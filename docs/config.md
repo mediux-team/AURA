@@ -86,10 +86,10 @@ Logging:
 MediaServer:
   Type: Plex
   URL: http://localhost:32400
-  Token: your_token_here
+  Token: YOUR_PLEX_API_TOKEN_HERE
   Libraries:
-    - "Movies"
-    - "TV Shows"
+    - Name: "Movies"
+    - Name: "TV Shows"
 ```
 
 -- **Example for Emby**:
@@ -98,10 +98,10 @@ MediaServer:
 MediaServer:
   Type: Emby
   URL: http://localhost:8096
-  Token: your_token_here
+  Token: YOUR_EMBY_API_TOKEN_HERE
   Libraries:
-    - "Movies"
-    - "TV Shows"
+    - Name: "Movies"
+    - Name: "TV Shows"
 ```
 
 -- **Example for Jellyfin**:
@@ -110,10 +110,10 @@ MediaServer:
 MediaServer:
   Type: Jellyfin
   URL: http://localhost:8096
-  Token: your_token_here
+  Token: YOUR_JELLYFIN_API_TOKEN_HERE
   Libraries:
-    - "Movies"
-    - "TV Shows"
+    - Name: "Movies"
+    - Name: "TV Shows"
 ```
 
 ### Type
@@ -149,7 +149,7 @@ MediaServer:
 
 ```yaml
 Mediux:
-  APIKey: your_mediux_api_key_here
+  APIKey: YOUR_MEDIUX_API_KEY_HERE
   DownloadQuality: optimized
 ```
 
@@ -240,6 +240,7 @@ Images:
 - **Details:**
   - If set to a valid path, images will be saved to that directory.
   - If left empty, images will be saved next to the media content.
+  - Ensure the specified path is added to your docker container.
   - Ensure the specified path is writable by the application.
 
 ## SaveImagesLocally.SeasonNamingConvention
@@ -369,3 +370,25 @@ Notifications:
 | Gotify.Token     | yes (when Provider=Gotify & Enabled)   | Your Gotify app token                        |
 
 ---
+
+## Sonarr / Radarr
+
+Configure support for the Sonarr and Radarr applications.
+
+Example:
+
+```yaml
+SonarrRadarr:
+  Applications:
+    - Type: Sonarr
+      Library: Shows
+      URL: http://<sonarr-url:port>
+      APIKey: YOUR_SONARR_API_TOKEN
+    - Type: Radarr
+      Library: Movies
+      URL: http://<radarr-url:port>
+      APIKey: YOUR_RADARR_API_TOKEN
+```
+
+---
+
