@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func (p *Plex) GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string) (items []models.MediaItem, totalSize int, Err logging.LogErrorInfo) {
+func (p *Plex) GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string, enableSortByNewEpisode bool) (items []models.MediaItem, totalSize int, Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx, fmt.Sprintf(
 		"Plex: Fetching Items for Library Section: %s", section.Title,
 	), logging.LevelInfo)
@@ -163,7 +163,9 @@ func (p *Plex) GetLibrarySectionItems(ctx context.Context, section models.Librar
 	}
 
 	// For show sections, bulk-fetch all episodes to compute LatestEpisodeAddedAt per show.
-	if section.Type == "show" {
+	// This requires an extra API call and can be slow for large libraries.
+	// Skip it when the user has disabled "Sort by New Episode Added".
+	if section.Type == "show" && enableSortByNewEpisode {
 		latestEpAdded, fetchErr := fetchLatestEpisodeAddedAtByShow(ctx, section.ID)
 		if fetchErr.Message != "" {
 			logAction.AppendWarning("latest_episode_added_at", "Failed to bulk-fetch latest episode addedAt for shows")

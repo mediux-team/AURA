@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func (e *EJ) GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string) (items []models.MediaItem, totalSize int, Err logging.LogErrorInfo) {
+func (e *EJ) GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string, enableSortByNewEpisode bool) (items []models.MediaItem, totalSize int, Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx, fmt.Sprintf(
 		"%s: Fetching Items for Library Section: %s", config.Current.MediaServer.Type, section.Title,
 	), logging.LevelInfo)

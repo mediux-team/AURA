@@ -45,6 +45,8 @@ func GetLibrarySectionItems(w http.ResponseWriter, r *http.Request) {
 	sectionTitle := r.URL.Query().Get("section_title")
 	sectionType := r.URL.Query().Get("section_type")
 	sectionStartIndex := r.URL.Query().Get("section_start_index")
+	enableSortByNewEpisodeParam := r.URL.Query().Get("enable_sort_by_new_episode")
+	enableSortByNewEpisode := enableSortByNewEpisodeParam != "false"
 
 	// Validate the section ID, title, type, and start index
 	if sectionID == "" || sectionTitle == "" || sectionType == "" || sectionStartIndex == "" {
@@ -68,7 +70,7 @@ func GetLibrarySectionItems(w http.ResponseWriter, r *http.Request) {
 			Type:  sectionType,
 		},
 	}
-	mediaItems, totalSize, Err := mediaserver.GetLibrarySectionItems(ctx, response.LibrarySection, sectionStartIndex, "")
+	mediaItems, totalSize, Err := mediaserver.GetLibrarySectionItems(ctx, response.LibrarySection, sectionStartIndex, "", enableSortByNewEpisode)
 	if Err.Message != "" {
 		httpx.SendResponse(w, ld, response)
 		return

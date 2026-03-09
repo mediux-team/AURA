@@ -12,7 +12,8 @@ export interface GetLibrarySectionItems_Response {
 
 export const GetLibrarySectionItems = async (
   librarySection: LibrarySection,
-  sectionStartIndex: number
+  sectionStartIndex: number,
+  enableSortByNewEpisode: boolean = true
 ): Promise<APIResponse<GetLibrarySectionItems_Response>> => {
   const logMessage =
     sectionStartIndex === 0
@@ -25,6 +26,7 @@ export const GetLibrarySectionItems = async (
       section_title: librarySection.title,
       section_type: librarySection.type,
       section_start_index: sectionStartIndex,
+      enable_sort_by_new_episode: enableSortByNewEpisode,
     };
     const response = await apiClient.get<APIResponse<GetLibrarySectionItems_Response>>(`/mediaserver/library/items`, {
       params,

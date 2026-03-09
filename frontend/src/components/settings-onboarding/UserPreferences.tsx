@@ -18,6 +18,8 @@ export function UserPreferencesCard() {
   const setShowOnlyDownloadDefaults = useUserPreferencesStore((state) => state.setShowOnlyDownloadDefaults);
   const showDateModified = useUserPreferencesStore((state) => state.showDateModified);
   const setShowDateModified = useUserPreferencesStore((state) => state.setShowDateModified);
+  const enableSortByNewEpisode = useUserPreferencesStore((state) => state.enableSortByNewEpisode);
+  const setEnableSortByNewEpisode = useUserPreferencesStore((state) => state.setEnableSortByNewEpisode);
 
   // View Density
   const { densityStep, setDensityStep } = useViewDensity();
@@ -144,8 +146,31 @@ export function UserPreferencesCard() {
       <Card className="p-5 mt-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">MediUX Images</h2>
+            <h2 className="text-xl font-semibold">Home Page Sorting</h2>
           </div>
+          <PopoverHelp ariaLabel="help-sort-new-episode">
+            <p className="mb-2">
+              When enabled, the <b>New Episode Added</b> sort option will be available on the Home page.
+            </p>
+            <p className="text-muted-foreground">
+              This option requires an extra request to your media server to fetch the latest episode dates for all
+              shows. Disabling it can significantly speed up initial page loading for large libraries.
+            </p>
+          </PopoverHelp>
+        </div>
+        <div className="flex items-center gap-5 mt-3">
+          <Label>Enable &quot;Sort by New Episode Added&quot;</Label>
+          <Switch
+            checked={enableSortByNewEpisode}
+            onCheckedChange={() => setEnableSortByNewEpisode(!enableSortByNewEpisode)}
+          />
+        </div>
+        {!enableSortByNewEpisode && (
+          <p className="text-sm text-muted-foreground mt-2">
+            The &quot;New Episode Added&quot; sort option is hidden on the Home page. Re-enable this to restore it.
+          </p>
+        )}
+      </Card>
           <PopoverHelp ariaLabel="media-item-filter-date-modified">
             <p className="mb-2">When enabled, the "Date Modified" for each image will be shown under the image.</p>
             <p className="text-muted-foreground">

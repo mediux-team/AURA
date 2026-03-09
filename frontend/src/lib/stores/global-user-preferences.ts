@@ -15,6 +15,9 @@ interface UserPreferencesStore {
   showDateModified: boolean;
   setShowDateModified: (showDateModified: boolean) => void;
 
+  enableSortByNewEpisode: boolean;
+  setEnableSortByNewEpisode: (enableSortByNewEpisode: boolean) => void;
+
   hasHydrated: boolean;
   hydrate: () => void;
   clear: () => void;
@@ -32,6 +35,9 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
       showDateModified: false,
       setShowDateModified: (showDateModified: boolean) => set({ showDateModified }),
 
+      enableSortByNewEpisode: true,
+      setEnableSortByNewEpisode: (enableSortByNewEpisode: boolean) => set({ enableSortByNewEpisode }),
+
       hasHydrated: false,
       hydrate: () => set({ hasHydrated: true }),
 
@@ -40,6 +46,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
           downloadDefaults: DOWNLOAD_IMAGE_TYPE_OPTIONS.map((option) => option.value),
           showOnlyDownloadDefaults: false,
           showDateModified: false,
+          enableSortByNewEpisode: true,
         }),
     }),
     {
@@ -49,6 +56,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
         downloadDefaults: state.downloadDefaults,
         showOnlyDownloadDefaults: state.showOnlyDownloadDefaults,
         showDateModified: state.showDateModified,
+        enableSortByNewEpisode: state.enableSortByNewEpisode,
       }),
       onRehydrateStorage: () => (state) => {
         state?.hydrate();

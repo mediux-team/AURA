@@ -72,7 +72,7 @@ func getAllLibrarySectionsAndItemsImpl(ctx context.Context) (success bool) {
 
 		for {
 
-			items, totalSize, Err := GetLibrarySectionItems(ctx, section, strconv.Itoa(start), strconv.Itoa(pageSize))
+			items, totalSize, Err := GetLibrarySectionItems(ctx, section, strconv.Itoa(start), strconv.Itoa(pageSize), true)
 			if Err.Message != "" {
 				return false
 			}

@@ -26,7 +26,7 @@ type MediaServerInterface interface {
 	GetLibrarySectionDetails(ctx context.Context, library *models.LibrarySection) (found bool, Err logging.LogErrorInfo)
 
 	// Get items in a specific library section
-	GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string) ([]models.MediaItem, int, logging.LogErrorInfo)
+	GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string, enableSortByNewEpisode bool) ([]models.MediaItem, int, logging.LogErrorInfo)
 
 	// Get Movie Collections for a specific library section
 	GetMovieCollections(ctx context.Context, section models.LibrarySection) (collections []models.CollectionItem, Err logging.LogErrorInfo)
@@ -123,12 +123,12 @@ func GetLibrarySectionDetails(ctx context.Context, library *models.LibrarySectio
 	return msClient.GetLibrarySectionDetails(ctx, library)
 }
 
-func GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string) ([]models.MediaItem, int, logging.LogErrorInfo) {
+func GetLibrarySectionItems(ctx context.Context, section models.LibrarySection, sectionStartIndex string, limit string, enableSortByNewEpisode bool) ([]models.MediaItem, int, logging.LogErrorInfo) {
 	msClient, Err := NewMediaServerClient(&config.Current.MediaServer)
 	if Err.Message != "" {
 		return nil, 0, Err
 	}
-	return msClient.GetLibrarySectionItems(ctx, section, sectionStartIndex, limit)
+	return msClient.GetLibrarySectionItems(ctx, section, sectionStartIndex, limit, enableSortByNewEpisode)
 }
 
 func GetMovieCollections(ctx context.Context, section models.LibrarySection) (collections []models.CollectionItem, Err logging.LogErrorInfo) {

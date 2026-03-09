@@ -22,6 +22,7 @@ import { log } from "@/lib/logger";
 import { MAX_CACHE_DURATION, useLibrarySectionsStore } from "@/lib/stores/global-store-library-sections";
 import { useSearchQueryStore } from "@/lib/stores/global-store-search-query";
 import { useHomePageStore } from "@/lib/stores/page-store-home";
+import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
 import { searchItems } from "@/hooks/search-query";
 
@@ -70,6 +71,8 @@ export default function Home() {
 
   const { sections, setSections, timestamp } = useLibrarySectionsStore();
   const hasHydrated = useLibrarySectionsStore((state) => state.hasHydrated);
+  const enableSortByNewEpisode = useUserPreferencesStore((state) => state.enableSortByNewEpisode);
+  const prefsHasHydrated = useUserPreferencesStore((state) => state.hasHydrated);
 
   // -------------------------------
   // Derived values
@@ -92,7 +95,12 @@ export default function Home() {
       setSortOption("dateAdded");
       setSortOrder("desc");
     }
-  }, [sortOption, setSortOption, setSortOrder]);
+    // If newEpisodeAdded is selected but the feature is disabled, fall back to dateAdded
+    if (sortOption === "newEpisodeAdded" && !enableSortByNewEpisode) {
+      setSortOption("dateAdded");
+      setSortOrder("desc");
+    }
+  }, [sortOption, setSortOption, setSortOrder, enableSortByNewEpisode]);
 
   // Fetch data from cache or API
   const getMediaItems = useCallback(
@@ -155,7 +163,7 @@ export default function Home() {
             let allItems: LibrarySection["media_items"] = [];
 
             while (itemsFetched < totalSize) {
-              const itemsResponse = await GetLibrarySectionItems(section, itemsFetched);
+              const itemsResponse = await GetLibrarySectionItems(section, itemsFetched, enableSortByNewEpisode);
               if (itemsResponse.status === "error") {
                 setError(itemsResponse);
                 return;
@@ -205,14 +213,14 @@ export default function Home() {
         isMounted.current = false;
       }
     },
-    [sections, setSections, timestamp]
+    [sections, setSections, timestamp, enableSortByNewEpisode]
   );
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!hasHydrated || !prefsHasHydrated) return;
     getMediaItems(true);
     isMounted.current = true;
-  }, [getMediaItems, hasHydrated]);
+  }, [getMediaItems, hasHydrated, prefsHasHydrated]);
 
   useEffect(() => {
     if (searchQuery !== prevSearchQuery.current) {
@@ -388,7 +396,7 @@ export default function Home() {
               filterIgnored={filterIgnored}
               setFilterIgnored={setFilterIgnored}
               hasUpdatedAt={hasUpdatedAt}
-              hasEpisodeAddedAt={hasEpisodeAddedAt}
+              hasEpisodeAddedAt={hasEpisodeAddedAt && enableSortByNewEpisode}
               sortOption={sortOption}
               setSortOption={setSortOption}
               sortOrder={sortOrder}
