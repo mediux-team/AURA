@@ -1,5 +1,13 @@
 ## [0.9.101] - 2026-08-08
 
+### Fixed
+
+- Fixed issue where Changelog would appear on every page visit when cookies were cleared. Now, the Changelog will only appear if a previous version is detected in the cookies and it is different from the current version. This will prevent the Changelog from appearing on every page visit when cookies are cleared.
+
+---
+
+## [0.9.101] - 2026-08-08
+
 ### Added
 
 - Added new Authorization header for Jellyfin media servers. This is to fix an issue where some Jellyfin servers were not accepting the X-Emby-Token header for authentication. Now, if the media server type is set to Jellyfin, it will use the new Authorization header as well. (Thanks to degradedcode for the PR!)

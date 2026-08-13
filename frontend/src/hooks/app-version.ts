@@ -71,10 +71,19 @@ export function useAppVersion(currentVersion: string = "dev") {
     const lastSeen = localStorage.getItem("lastSeenVersion");
     log("INFO", "App Version", "Release Notes", `Last seen version: ${lastSeen}, Current version: ${currentVersion}`);
 
+    // First time this browser has ever seen the app (no stored version yet).
+    // There's nothing "new" to a brand-new user, so just baseline to the
+    // current version silently instead of showing the entire changelog history.
+    if (!lastSeen) {
+      localStorage.setItem("lastSeenVersion", currentVersion);
+      setChangelog("");
+      return;
+    }
+
     fetch("/CHANGELOG.md")
       .then((res) => res.text())
       .then((fullChangelog) => {
-        const relevantEntries = getChangelogEntriesSince(fullChangelog, lastSeen || "");
+        const relevantEntries = getChangelogEntriesSince(fullChangelog, lastSeen);
         setChangelog(relevantEntries.map((e) => e.content).join("\n"));
         if (lastSeen !== currentVersion && relevantEntries.length > 0) {
           setShowReleaseNotes(true);
