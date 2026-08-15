@@ -243,11 +243,16 @@ func fetchSeasonsAndEpisodesForShow(ctx context.Context, itemInfo *models.MediaI
 	for _, episode := range plexResp.MediaContainer.Metadata {
 		seasonNumber := episode.ParentIndex
 		ep := models.MediaItemEpisode{
-			RatingKey:     episode.RatingKey,
-			Title:         episode.Title,
-			SeasonNumber:  seasonNumber,
-			EpisodeNumber: episode.Index,
-			AddedAt:       episode.AddedAt,
+			RatingKey:            episode.RatingKey,
+			Title:                episode.Title,
+			SeasonNumber:         seasonNumber,
+			EpisodeNumber:        episode.Index,
+			// Plex splits merged multi-episode files into separate, sequentially
+			// numbered items (see backend/mediaserver/ej for why Jellyfin/Emby
+			// need a separate offset), so Plex's MediUX-matching number is always
+			// the same as its native episode number.
+			MediuxEpisodeNumber: episode.Index,
+			AddedAt:              episode.AddedAt,
 			File: models.MediaItemFile{
 				Path:     episode.Media[0].Part[0].File,
 				Size:     episode.Media[0].Part[0].Size,

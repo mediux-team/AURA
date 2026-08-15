@@ -60,8 +60,15 @@ type MediaItemEpisode struct {
 	Title         string        `json:"title"`
 	SeasonNumber  int           `json:"season_number"`
 	EpisodeNumber int           `json:"episode_number"`
-	AddedAt       int64         `json:"added_at"`
-	File          MediaItemFile `json:"file"`
+	// MediuxEpisodeNumber is the episode number to match against MediUX images.
+	// It usually equals EpisodeNumber, but for Emby/Jellyfin it can diverge when
+	// an earlier episode in the season is a merged multi-episode file: Jellyfin
+	// numbers the merged file across multiple index slots (e.g. 1-2), while
+	// MediUX (TMDB-based) counts it as a single slot, shifting every following
+	// episode's MediUX number down by the difference.
+	MediuxEpisodeNumber int           `json:"mediux_episode_number"`
+	AddedAt              int64         `json:"added_at"`
+	File                 MediaItemFile `json:"file"`
 }
 
 type MediaItemFile struct {

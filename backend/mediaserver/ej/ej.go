@@ -365,6 +365,7 @@ type EmbyJellyItemContentResponse struct {
 	DisplayOrder      string    `json:"DisplayOrder"`
 	EndDate           time.Time `json:"EndDate"`
 	IndexNumber       int       `json:"IndexNumber"`
+	IndexNumberEnd    int       `json:"IndexNumberEnd"`
 	ParentIndexNumber int       `json:"ParentIndexNumber"`
 }
 

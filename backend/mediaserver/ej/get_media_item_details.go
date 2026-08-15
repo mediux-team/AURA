@@ -256,7 +256,7 @@ func fetchEpisodesForSeason(ctx context.Context, showRatingKey string, season mo
 	u.Path = path.Join(u.Path, "Shows", showRatingKey, "Episodes")
 	query := u.Query()
 	query.Set("SeasonId", season.RatingKey)
-	query.Set("Fields", "ID,Name,IndexNumber,ParentIndexNumber,Path,Size,RunTimeTicks,DateCreated,MediaSources")
+	query.Set("Fields", "ID,Name,IndexNumber,IndexNumberEnd,ParentIndexNumber,Path,Size,RunTimeTicks,DateCreated,MediaSources")
 	u.RawQuery = query.Encode()
 	URL := u.String()
 
@@ -275,17 +275,29 @@ func fetchEpisodesForSeason(ctx context.Context, showRatingKey string, season mo
 		return season, *logAction.Error
 	}
 
-	for _, episode := range ejResp.Items {
+	// Jellyfin/Emby number a merged multi-episode file (e.g. "S01E01-E02") across
+	// multiple index slots (IndexNumber..IndexNumberEnd), while MediUX (TMDB-based)
+	// counts it as a single slot. That collapses every subsequent episode's MediUX
+	// number by the difference, so track a running offset to translate between the
+	// two numbering schemes.
+	mediuxNumberOffset := 0
+	for _, rawEpisode := range ejResp.Items {
+		mediuxEpisodeNumber := rawEpisode.IndexNumber - mediuxNumberOffset
+		if rawEpisode.IndexNumberEnd > rawEpisode.IndexNumber {
+			mediuxNumberOffset += rawEpisode.IndexNumberEnd - rawEpisode.IndexNumber
+		}
+
 		episode := models.MediaItemEpisode{
-			RatingKey:     episode.ID,
-			Title:         episode.Name,
-			SeasonNumber:  episode.ParentIndexNumber,
-			EpisodeNumber: episode.IndexNumber,
-			AddedAt:       episode.DateCreated.Unix(),
+			RatingKey:            rawEpisode.ID,
+			Title:                rawEpisode.Name,
+			SeasonNumber:         rawEpisode.ParentIndexNumber,
+			EpisodeNumber:        rawEpisode.IndexNumber,
+			MediuxEpisodeNumber:  mediuxEpisodeNumber,
+			AddedAt:              rawEpisode.DateCreated.Unix(),
 			File: models.MediaItemFile{
-				Path:     episode.Path,
-				Size:     episode.MediaSources[0].Size,
-				Duration: episode.RunTimeTicks / 10000,
+				Path:     rawEpisode.Path,
+				Size:     rawEpisode.MediaSources[0].Size,
+				Duration: rawEpisode.RunTimeTicks / 10000,
 			},
 		}
 

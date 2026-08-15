@@ -216,7 +216,7 @@ func ProcessQueueItems() {
 								if image.SeasonNumber != nil && *image.SeasonNumber != season.SeasonNumber {
 									continue
 								}
-								if image.EpisodeNumber != nil && *image.EpisodeNumber != episode.EpisodeNumber {
+								if image.EpisodeNumber != nil && *image.EpisodeNumber != episode.MediuxEpisodeNumber {
 									continue
 								}
 								mediaItemHasEpisode = true

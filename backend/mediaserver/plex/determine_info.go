@@ -40,7 +40,7 @@ func getEpisodeRatingKeyFromImageFile(item models.MediaItem, imageFile models.Im
 	for _, season := range item.Series.Seasons {
 		if season.SeasonNumber == *seasonNumberFromSet {
 			for _, episode := range season.Episodes {
-				if episode.EpisodeNumber == *episodeNumberFromSet && episode.SeasonNumber == *seasonNumberFromSet {
+				if episode.MediuxEpisodeNumber == *episodeNumberFromSet && episode.SeasonNumber == *seasonNumberFromSet {
 					return episode.RatingKey
 				}
 			}
@@ -60,7 +60,7 @@ func getEpisodePathFromImageFile(item models.MediaItem, imageFile models.ImageFi
 	for _, season := range item.Series.Seasons {
 		if season.SeasonNumber == *seasonNumberFromSet {
 			for _, episode := range season.Episodes {
-				if episode.EpisodeNumber == *episodeNumberFromSet && episode.SeasonNumber == *seasonNumberFromSet {
+				if episode.MediuxEpisodeNumber == *episodeNumberFromSet && episode.SeasonNumber == *seasonNumberFromSet {
 					return episode.File.Path
 				}
 			}
