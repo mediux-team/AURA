@@ -37,7 +37,7 @@ func getEpisodeRatingKeyFromImageFile(embyJellyItem models.MediaItem, imageFile 
 	for _, season := range embyJellyItem.Series.Seasons {
 		if season.SeasonNumber == *seasonNumberFromSet {
 			for _, episode := range season.Episodes {
-				if episode.EpisodeNumber == *episodeNumberFromSet && episode.SeasonNumber == *seasonNumberFromSet {
+				if episode.MediuxEpisodeNumber == *episodeNumberFromSet && episode.SeasonNumber == *seasonNumberFromSet {
 					return episode.RatingKey
 				}
 			}
