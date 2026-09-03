@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"aura/config"
 	"aura/logging"
 	"aura/mediaserver"
 	"context"
@@ -17,22 +18,24 @@ func StartRefreshMediaItemsAndCollectionsJob() error {
 
 	if refreshMediaItemsAndCollectionsJobID != 0 {
 		c.Remove(refreshMediaItemsAndCollectionsJobID)
+		delete(jobSpecs, refreshMediaItemsAndCollectionsJobID)
 		refreshMediaItemsAndCollectionsJobID = 0
 	}
 
+	jobSetting := config.Current.Jobs.RefreshMediaItemsAndCollections
+	if !jobSetting.IsEnabled() {
+		logging.LOGGER.Info().Timestamp().Msg("Refresh Media Items and Collections Job is disabled in config")
+		return nil
+	}
+
+	spec := jobSetting.Cron
+	if spec == "" {
+		spec = config.DefaultJobsConfig().RefreshMediaItemsAndCollections.Cron
+	}
+
 	var err error
-	spec := "*/90 * * * *"
 	refreshMediaItemsAndCollectionsJobID, err = c.AddFunc(spec, func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logging.LOGGER.Error().Timestamp().Interface("recover", r).Msg("PANIC: in scheduled RefreshMediaItemsAndCollectionsJob")
-			}
-		}()
-		ctx, ld := logging.CreateLoggingContext(context.Background(), "Cron Job")
-		action := ld.AddAction("Refresh Media Items and Collections", logging.LevelInfo)
-		ctx = logging.WithCurrentAction(ctx, action)
-		mediaserver.GetAllLibrarySectionsAndItems(ctx, true)
-		ld.Log()
+		RunRefreshMediaItemsAndCollectionsJob()
 	})
 	if err != nil {
 		return err
@@ -41,7 +44,19 @@ func StartRefreshMediaItemsAndCollectionsJob() error {
 
 	logging.LOGGER.Info().Timestamp().
 		Str("cron", spec).
-		Str("interval", "every 90 minutes").
 		Msg("Refresh Media Items and Collections Job Started")
 	return nil
+}
+
+func RunRefreshMediaItemsAndCollectionsJob() {
+	defer func() {
+		if r := recover(); r != nil {
+			logging.LOGGER.Error().Timestamp().Interface("recover", r).Msg("PANIC: in scheduled RefreshMediaItemsAndCollectionsJob")
+		}
+	}()
+	ctx, ld := logging.CreateLoggingContext(context.Background(), "Cron Job")
+	action := ld.AddAction("Refresh Media Items and Collections", logging.LevelInfo)
+	ctx = logging.WithCurrentAction(ctx, action)
+	mediaserver.GetAllLibrarySectionsAndItems(ctx, true)
+	ld.Log()
 }

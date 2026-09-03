@@ -34,6 +34,9 @@ func (config *Config) Validate(ctx context.Context) {
 	// Sub-action: AutoDownload Config
 	isAutoDownloadValid := ValidateAutoDownload(ctx, &config.AutoDownload)
 
+	// Sub-action: Jobs Config
+	isJobsValid := ValidateJobs(ctx, &config.Jobs)
+
 	// Sub-action: Images Config
 	isImagesValid := ValidateImages(ctx, &config.Images, config.MediaServer)
 
@@ -51,7 +54,7 @@ func (config *Config) Validate(ctx context.Context) {
 
 	// If any validation failed, set status to error
 	if !isAuthValid || !isLoggingValid || !isMediaServerValid ||
-		!isMediuxValid || !isAutoDownloadValid ||
+		!isMediuxValid || !isAutoDownloadValid || !isJobsValid ||
 		!isImagesValid || !isNotificationsValid || !isSonarrRadarrValid || !isDatabaseValid || !isLabelsAndTagsValid {
 		logAction.SetError("Config validation failed", "One or more config sections are invalid", nil)
 		Valid = false
@@ -240,6 +243,43 @@ func ValidateAutoDownload(ctx context.Context, AutoDownload *Config_AutoDownload
 func ValidateCron(cronExpression string) bool {
 	_, err := cron.ParseStandard(cronExpression)
 	return err == nil
+}
+
+func ValidateJobs(ctx context.Context, Jobs *Config_Jobs) bool {
+	ctx, logAction := logging.AddSubActionToContext(ctx, "Validating Jobs Config", logging.LevelTrace)
+	if logAction != nil {
+		defer logAction.Complete()
+	}
+
+	isValid := true
+	defaults := DefaultJobsConfig()
+
+	validateJob := func(name string, setting *Config_JobSetting, defaultSetting Config_JobSetting) {
+		if setting.Enabled == nil {
+			setting.Enabled = defaultSetting.Enabled
+		}
+		if setting.Cron == "" {
+			setting.Cron = defaultSetting.Cron
+			logging.LOGGER.Warn().Timestamp().Msgf("Jobs.%s.Cron not set, defaulting to '%s'", name, defaultSetting.Cron)
+			if logAction != nil {
+				logAction.AppendWarning("message", fmt.Sprintf("Jobs.%s.Cron not set, defaulting to '%s'", name, defaultSetting.Cron))
+			}
+		}
+		if setting.IsEnabled() && !ValidateCron(setting.Cron) {
+			if logAction != nil {
+				logAction.SetError(fmt.Sprintf("Jobs.%s.Cron: '%s' is not a valid cron expression", name, setting.Cron), "Please provide a valid cron expression", nil)
+			}
+			isValid = false
+		}
+	}
+
+	validateJob("RefreshMediaItemsAndCollections", &Jobs.RefreshMediaItemsAndCollections, defaults.RefreshMediaItemsAndCollections)
+	validateJob("CheckForMediaItemChanges", &Jobs.CheckForMediaItemChanges, defaults.CheckForMediaItemChanges)
+	validateJob("HandleTempIgnoredItems", &Jobs.HandleTempIgnoredItems, defaults.HandleTempIgnoredItems)
+	validateJob("RefreshMediuxUsers", &Jobs.RefreshMediuxUsers, defaults.RefreshMediuxUsers)
+	validateJob("CheckMediuxSiteLink", &Jobs.CheckMediuxSiteLink, defaults.CheckMediuxSiteLink)
+
+	return isValid
 }
 
 func ValidateImages(ctx context.Context, Images *Config_Images, msConfig Config_MediaServer) bool {

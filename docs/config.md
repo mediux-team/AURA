@@ -467,7 +467,58 @@ Notifications:
 | Gotify.URL        | yes (when Provider=Gotify & Enabled)   | Base URL for your Gotify server              |
 | Gotify.ApiToken   | yes (when Provider=Gotify & Enabled)   | Your Gotify app token                        |
 
-**Note**: Replace any `YOUR_...` placeholders with your actual configuration values. For URL fields, ensure you include the full URL with the appropriate protocol (e.g., `http://` or `https://`).
+---
+
+## Background Jobs
+
+Aura runs several automated background jobs to keep your media library, MediUX creators, and asset caches synchronized. You can customize the cron schedule or disable any background job in `config.yaml`.
+
+- **Example**:
+
+```yaml
+Jobs:
+    RefreshMediaItemsAndCollections:
+        Enabled: true
+        Cron: "0 4 * * *"
+    CheckForMediaItemChanges:
+        Enabled: true
+        Cron: "0 */6 * * *"
+    HandleTempIgnoredItems:
+        Enabled: true
+        Cron: "0 */6 * * *"
+    RefreshMediuxUsers:
+        Enabled: true
+        Cron: "0 */12 * * *"
+    CheckMediuxSiteLink:
+        Enabled: true
+        Cron: "0 */1 * * *"
+```
+
+### RefreshMediaItemsAndCollections
+
+- **Default**: `Enabled: true`, `Cron: "0 4 * * *"` (Daily at 4:00 AM)
+- **Description**: Connects to your media server (Plex, Jellyfin, Emby) and performs a full refresh of all library sections, BoxSet collections, and individual media items in the local database.
+- **Details**: In large media libraries, querying all sections and collections frequently can generate high I/O and API load. Setting this to run daily at off-peak hours (or disabling it if you prefer triggering updates via Sonarr/Radarr webhooks or manual refresh) keeps media server resources light.
+
+### CheckForMediaItemChanges
+
+- **Default**: `Enabled: true`, `Cron: "0 */6 * * *"` (Every 6 hours)
+- **Description**: Cross-references existing media items in the local database against the media server to detect updated rating keys, titles, or editions.
+
+### HandleTempIgnoredItems
+
+- **Default**: `Enabled: true`, `Cron: "0 */6 * * *"` (Every 6 hours)
+- **Description**: Checks whether items previously marked with temporary ignore modes (e.g. until a set is available) now have matching artwork sets uploaded to MediUX.
+
+### RefreshMediuxUsers
+
+- **Default**: `Enabled: true`, `Cron: "0 */12 * * *"` (Every 12 hours)
+- **Description**: Refreshes metadata and set listings for tracked and followed MediUX creators.
+
+### CheckMediuxSiteLink
+
+- **Default**: `Enabled: true`, `Cron: "0 */1 * * *"` (Hourly)
+- **Description**: Checks the availability and connectivity of the MediUX site link.
 
 ---
 

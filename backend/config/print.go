@@ -22,6 +22,7 @@ func (config *Config) PrintDetails() {
 		Interface("Media Server", sanitizedConfig.MediaServer).
 		Interface("MediUX", sanitizedConfig.Mediux).
 		Interface("Auto Download", sanitizedConfig.AutoDownload).
+		Interface("Jobs", sanitizedConfig.Jobs).
 		Interface("Images", sanitizedConfig.Images).
 		Interface("TMDB", sanitizedConfig.TMDB).
 		Interface("Labels and Tags", sanitizedConfig.LabelsAndTags).

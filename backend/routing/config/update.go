@@ -62,6 +62,7 @@ func UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 	mediaServerChanged, mediaServerValid, newMediaServerName := checkConfigDifferences_MediaServer(ctx, config.Current.MediaServer, &newConfig.MediaServer)
 	mediuxChanged, mediuxValid := checkConfigDifferences_Mediux(ctx, config.Current.Mediux, &newConfig.Mediux)
 	autoDownloadChanged, autoDownloadValid := checkConfigDifferences_Autodownload(ctx, config.Current.AutoDownload, &newConfig.AutoDownload)
+	jobsChanged, jobsValid := checkConfigDifferences_Jobs(ctx, config.Current.Jobs, &newConfig.Jobs)
 	imagesChanged, imagesValid := checkConfigDifferences_Images(ctx, config.Current.Images, &newConfig.Images, newConfig.MediaServer)
 	tmdbChanged, tmdbValid := checkConfigDifferences_TMDB(ctx, config.Current.TMDB, &newConfig.TMDB)
 	labelsAndTagsChanged, labelsAndTagsValid := checkConfigDifferences_LabelsAndTags(ctx, config.Current.LabelsAndTags, &newConfig.LabelsAndTags)
@@ -69,7 +70,7 @@ func UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 	sonarrRadarrChanged, sonarrRadarrValid := checkConfigDifferences_SonarrRadarr(ctx, config.Current.SonarrRadarr, &newConfig.SonarrRadarr, newConfig.MediaServer)
 	databaseChanged, databaseValid := checkConfigDifferences_Database(ctx, config.Current.Database, &newConfig.Database)
 
-	if !authValid || !loggingValid || !mediaServerValid || !mediuxValid || !autoDownloadValid || !imagesValid || !tmdbValid || !labelsAndTagsValid || !notificationsValid || !sonarrRadarrValid || !databaseValid {
+	if !authValid || !loggingValid || !mediaServerValid || !mediuxValid || !autoDownloadValid || !jobsValid || !imagesValid || !tmdbValid || !labelsAndTagsValid || !notificationsValid || !sonarrRadarrValid || !databaseValid {
 		ld.Status = logging.StatusError
 		logAction.SetError("Invalid configuration", "The provided configuration is invalid. Check the results for details.", map[string]any{
 			"auth_valid":            authValid,
@@ -77,6 +78,7 @@ func UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 			"media_server_valid":    mediaServerValid,
 			"mediux_valid":          mediuxValid,
 			"auto_download_valid":   autoDownloadValid,
+			"jobs_valid":            jobsValid,
 			"images_valid":          imagesValid,
 			"tmdb_valid":            tmdbValid,
 			"labels_and_tags_valid": labelsAndTagsValid,
@@ -90,7 +92,7 @@ func UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !authChanged && !loggingChanged && !mediaServerChanged && !mediuxChanged &&
-		!autoDownloadChanged && !imagesChanged && !tmdbChanged && !labelsAndTagsChanged &&
+		!autoDownloadChanged && !jobsChanged && !imagesChanged && !tmdbChanged && !labelsAndTagsChanged &&
 		!notificationsChanged && !sonarrRadarrChanged && !databaseChanged {
 		// If nothing has changed AND the config is valid, log a warning
 		if config.Valid {
@@ -135,6 +137,10 @@ func UpdateAppConfig(w http.ResponseWriter, r *http.Request) {
 
 	if autoDownloadChanged {
 		jobs.StartAutoDownloadJob()
+	}
+
+	if jobsChanged {
+		jobs.StartConfiguredJobs()
 	}
 
 	if mediaServerChanged {
@@ -409,6 +415,20 @@ func checkConfigDifferences_Autodownload(ctx context.Context, oldAutoDownload co
 		}
 	}
 	newValid = config.ValidateAutoDownload(ctx, newAutoDownload)
+	return changed, newValid
+}
+
+// checkConfigDifferences_Jobs compares old and new Jobs configurations.
+func checkConfigDifferences_Jobs(ctx context.Context, oldJobs config.Config_Jobs, newJobs *config.Config_Jobs) (changed, newValid bool) {
+	ctx, logAction := logging.AddSubActionToContext(ctx, "Check Config Differences: Jobs", logging.LevelTrace)
+	defer logAction.Complete()
+	changed = false
+	newValid = config.ValidateJobs(ctx, newJobs)
+	if !reflect.DeepEqual(oldJobs, *newJobs) {
+		changed = true
+		logAction.AppendResult("Jobs configuration changed", "Jobs schedule or enabled state updated")
+		logging.LOGGER.Info().Timestamp().Msg("Jobs configuration changed")
+	}
 	return changed, newValid
 }
 

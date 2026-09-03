@@ -45,6 +45,35 @@ func DefaultNotificationTemplates() Config_NotificationTemplate {
 	}
 }
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func DefaultJobsConfig() Config_Jobs {
+	return Config_Jobs{
+		RefreshMediaItemsAndCollections: Config_JobSetting{
+			Enabled: boolPtr(true),
+			Cron:    "0 4 * * *",
+		},
+		CheckForMediaItemChanges: Config_JobSetting{
+			Enabled: boolPtr(true),
+			Cron:    "0 */6 * * *",
+		},
+		HandleTempIgnoredItems: Config_JobSetting{
+			Enabled: boolPtr(true),
+			Cron:    "0 */6 * * *",
+		},
+		RefreshMediuxUsers: Config_JobSetting{
+			Enabled: boolPtr(true),
+			Cron:    "0 */12 * * *",
+		},
+		CheckMediuxSiteLink: Config_JobSetting{
+			Enabled: boolPtr(true),
+			Cron:    "0 */1 * * *",
+		},
+	}
+}
+
 func DefaultConfig() Config {
 	return Config{
 		Auth: Config_Auth{
@@ -61,6 +90,7 @@ func DefaultConfig() Config {
 			Enabled: false,
 			Cron:    "0 0 * * *",
 		},
+		Jobs: DefaultJobsConfig(),
 		Images: Config_Images{
 			CacheImages: Config_CacheImages{
 				Enabled: false,

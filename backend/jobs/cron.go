@@ -15,18 +15,15 @@ var (
 
 	jobSpecs = map[cron.EntryID]string{}
 
-	// Runs Always
 	refreshMediaItemsAndCollectionsJobID cron.EntryID = 0
 	refreshMediuxUsersJobID              cron.EntryID = 0
 	checkMediuxSiteLinkJobID             cron.EntryID = 0
 	checkForMediaItemChangesJobID        cron.EntryID = 0
 	handleTempIgnoredItemsJobID          cron.EntryID = 0
-
-	// Configurable
-	autodownloadJobID cron.EntryID = 0
+	autodownloadJobID                    cron.EntryID = 0
 )
 
-var manualPrevRun = map[cron.EntryID]string{}
+var manualPrevRun = map[string]string{}
 
 func init() {
 	c = cron.New()
@@ -39,6 +36,15 @@ func StartJobs() {
 	}
 }
 
+func StartConfiguredJobs() {
+	_ = StartAutoDownloadJob()
+	_ = StartRefreshMediaItemsAndCollectionsJob()
+	_ = StartRefreshMediuxUsersJob()
+	_ = StartCheckMediuxSiteLinkJob()
+	_ = StartCheckForMediaItemChangesJob()
+	_ = StartHandleTempIgnoredItemsJob()
+}
+
 type JobInfo struct {
 	ID      cron.EntryID `json:"id"`
 	Spec    string       `json:"spec"`
@@ -47,58 +53,89 @@ type JobInfo struct {
 	JobName string       `json:"job_name"`
 }
 
+type jobDescriptor struct {
+	Name    string
+	EntryID *cron.EntryID
+	Runner  func()
+}
+
+func getJobDescriptors() []jobDescriptor {
+	return []jobDescriptor{
+		{
+			Name:    "AutoDownload Job",
+			EntryID: &autodownloadJobID,
+			Runner:  RunAutoDownloadJob,
+		},
+		{
+			Name:    "Refresh Media Items and Collections Job",
+			EntryID: &refreshMediaItemsAndCollectionsJobID,
+			Runner:  RunRefreshMediaItemsAndCollectionsJob,
+		},
+		{
+			Name:    "Refresh Mediux Users Job",
+			EntryID: &refreshMediuxUsersJobID,
+			Runner:  RunRefreshMediuxUsersJob,
+		},
+		{
+			Name:    "Check Mediux Site Link Availability Job",
+			EntryID: &checkMediuxSiteLinkJobID,
+			Runner:  RunCheckMediuxSiteLinkJob,
+		},
+		{
+			Name:    "Check for Media Item Changes Job",
+			EntryID: &checkForMediaItemChangesJobID,
+			Runner:  RunCheckForMediaItemChangesJob,
+		},
+		{
+			Name:    "Handle Temp Ignored Items Job",
+			EntryID: &handleTempIgnoredItemsJobID,
+			Runner:  RunHandleTempIgnoredItemsJob,
+		},
+	}
+}
+
 func GetListOfJobs() []JobInfo {
 	mu.Lock()
 	defer mu.Unlock()
 
 	var jobs []JobInfo
-	if c != nil {
-		entries := c.Entries()
-		for _, entry := range entries {
-			prevRun := entry.Prev.String()
-			if manual, ok := manualPrevRun[entry.ID]; ok {
-				prevRun = manual
-			} else if prevRun == "0001-01-01 00:00:00 +0000 UTC" {
-				prevRun = ""
-			} else {
-				prevRun = entry.Prev.Format("2006-01-02 15:04:05")
-			}
+	descriptors := getJobDescriptors()
 
-			jobInfo := JobInfo{
-				ID:      entry.ID,
-				Spec:    "",
-				NextRun: entry.Next.Format("2006-01-02 15:04:05"),
-				PrevRun: prevRun,
-				JobName: "",
-			}
+	for idx, desc := range descriptors {
+		entryID := *desc.EntryID
+		prevRun := manualPrevRun[desc.Name]
 
-			// Use stored spec; cron doesn't expose it from the parsed schedule.
-			if spec, ok := jobSpecs[entry.ID]; ok {
-				jobInfo.Spec = spec
-			} else {
-				// optional fallback: at least show concrete schedule type
-				jobInfo.Spec = fmt.Sprintf("%T", entry.Schedule)
-			}
-
-			switch entry.ID {
-			case autodownloadJobID:
-				jobInfo.JobName = "AutoDownload Job"
-			case refreshMediaItemsAndCollectionsJobID:
-				jobInfo.JobName = "Refresh Media Items and Collections Job"
-			case refreshMediuxUsersJobID:
-				jobInfo.JobName = "Refresh Mediux Users Job"
-			case checkMediuxSiteLinkJobID:
-				jobInfo.JobName = "Check Mediux Site Link Availability Job"
-			case checkForMediaItemChangesJobID:
-				jobInfo.JobName = "Check for Media Item Changes Job"
-			case handleTempIgnoredItemsJobID:
-				jobInfo.JobName = "Handle Temp Ignored Items Job"
-			default:
-				jobInfo.JobName = "Unknown Job"
-			}
-			jobs = append(jobs, jobInfo)
+		jobInfo := JobInfo{
+			ID:      cron.EntryID(idx + 1),
+			JobName: desc.Name,
+			PrevRun: prevRun,
 		}
+
+		if entryID != 0 && c != nil {
+			entry := c.Entry(entryID)
+			if entry.ID != 0 {
+				jobInfo.ID = entry.ID
+				if spec, ok := jobSpecs[entry.ID]; ok {
+					jobInfo.Spec = spec
+				} else {
+					jobInfo.Spec = fmt.Sprintf("%T", entry.Schedule)
+				}
+				jobInfo.NextRun = entry.Next.Format("2006-01-02 15:04:05")
+				if jobInfo.PrevRun == "" && !entry.Prev.IsZero() {
+					jobInfo.PrevRun = entry.Prev.Format("2006-01-02 15:04:05")
+				}
+			} else {
+				jobInfo.Spec = "Disabled"
+				jobInfo.NextRun = "Disabled"
+			}
+		} else {
+			jobInfo.Spec = "Disabled"
+			jobInfo.NextRun = "Disabled"
+		}
+
+		jobs = append(jobs, jobInfo)
 	}
+
 	return jobs
 }
 
@@ -106,37 +143,36 @@ func TriggerJob(jobName string, jobID string) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	var entryID cron.EntryID
-	switch jobName {
-	case "AutoDownload Job":
-		entryID = autodownloadJobID
-	case "Refresh Media Items and Collections Job":
-		entryID = refreshMediaItemsAndCollectionsJobID
-	case "Refresh Mediux Users Job":
-		entryID = refreshMediuxUsersJobID
-	case "Check Mediux Site Link Availability Job":
-		entryID = checkMediuxSiteLinkJobID
-	case "Check for Media Item Changes Job":
-		entryID = checkForMediaItemChangesJobID
-	case "Handle Temp Ignored Items Job":
-		entryID = handleTempIgnoredItemsJobID
-	default:
+	descriptors := getJobDescriptors()
+	var matchedDesc *jobDescriptor
+	for i := range descriptors {
+		if descriptors[i].Name == jobName {
+			matchedDesc = &descriptors[i]
+			break
+		}
+	}
+
+	if matchedDesc == nil {
 		return fmt.Errorf("unknown job name: %s", jobName)
 	}
 
-	if entryID == 0 {
-		return fmt.Errorf("job not found or not scheduled: %s", jobName)
-	}
-
-	entry := c.Entry(entryID)
-	if entry.ID == 0 {
-		return fmt.Errorf("job entry not found for ID: %d", entryID)
-	}
-
 	go func() {
-		if entry.Job != nil {
-			manualPrevRun[entry.ID] = time.Now().Format("2006-01-02 15:04:05")
-			entry.Job.Run()
+		mu.Lock()
+		manualPrevRun[matchedDesc.Name] = time.Now().Format("2006-01-02 15:04:05")
+		entryID := *matchedDesc.EntryID
+		mu.Unlock()
+
+		if entryID != 0 && c != nil {
+			entry := c.Entry(entryID)
+			if entry.ID != 0 && entry.Job != nil {
+				entry.Job.Run()
+				return
+			}
+		}
+
+		// If the job is disabled in cron schedule, run its task directly
+		if matchedDesc.Runner != nil {
+			matchedDesc.Runner()
 		}
 	}()
 

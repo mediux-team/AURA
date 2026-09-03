@@ -19,6 +19,7 @@ func StartAutoDownloadJob() error {
 
 	if autodownloadJobID != 0 {
 		c.Remove(autodownloadJobID)
+		delete(jobSpecs, autodownloadJobID)
 		autodownloadJobID = 0
 	}
 
@@ -36,28 +37,7 @@ func StartAutoDownloadJob() error {
 	var err error
 
 	autodownloadJobID, err = c.AddFunc(spec, func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logging.LOGGER.Error().
-					Timestamp().
-					Interface("recover", r).
-					Str("stack", string(debug.Stack())).
-					Msg("PANIC: in scheduled AutoDownload Job")
-			}
-		}()
-		ctx, ld := logging.CreateLoggingContext(context.Background(), "Cron Job")
-		action := ld.AddAction("AutoDownload Check", logging.LevelInfo)
-		ctx = logging.WithCurrentAction(ctx, action)
-		Err := autodownload.CheckAllItems(ctx)
-		if Err.Message != "" {
-			logging.LOGGER.Error().Timestamp().Str("error", Err.Message).
-				Str("next_run", c.Entry(autodownloadJobID).Next.String()).
-				Msg("Error running AutoDownload Job")
-		} else {
-			logging.LOGGER.Info().Timestamp().
-				Str("next_run", c.Entry(autodownloadJobID).Next.String()).
-				Msg("AutoDownload Job Completed")
-		}
+		RunAutoDownloadJob()
 	})
 	if err != nil {
 		return err
@@ -70,44 +50,35 @@ func StartAutoDownloadJob() error {
 	return nil
 }
 
+func RunAutoDownloadJob() {
+	defer func() {
+		if r := recover(); r != nil {
+			logging.LOGGER.Error().
+				Timestamp().
+				Interface("recover", r).
+				Str("stack", string(debug.Stack())).
+				Msg("PANIC: in AutoDownload Job")
+		}
+	}()
+	ctx, ld := logging.CreateLoggingContext(context.Background(), "Cron Job")
+	action := ld.AddAction("AutoDownload Check", logging.LevelInfo)
+	ctx = logging.WithCurrentAction(ctx, action)
+	Err := autodownload.CheckAllItems(ctx)
+	if Err.Message != "" {
+		logging.LOGGER.Error().Timestamp().Str("error", Err.Message).
+			Msg("Error running AutoDownload Job")
+	} else {
+		logging.LOGGER.Info().Timestamp().
+			Msg("AutoDownload Job Completed")
+	}
+	ld.Log()
+}
+
 func RunAutoDownloadJobNow() {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if config.Current.AutoDownload.Enabled == false {
-		logging.LOGGER.Warn().Timestamp().Msg("AutoDownload is disabled, cannot run job")
-		return
-	}
-
-	if c == nil {
-		logging.LOGGER.Error().Timestamp().Msg("Cron Jobs Scheduler is not initialized")
-		return
-	}
-
-	if autodownloadJobID == 0 {
-		logging.LOGGER.Error().Timestamp().Msg("AutoDownload Job is not scheduled")
-		return
-	}
-
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logging.LOGGER.Error().Timestamp().Interface("recover", r).Msg("Panic in AutoDownload Job")
-			}
-		}()
-		ctx, ld := logging.CreateLoggingContext(context.Background(), "Manual Job Run")
-		action := ld.AddAction("AutoDownload Check", logging.LevelInfo)
-		ctx = logging.WithCurrentAction(ctx, action)
-		Err := autodownload.CheckAllItems(ctx)
-		if Err.Message != "" {
-			logging.LOGGER.Error().Timestamp().Str("error", Err.Message).
-				Str("next_run", c.Entry(autodownloadJobID).Next.String()).
-				Msg("Error running Manual AutoDownload Job")
-			return
-		} else {
-			logging.LOGGER.Info().Timestamp().
-				Str("next_run", c.Entry(autodownloadJobID).Next.String()).
-				Msg("Manual AutoDownload Job Completed")
-		}
+		RunAutoDownloadJob()
 	}()
 }
