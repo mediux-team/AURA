@@ -5,11 +5,20 @@ import (
 	"aura/logging"
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+// The download queue worker, Plex event listener and API handlers write concurrently.
+// WAL stops readers blocking the writer, the busy timeout makes writers wait instead of
+// failing, and immediate transactions take the write lock up front: a deferred
+// transaction that upgrades from read to write fails at once with SQLITE_BUSY.
+const sqliteBusyTimeoutMs = 30000
+
+var sqliteConnectionParams = fmt.Sprintf("?_journal_mode=WAL&_busy_timeout=%d&_txlock=immediate", sqliteBusyTimeoutMs)
 
 func (s *SQliteDB) Init(ctx context.Context) (newDB bool, Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx, "Initializing Database", logging.LevelInfo)
@@ -78,7 +87,7 @@ func (s *SQliteDB) GetDBConnection(ctx context.Context) (conn *sql.DB, newDB boo
 		logging.LOGGER.Warn().Timestamp().Msg("Database file not found. Creating new database.")
 	}
 
-	conn, openErr := sql.Open("sqlite3", dbPath)
+	conn, openErr := sql.Open("sqlite3", dbPath+sqliteConnectionParams)
 	if openErr != nil {
 		return conn, newDB, logging.LogErrorInfo{Message: openErr.Error()}
 	}

@@ -43,6 +43,23 @@ func (s *SQliteDB) Backup(ctx context.Context, currentVersion, newVersion int) (
 		return *logAction.Error
 	}
 
+	// Committed writes can still be in the WAL file; move them into the main file before copying it.
+	// A checkpoint blocked by another connection is reported in busy, not as an error.
+	var busy, walFrames, checkpointedFrames int
+	err := s.conn.QueryRowContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE)").Scan(&busy, &walFrames, &checkpointedFrames)
+	if err == nil && busy != 0 {
+		err = fmt.Errorf("checkpoint blocked by another connection")
+	}
+	if err != nil {
+		logAction.SetError("Failed to checkpoint database before backup",
+			"Ensure no other process is holding the database open.",
+			map[string]any{
+				"error": err.Error(),
+				"path":  dbPath,
+			})
+		return *logAction.Error
+	}
+
 	// Create a backup file with version and timestamp
 	// Create a backup file path with version and timestamp
 	timestamp := time.Now().Format("20060102_150405")
