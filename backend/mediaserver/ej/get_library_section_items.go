@@ -163,6 +163,7 @@ func (e *EJ) GetLibrarySectionItems(ctx context.Context, section models.LibraryS
 			item.HasMediuxSets = true
 		}
 
+		cache.LibraryStore.UpdateMediaItem(section.Title, &item)
 		items = append(items, item)
 	}
 
@@ -314,6 +315,7 @@ func splitCollectionIntoIndividualItems(ctx context.Context, collectionName, par
 			itemInfo.HasMediuxSets = true
 		}
 
+		cache.LibraryStore.UpdateMediaItem(sectionTitle, &itemInfo)
 		items = append(items, itemInfo)
 	}
 	return items, logging.LogErrorInfo{}
