@@ -35,6 +35,7 @@ import { ToggleGroup } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/cn";
 import { useSearchQueryStore } from "@/lib/stores/global-store-search-query";
 import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
+import { useHomePageStore } from "@/lib/stores/page-store-home";
 
 import { extractInfoFromSearchQuery } from "@/hooks/search-query";
 
@@ -441,6 +442,30 @@ export function FilterHome({
   }, [filteredLibraries.length, filterInDB, filterIgnored, hasSetsAvailableFilter]);
 
   const handleClearSession = () => {
+    useHomePageStore.getState().resetToSavedDefaults();
+    const prefs = useUserPreferencesStore.getState();
+    const defaultSort = prefs.defaultSort || "dateAdded";
+    const defaultSortOrder = (prefs.defaultSortOrder as "asc" | "desc") || "desc";
+    const defaultItemsPerPage = prefs.defaultItemsPerPage || 20;
+    const defaultLibraries = prefs.defaultLibraries || [];
+    const defaultFilterInDB = (prefs.defaultFilterInDB as TYPE_HOME_PAGE_FILTER_IN_DB_OPTIONS) || "";
+    const defaultFilterIgnored = (prefs.defaultFilterIgnored as TYPE_FILTER_IGNORED_OPTIONS) || "";
+    const defaultHasSetsAvailableFilter =
+      (prefs.defaultHasSetsAvailableFilter as TYPE_HOME_PAGE_FILTER_HAS_SETS_AVAILABLE_OPTIONS) || "";
+
+    setSortOption(defaultSort);
+    setSortOrder(defaultSortOrder);
+    setItemsPerPage(defaultItemsPerPage);
+    setFilteredLibraries(defaultLibraries);
+    setFilterInDB(defaultFilterInDB);
+    setFilterIgnored(defaultFilterIgnored);
+    setHasSetsAvailableFilter(defaultHasSetsAvailableFilter);
+    setCurrentPage(1);
+  };
+
+  const handleResetDefaults = () => {
+    useUserPreferencesStore.getState().resetHomeDefaults();
+    useHomePageStore.getState().resetToFactoryDefaults();
     setSortOption("dateAdded");
     setSortOrder("desc");
     setItemsPerPage(20);
@@ -449,11 +474,6 @@ export function FilterHome({
     setFilterIgnored("");
     setHasSetsAvailableFilter("");
     setCurrentPage(1);
-  };
-
-  const handleResetDefaults = () => {
-    useUserPreferencesStore.getState().resetHomeDefaults();
-    handleClearSession();
     setResetDefaultsFeedback(true);
     setTimeout(() => {
       setResetDefaultsFeedback(false);
@@ -470,6 +490,7 @@ export function FilterHome({
       filterIgnored,
       hasSetsAvailableFilter,
     });
+    useHomePageStore.setState({ sessionModified: false });
     setSavedDefault(true);
     setTimeout(() => {
       setSavedDefault(false);

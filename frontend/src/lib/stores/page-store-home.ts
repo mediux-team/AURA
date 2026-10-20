@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 import { PageStore } from "@/lib/stores/stores";
 import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
@@ -13,7 +13,15 @@ import type {
 } from "@/types/ui-options";
 import type { TYPE_HOME_PAGE_FILTER_IN_DB_OPTIONS } from "@/types/ui-options";
 
+// Clean up legacy IndexedDB entry if previously persisted there
+if (typeof window !== "undefined") {
+  PageStore.removeItem("Home").catch(() => {});
+}
+
 interface Home_PageStore extends SortStore<string, TYPE_SORT_ORDER_OPTIONS>, PaginationStore<number, number> {
+  // Session tracking
+  sessionModified: boolean;
+
   // Filters
   filteredLibraries: string[];
   setFilteredLibraries: (libraries: string[]) => void;
@@ -41,29 +49,31 @@ interface Home_PageStore extends SortStore<string, TYPE_SORT_ORDER_OPTIONS>, Pag
 export const useHomePageStore = create<Home_PageStore>()(
   persist(
     (set) => ({
+      sessionModified: false,
+
       sortOption: "dateAdded",
-      setSortOption: (option) => set({ sortOption: option }),
+      setSortOption: (option) => set({ sortOption: option, sessionModified: true }),
 
       sortOrder: "desc",
-      setSortOrder: (order) => set({ sortOrder: order }),
+      setSortOrder: (order) => set({ sortOrder: order, sessionModified: true }),
 
       currentPage: 1,
       setCurrentPage: (page) => set({ currentPage: page }),
 
       itemsPerPage: 20,
-      setItemsPerPage: (itemsPerPage) => set({ itemsPerPage }),
+      setItemsPerPage: (itemsPerPage) => set({ itemsPerPage, sessionModified: true }),
 
       filteredLibraries: [],
-      setFilteredLibraries: (libraries) => set({ filteredLibraries: libraries }),
+      setFilteredLibraries: (libraries) => set({ filteredLibraries: libraries, sessionModified: true }),
 
       filterInDB: "",
-      setFilterInDB: (filter) => set({ filterInDB: filter }),
+      setFilterInDB: (filter) => set({ filterInDB: filter, sessionModified: true }),
 
       filterIgnored: "",
-      setFilterIgnored: (ignored) => set({ filterIgnored: ignored }),
+      setFilterIgnored: (ignored) => set({ filterIgnored: ignored, sessionModified: true }),
 
       hasSetsAvailableFilter: "",
-      setHasSetsAvailableFilter: (filter) => set({ hasSetsAvailableFilter: filter }),
+      setHasSetsAvailableFilter: (filter) => set({ hasSetsAvailableFilter: filter, sessionModified: true }),
 
       previousMediaItem: null,
       setPreviousMediaItem: (mediaItem) => set({ previousMediaItem: mediaItem }),
@@ -84,6 +94,7 @@ export const useHomePageStore = create<Home_PageStore>()(
           filterInDB: "",
           filterIgnored: "",
           hasSetsAvailableFilter: "",
+          sessionModified: false,
         }),
 
       resetToSavedDefaults: () => {
@@ -98,6 +109,7 @@ export const useHomePageStore = create<Home_PageStore>()(
           filterIgnored: (prefs.defaultFilterIgnored as TYPE_FILTER_IGNORED_OPTIONS) || "",
           hasSetsAvailableFilter:
             (prefs.defaultHasSetsAvailableFilter as TYPE_HOME_PAGE_FILTER_HAS_SETS_AVAILABLE_OPTIONS) || "",
+          sessionModified: false,
         });
       },
 
@@ -114,12 +126,14 @@ export const useHomePageStore = create<Home_PageStore>()(
           previousMediaItem: null,
           nextMediaItem: null,
           hasHydrated: false,
+          sessionModified: false,
         }),
     }),
     {
       name: "Home",
-      storage: PageStore,
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
+        sessionModified: state.sessionModified,
         sortOption: state.sortOption,
         sortOrder: state.sortOrder,
         currentPage: state.currentPage,
@@ -131,7 +145,30 @@ export const useHomePageStore = create<Home_PageStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         state?.hydrate();
+        if (state && !state.sessionModified) {
+          state.resetToSavedDefaults();
+        }
       },
     }
   )
 );
+
+// Sync saved server preferences when user preferences load or change, if this session hasn't been modified
+useUserPreferencesStore.subscribe((state, prev) => {
+  if (typeof window === "undefined") return;
+  const homeStore = useHomePageStore.getState();
+  if (!homeStore.sessionModified) {
+    if (
+      state.defaultSort !== prev.defaultSort ||
+      state.defaultSortOrder !== prev.defaultSortOrder ||
+      state.defaultItemsPerPage !== prev.defaultItemsPerPage ||
+      state.defaultLibraries !== prev.defaultLibraries ||
+      state.defaultFilterInDB !== prev.defaultFilterInDB ||
+      state.defaultFilterIgnored !== prev.defaultFilterIgnored ||
+      state.defaultHasSetsAvailableFilter !== prev.defaultHasSetsAvailableFilter ||
+      (state.hasHydrated && !prev.hasHydrated)
+    ) {
+      homeStore.resetToSavedDefaults();
+    }
+  }
+});
