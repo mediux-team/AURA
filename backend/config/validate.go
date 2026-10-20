@@ -596,6 +596,28 @@ func ValidateUserPreferences(ctx context.Context, UserPreferences *Config_UserPr
 	}
 	UserPreferences.FavoriteCreators = favoriteCreators
 
+	// Validate and sanitize home view defaults
+	if UserPreferences.DefaultSort == "" {
+		UserPreferences.DefaultSort = "dateAdded"
+	}
+	if UserPreferences.DefaultSortOrder != "asc" && UserPreferences.DefaultSortOrder != "desc" {
+		UserPreferences.DefaultSortOrder = "desc"
+	}
+	if UserPreferences.DefaultItemsPerPage <= 0 {
+		UserPreferences.DefaultItemsPerPage = 20
+	} else if UserPreferences.DefaultItemsPerPage > 250 {
+		UserPreferences.DefaultItemsPerPage = 250
+	}
+	if UserPreferences.DefaultFilterInDB != "" && UserPreferences.DefaultFilterInDB != "inDB" && UserPreferences.DefaultFilterInDB != "notInDB" {
+		UserPreferences.DefaultFilterInDB = ""
+	}
+	if UserPreferences.DefaultFilterIgnored != "" && UserPreferences.DefaultFilterIgnored != "ignored" && UserPreferences.DefaultFilterIgnored != "notIgnored" {
+		UserPreferences.DefaultFilterIgnored = ""
+	}
+	if UserPreferences.DefaultHasSetsAvailableFilter != "" && UserPreferences.DefaultHasSetsAvailableFilter != "hasSetsAvailable" && UserPreferences.DefaultHasSetsAvailableFilter != "noSetsAvailable" {
+		UserPreferences.DefaultHasSetsAvailableFilter = ""
+	}
+
 	return isValid
 }
 

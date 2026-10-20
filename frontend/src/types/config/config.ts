@@ -209,4 +209,12 @@ export interface AppConfigUserPreferences {
   default_add_to_db_only: boolean; // Whether "Add to Database Only" is checked by default in the Download Modal
   auto_download_new_items: boolean; // Whether new items get images from the favorite creators automatically
   favorite_creators: string[]; // MediUX usernames ranked best first
+  default_sort?: string; // Default sort option on the Home page
+  default_sort_order?: "asc" | "desc"; // Default sort order on the Home page
+  default_items_per_page?: number; // Default items per page on the Home page
+  default_libraries?: string[]; // Default library sections filtered on the Home page
+  default_filter_in_db?: string; // Default filter for items in database
+  default_filter_ignored?: string; // Default filter for ignored items
+  default_has_sets_available_filter?: string; // Default filter for sets available
 }
+

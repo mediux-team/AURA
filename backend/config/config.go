@@ -305,11 +305,18 @@ type Config_SonarrRadarrApp struct {
 }
 
 type Config_UserPreferences struct {
-	DownloadDefaults         []string `json:"download_defaults" yaml:"DownloadDefaults"`                   // Image types selected by default in the Download Modal.
-	ShowOnlyDownloadDefaults bool     `json:"show_only_download_defaults" yaml:"ShowOnlyDownloadDefaults"` // Whether to only show the default image types in the Download Modal.
-	ShowDateModified         bool     `json:"show_date_modified" yaml:"ShowDateModified"`                  // Whether to show the date modified on poster sets.
-	DefaultAddToQueue        bool     `json:"default_add_to_queue" yaml:"DefaultAddToQueue"`               // Whether "Add to Queue" is checked by default in the Download Modal.
-	DefaultAddToDBOnly       bool     `json:"default_add_to_db_only" yaml:"DefaultAddToDBOnly"`            // Whether "Add to Database Only" is checked by default in the Download Modal.
-	AutoDownloadNewItems     bool     `json:"auto_download_new_items" yaml:"AutoDownloadNewItems"`         // Whether images are downloaded automatically for new items, from the favorite creators.
-	FavoriteCreators         []string `json:"favorite_creators" yaml:"FavoriteCreators"`                   // MediUX usernames ranked best first, the first is rank 1.
+	DownloadDefaults              []string `json:"download_defaults" yaml:"DownloadDefaults"`                                                  // Image types selected by default in the Download Modal.
+	ShowOnlyDownloadDefaults      bool     `json:"show_only_download_defaults" yaml:"ShowOnlyDownloadDefaults"`                                // Whether to only show the default image types in the Download Modal.
+	ShowDateModified              bool     `json:"show_date_modified" yaml:"ShowDateModified"`                                                 // Whether to show the date modified on poster sets.
+	DefaultAddToQueue             bool     `json:"default_add_to_queue" yaml:"DefaultAddToQueue"`                                              // Whether "Add to Queue" is checked by default in the Download Modal.
+	DefaultAddToDBOnly            bool     `json:"default_add_to_db_only" yaml:"DefaultAddToDBOnly"`                                           // Whether "Add to Database Only" is checked by default in the Download Modal.
+	AutoDownloadNewItems          bool     `json:"auto_download_new_items" yaml:"AutoDownloadNewItems"`                                        // Whether images are downloaded automatically for new items, from the favorite creators.
+	FavoriteCreators              []string `json:"favorite_creators" yaml:"FavoriteCreators"`                                                  // MediUX usernames ranked best first, the first is rank 1.
+	DefaultSort                   string   `json:"default_sort,omitempty" yaml:"DefaultSort,omitempty"`                                        // Default sort option on the Home page (e.g. dateAdded, title, releaseDate).
+	DefaultSortOrder              string   `json:"default_sort_order,omitempty" yaml:"DefaultSortOrder,omitempty"`                             // Default sort order on the Home page ("asc" or "desc").
+	DefaultItemsPerPage           int      `json:"default_items_per_page,omitempty" yaml:"DefaultItemsPerPage,omitempty"`                      // Default number of items per page on the Home page.
+	DefaultLibraries              []string `json:"default_libraries,omitempty" yaml:"DefaultLibraries,omitempty"`                              // Default library sections filtered on the Home page.
+	DefaultFilterInDB             string   `json:"default_filter_in_db,omitempty" yaml:"DefaultFilterInDB,omitempty"`                          // Default filter for saved items in database ("", "inDB", "notInDB").
+	DefaultFilterIgnored          string   `json:"default_filter_ignored,omitempty" yaml:"DefaultFilterIgnored,omitempty"`                     // Default filter for ignored items ("", "ignored", "notIgnored").
+	DefaultHasSetsAvailableFilter string   `json:"default_has_sets_available_filter,omitempty" yaml:"DefaultHasSetsAvailableFilter,omitempty"` // Default filter for available sets ("", "hasSetsAvailable", "noSetsAvailable").
 }

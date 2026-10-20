@@ -14,8 +14,8 @@ Auth.TrustProxyForCookieSecure: bool
 Backups.Keep: int
 Images.CacheImages.Enabled: bool
 Images.SaveImagesLocally.Enabled: bool
-Images.SaveImagesLocally.NameTemplates.Poster: string
 Images.SaveImagesLocally.NameTemplates.Backdrop: string
+Images.SaveImagesLocally.NameTemplates.Poster: string
 Images.SaveImagesLocally.NameTemplates.SeasonPoster: string
 Images.SaveImagesLocally.NameTemplates.SpecialSeasonPoster: string
 Images.SaveImagesLocally.NameTemplates.Titlecard: string
@@ -122,6 +122,13 @@ TMDB.ApiToken: string
 UserPreferences.AutoDownloadNewItems: bool
 UserPreferences.DefaultAddToDBOnly: bool
 UserPreferences.DefaultAddToQueue: bool
+UserPreferences.DefaultFilterIgnored: string
+UserPreferences.DefaultFilterInDB: string
+UserPreferences.DefaultHasSetsAvailableFilter: string
+UserPreferences.DefaultItemsPerPage: int
+UserPreferences.DefaultLibraries: []string
+UserPreferences.DefaultSort: string
+UserPreferences.DefaultSortOrder: string
 UserPreferences.DownloadDefaults: []string
 UserPreferences.FavoriteCreators: []string
 UserPreferences.ShowDateModified: bool
