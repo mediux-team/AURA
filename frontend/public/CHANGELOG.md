@@ -1,5 +1,17 @@
 ## [0.9.113] - 2026-10-21
 
+### Updated
+
+- Updated the [docs](https://mediux-team.github.io/AURA/) site with a new look
+
+### Fixed
+
+- Fixed wrong info on Sonarr & Radarr Settings page.
+
+---
+
+## [0.9.113] - 2026-10-21
+
 ### Fixed
 
 - Fixed aura opening the setup page on startup when the media server was still starting, for example when it starts in the same Docker Compose file. aura now waits up to 5 minutes for the media server and MediUX to be reachable.

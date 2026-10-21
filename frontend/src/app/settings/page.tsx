@@ -113,7 +113,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "sonarr-radarr",
     label: "Sonarr & Radarr",
-    description: "Sonarr and Radarr instances, used for webhooks and labels or tags.",
+    description: "Sonarr and Radarr instances, used for tags.",
     icon: Clapperboard,
     group: "Connections",
     configSection: "sonarr_radarr",
