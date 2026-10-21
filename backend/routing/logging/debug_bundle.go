@@ -199,7 +199,11 @@ func debugBundleInfo(ctx context.Context, cfg *config.Config, redactor *config.R
 			fmt.Fprintf(&b, "  Connection: %s\n", redactor.Text(connections[i]))
 		}
 		for _, library := range server.Libraries {
-			fmt.Fprintf(&b, "  Library: %s (%s)\n", library.Title, library.Type)
+			if library.Type == "" {
+				fmt.Fprintf(&b, "  Library: %s\n", library.Title)
+			} else {
+				fmt.Fprintf(&b, "  Library: %s (%s)\n", library.Title, library.Type)
+			}
 		}
 		if len(server.LibraryMap) > 0 {
 			mapped := make([]string, 0, len(server.LibraryMap))

@@ -1,3 +1,12 @@
+## [0.9.113] - 2026-10-21
+
+### Fixed
+
+- Fixed aura opening the setup page on startup when the media server was still starting, for example when it starts in the same Docker Compose file. aura now waits up to 5 minutes for the media server and MediUX to be reachable.
+- Fixed Jellyfin and Emby connection checks being logged with the wrong names
+
+---
+
 ## [0.9.112] - 2026-10-21
 
 ### Fixed

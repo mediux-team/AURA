@@ -12,7 +12,7 @@ import (
 )
 
 func (ej *EJ) TestConnection(ctx context.Context, msConfig config.Config_MediaServer) (connectionOK bool, serverName string, serverVersion string, Err logging.LogErrorInfo) {
-	ctx, logAction := logging.AddSubActionToContext(ctx, "%s: Checking Media Server Connection", msConfig.Type)
+	ctx, logAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("%s: Checking Media Server Connection", msConfig.Type), logging.LevelDebug)
 	defer logAction.Complete()
 
 	connectionOK = false
@@ -34,7 +34,7 @@ func (ej *EJ) TestConnection(ctx context.Context, msConfig config.Config_MediaSe
 
 	// Try up to 3 times with a 5 second delay between attempts
 	for attempt := 1; attempt <= 3; attempt++ {
-		attemptAction := logAction.AddSubAction(fmt.Sprintf("Attempt %d to connect to Jellyfin", attempt), logging.LevelTrace)
+		attemptAction := logAction.AddSubAction(fmt.Sprintf("Attempt %d to connect to %s", attempt, msConfig.Type), logging.LevelTrace)
 		resp, respBody, reqErr := makeRequest(ctx, msConfig, URL, "GET", nil)
 		if reqErr.Message != "" {
 			attemptAction.AppendWarning(fmt.Sprintf("attempt_%d", attempt), map[string]any{"error": reqErr.Message})

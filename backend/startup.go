@@ -99,9 +99,18 @@ func runPreFlight() (success bool) {
 	config.AppFullyLoaded = false
 
 	// Validate Media Server Connection
+	// The media server may still be starting, for example when it starts with aura, so it's tried for a while
 	config.SetAppLoadingStep("Validating Media Server Connection")
-	connectionOk, serverName, serverVersion, msErr := mediaserver.TestConnection(ctx, &config.Current.MediaServer)
-	if msErr.Message != "" || !connectionOk || serverVersion == "" || serverName == "" {
+	var serverName, serverVersion string
+	msErr := waitUntilReady(config.Current.MediaServer.Type, "Waiting for Media Server to Start", func() logging.LogErrorInfo {
+		connectionOk, name, version, Err := mediaserver.TestConnection(ctx, &config.Current.MediaServer)
+		if Err.Message == "" && (!connectionOk || name == "" || version == "") {
+			Err = logging.LogErrorInfo{Message: fmt.Sprintf("%s didn't return its name and version", config.Current.MediaServer.Type)}
+		}
+		serverName, serverVersion = name, version
+		return Err
+	})
+	if msErr.Message != "" {
 		config.MediaServerValid = false
 		return success
 	}
@@ -127,8 +136,11 @@ func runPreFlight() (success bool) {
 
 	// Validate MediUX Token
 	config.SetAppLoadingStep("Validating MediUX Token")
-	mediuxTokenValid, mediuxErr := mediux.ValidateToken(ctx, config.Current.Mediux.ApiToken)
-	if mediuxErr.Message != "" || !mediuxTokenValid {
+	mediuxErr := waitUntilReady("MediUX", "Waiting for MediUX", func() logging.LogErrorInfo {
+		_, Err := mediux.ValidateToken(ctx, config.Current.Mediux.ApiToken)
+		return Err
+	})
+	if mediuxErr.Message != "" {
 		config.MediuxValid = false
 		return success
 	}
