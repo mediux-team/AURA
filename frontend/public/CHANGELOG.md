@@ -4,6 +4,10 @@
 
 - Fixed adding a new notification provider (Discord, Pushover, Gotify or Webhook) failing to save with "unknown field enabled"
 
+### Updated
+
+- Updated frontend dependencies to latest versions for better security and performance.
+
 ---
 
 ## [0.9.111] - 2026-10-20
