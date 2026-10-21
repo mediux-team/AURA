@@ -1,0 +1,86 @@
+---
+title: Getting Started
+description: What you need to run aura, how to install it, and what happens the first time it starts.
+sidebar:
+    order: 1
+---
+
+import {
+	Aside,
+	CardGrid,
+	LinkCard,
+	Steps,
+} from "@astrojs/starlight/components";
+
+aura runs as a single Docker container. It serves its web interface on port `3000`, and keeps everything it needs (database, logs, backups) in a `/config` folder.
+
+## Before You Start
+
+You'll need:
+
+- **Docker**, or a NAS or server that runs Docker containers, such as Unraid or Synology.
+- **A media server**: Plex, Emby, Jellyfin or Silo, and an API token for it.
+- **A MediUX API token**, so aura can browse MediUX sets. See [MediUX settings](/AURA/settings/mediux/) for how to get one.
+
+## Install aura
+
+<CardGrid>
+	<LinkCard
+		title="Docker Compose"
+		description="The recommended way: a small file that describes the container."
+		href="/AURA/installation/docker-compose/"
+	/>
+	<LinkCard
+		title="Docker Run"
+		description="A single command, or building the image yourself."
+		href="/AURA/installation/docker-file/"
+	/>
+	<LinkCard
+		title="Unraid"
+		description="Install aura from Unraid Community Apps."
+		href="/AURA/installation/unraid/"
+	/>
+</CardGrid>
+
+## First Start
+
+The first time aura starts, it opens the **Onboarding** page to set it up. It opens again later if the configuration ever needs fixing, for example when the media server can't be reached.
+
+<Steps>
+
+1. **Enter the setup code.** So nobody else on your network can set up aura before you, the setup page asks for a code that aura prints in its logs. Get it with a command like `docker logs aura`:
+
+    ```txt
+    aura is in setup mode. Enter this setup code on the setup page: K7QM-3RXA
+    ```
+
+    The code changes every time aura starts, and is only needed while setting up. If authentication is already set up, you log in instead.
+
+2. **Go through the steps.** Onboarding walks through the same sections as the [Settings](/AURA/settings/) page: MediUX, your main media server, other media servers, authentication, images, Sonarr & Radarr, labels & tags, notifications and logging. Only MediUX and the main media server are required. Everything else can be set up later.
+
+3. **Review and finish.** aura checks the connections, saves the settings, and loads your libraries. Larger libraries take a few minutes the first time.
+
+</Steps>
+
+## The Config Folder
+
+aura stores its database (`AURA.db`, which also holds your settings and saved sets) and its logs in the `/config` folder. See [Config File & Environment Variables](/AURA/config/) to change these locations.
+
+<Aside type="caution" title="Use a local filesystem">
+	The `/config` folder must be on a local filesystem. A Docker volume or bind
+	mount is fine, including on a NAS, but a network share (NFS or SMB) is not
+	supported. The database relies on file locking that network shares don't
+	reliably provide.
+</Aside>
+
+- While aura is running, `AURA.db-wal` and `AURA.db-shm` files appear next to `AURA.db`. They're part of the database, and aura removes them when it stops. To copy the database by hand, stop aura first, or copy all three files together.
+- aura backs up the database every day to `/config/backups`, and keeps the last 7 backups. See [Backups](/AURA/settings/backups/) to change this or restore a backup.
+- aura also backs up the database before each database update, for example `AURA_backup_v7_to_v8_<timestamp>.db`.
+
+## Health Check
+
+The aura image has a built-in health check, so Docker, Unraid and Portainer show whether aura is healthy. Every 30 seconds it calls `http://127.0.0.1:8888/api/health` inside the container.
+
+- `/api/health` doesn't need a login. It answers with aura's status (`ok`, `starting` or `setup`), its version, and whether the database can be read.
+- If the database can't be read, the container is marked unhealthy after 3 failed checks.
+- A media server that can't be reached doesn't make aura unhealthy, because restarting aura wouldn't fix it.

@@ -1,0 +1,64 @@
+---
+title: Config File & Environment Variables
+description: Set aura up with a config.yaml file, the environment variables aura reads, and its API docs.
+---
+
+import { Aside, LinkCard, Steps } from "@astrojs/starlight/components";
+
+aura stores its settings in its database (`AURA.db` in the `/config` folder). Most people set aura up during [onboarding](/AURA/installation/#first-start) and change it on the [Settings](/AURA/settings/) page. You never need to edit a file.
+
+If you'd rather set aura up from a file, for example to script a deployment, you can use a `config.yaml` file. Each settings page has an **In the Config File** section with its options.
+
+## Using a config.yaml File
+
+<Steps>
+
+1. **Create a `config.yaml` file** with the settings you need. Settings you leave out use their defaults. The easiest way to start is to export one from **Settings > Advanced > Export Configuration**.
+
+2. **Put it in the `/config` folder** and start aura.
+
+3. On startup, aura imports the file into its database and renames it to `config.yaml.imported`.
+
+</Steps>
+
+Once the settings are in the database, aura ignores any new `config.yaml`. To import one again, replacing your current settings, set `AURA_IMPORT_CONFIG=true` and restart aura, or use **Import Configuration** in [Settings > Advanced](/AURA/settings/advanced/).
+
+<Aside type="caution">
+  The database and `config.yaml` contain your tokens and API keys. Keep them private. To share your settings when
+  asking for help, use a **redacted** export instead.
+</Aside>
+
+A minimal config file only needs MediUX and a media server. A single `MediaServer` becomes the main media server:
+
+```yaml title="config.yaml"
+Mediux:
+  ApiToken: YOUR_MEDIUX_API_TOKEN
+
+MediaServer:
+  Type: Plex
+  URL: http://192.168.1.10:32400
+  ApiToken: YOUR_PLEX_TOKEN
+  Libraries:
+    - Title: Movies
+    - Title: Series
+```
+
+To set up more than one media server, use `MediaServers` and `MainMediaServer`, as shown on the [Media Servers](/AURA/settings/media-servers/#in-the-config-file) page.
+
+## Environment Variables
+
+| Variable             | Default   | What it does                                                                                                                                       |
+| -------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CONFIG_PATH`        | `/config` | The folder aura keeps its database, logs, backups and cache in.                                                                                    |
+| `DATABASE_PATH`      | `AURA.db` | The database file. A relative path is relative to `CONFIG_PATH`. Older versions set this with `Database.Path` in `config.yaml`; if you changed it there, set this to the same value. |
+| `AURA_IMPORT_CONFIG` | `false`   | Set to `true` to import `config.yaml` on startup, even if the settings are already in the database.                                                |
+| `AURA_DISABLE_AUTH`  | `false`   | Set to `true` to turn off authentication if you're locked out. See [Locked Out?](/AURA/settings/authentication/#locked-out).                      |
+| `TZ`                 | `UTC`     | Your time zone, for example `America/New_York`. Used for job schedules and log times.                                                             |
+
+## API Docs
+
+aura has a REST API, which the web interface uses too. Its documentation is at `http://<your-aura-address>/swagger/index.html`, where you can also try it out. Use your [API key](/AURA/settings/authentication/#api-key) in the `X-Api-Key` header.
+
+## Settings Pages
+
+<LinkCard title="Settings Overview" description="Every settings section, with what each option does and its config file options." href="/AURA/settings/" />

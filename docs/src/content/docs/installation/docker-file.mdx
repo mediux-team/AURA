@@ -1,0 +1,61 @@
+---
+title: Docker Run
+description: Run aura with a single docker run command, or build the image yourself.
+sidebar:
+  order: 3
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+## Run the Published Image
+
+To start aura with a single command (change the paths, user and time zone to match your system):
+
+```bash
+docker run -d \
+  --name aura \
+  --restart unless-stopped \
+  --user 99:100 \
+  -p 3000:3000 \
+  -v /mnt/user/appdata/aura:/config \
+  -v /mnt/user/data/media:/data/media \
+  -e TZ=America/New_York \
+  ghcr.io/mediux-team/aura:latest
+```
+
+Then open `http://<your-server-ip>:3000` and follow the [First Start](/AURA/installation/#first-start) steps. See [The Volumes](/AURA/installation/docker-compose/#the-volumes) for what each folder is for.
+
+To update, pull the new image, then remove the container and run the same command again:
+
+```bash
+docker pull ghcr.io/mediux-team/aura:latest
+docker rm -f aura
+```
+
+## Build the Image Yourself
+
+If you'd rather build aura from its source code:
+
+<Steps>
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/mediux-team/aura.git
+   cd aura
+   ```
+
+2. **Build the image:**
+
+   ```bash
+   docker build -t aura .
+   ```
+
+3. **Run it** with the `docker run` command above, using `aura` as the image name instead of `ghcr.io/mediux-team/aura:latest`.
+
+</Steps>
+
+<Aside>
+  The Change Log page of an image you build yourself says it was built without build details, as it doesn't have the
+  build number and commit that official images have.
+</Aside>

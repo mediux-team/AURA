@@ -1,5 +1,6 @@
-_site
-.sass-cache
-.jekyll-cache
-.jekyll-metadata
-vendor
+# Build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/

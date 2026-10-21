@@ -29,11 +29,11 @@
 
 Movie being processed and the results in Plex
 
-![aura Movie Demo](docs/assets/demo/demo_movie.gif)
+![aura Movie Demo](docs/public/demo/demo_movie.gif)
 
 Series being processed and the results in Plex
 
-![aura Show Demo](docs/assets/demo/demo_show.gif)
+![aura Show Demo](docs/public/demo/demo_show.gif)
 
 ---
 

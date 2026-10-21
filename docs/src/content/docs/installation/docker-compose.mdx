@@ -1,0 +1,69 @@
+---
+title: Docker Compose
+description: Install and run aura with Docker Compose.
+sidebar:
+  order: 2
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Docker Compose is the easiest way to run aura and keep it up to date. The settings live in one file, so you can change them and recreate the container with a single command.
+
+<Steps>
+
+1. **Create a folder for aura**, for example `/opt/aura` or `/mnt/user/appdata/aura`, and create a file named `docker-compose.yml` in it:
+
+   ```yaml title="docker-compose.yml"
+   services:
+     aura:
+       image: ghcr.io/mediux-team/aura:latest
+       container_name: aura
+       restart: unless-stopped
+
+       # Optional: run as a non-root user
+       # Unraid: 99:100, Synology: 1026:100, Linux: run `id <username>` to find yours
+       user: "99:100"
+
+       ports:
+         - "3000:3000" # Web interface
+
+       volumes:
+         - /mnt/user/appdata/aura:/config # Database, logs and backups
+         - /mnt/user/data/media:/data/media # Your media, the same paths as your media server
+
+       environment:
+         - TZ=America/New_York # Your time zone, used for job schedules and log times
+   ```
+
+2. **Change the paths and time zone** to match your system. The two volumes are explained [below](#the-volumes).
+
+3. **Start aura:**
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Open the web interface** at `http://<your-server-ip>:3000` and follow the [First Start](/AURA/installation/#first-start) steps.
+
+</Steps>
+
+## The Volumes
+
+- **`/config`** holds the database, logs and backups. It must be on a local filesystem, not a network share.
+- **Your media folder** is only needed if you turn on [Save Images Locally](/AURA/settings/images/), which saves images next to your movies and shows. aura finds the files using the paths your media server reports, so the path inside the aura container must be **the same as inside your media server's container**. If your media server sees a movie at `/data/media/movies/Alien (1979)/Alien.mkv`, aura must see it at that path too.
+
+## Updating
+
+To update to the newest version:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Use the `beta` tag instead of `latest` to try new features before they're released. Beta images can have bugs, so back up your config folder first.
+
+<Aside>
+  The image is published to both GitHub Container Registry (`ghcr.io/mediux-team/aura`) and Docker Hub
+  (`mediux/aura`). Use whichever you prefer.
+</Aside>

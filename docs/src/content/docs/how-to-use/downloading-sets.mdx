@@ -1,0 +1,61 @@
+---
+title: Downloading Sets
+description: Choose which images to apply from a set, and how aura keeps the set up to date.
+sidebar:
+  order: 3
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+![The download button on a set](../../../assets/screenshots/download_modal_button.png)
+
+Click the **download** button on any set to open the download window. You choose which images to apply, and aura saves the set so it can keep it up to date.
+
+![The download window for a movie set](../../../assets/screenshots/download_modal_movie.png)
+
+## Choosing Images
+
+Each movie or show in the set has its own options. Click an image type to turn it on or off:
+
+- **Movies and collections**: Poster and Backdrop.
+- **Shows**: Poster, Backdrop, Season Posters, Special Season Poster (season 0) and Title Cards.
+
+Your [download defaults](/AURA/settings/user-preferences/#download-defaults) are turned on to start with. The window shows how many images will be downloaded and their total size.
+
+- **Already downloaded**: a type you've already downloaded from another saved set is marked, so you don't replace it by mistake. If the item is already saved, the window lists its other sets.
+- **Possible future types**: a type the set doesn't have yet, like title cards for a new season, can still be selected. aura saves it, and [Auto Download](#auto-download) downloads it when the creator adds it.
+
+![The download window for a show set](../../../assets/screenshots/download_modal_show.png)
+
+## Download Options
+
+### Auto Download
+
+aura checks the set for new and updated images and downloads them, for example title cards for a new season. The **Auto Download** job runs every night by default; see [Jobs](/AURA/how-to-use/jobs/). On by default.
+
+### Auto Upgrade
+
+Lets aura replace this set with one from a higher ranked [favorite creator](/AURA/settings/user-preferences/#automatically-upgrade-sets), when **Automatically Upgrade Sets** is on. Turn it off to keep this set.
+
+### Add to Database Only
+
+Saves the set without downloading anything. Use it for sets you've already applied some other way, so aura knows about them and can keep them up to date.
+
+### Auto Add New Collection Items (collection sets)
+
+When a movie is added to the collection later, aura downloads its images from this set.
+
+### Add to Queue
+
+Adds the set to the [Download Queue](/AURA/how-to-use/download-queue/) instead of downloading it while you wait. The queue downloads in the background, one set at a time, so you can close the window and queue up lots of sets quickly.
+
+## Downloading
+
+Click **Download**. The window shows each image's progress, and any that fail. Click **Retry** to try the failed ones again. When it's done, the set appears in [Saved Sets](/AURA/how-to-use/saved-sets/).
+
+**Reset Form** puts the options back to how they were when the window opened.
+
+<Aside>
+  In a boxset, the same movie can be in both a movie set and a collection set. The download window asks which one to
+  use, so the movie only gets one poster.
+</Aside>

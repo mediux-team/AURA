@@ -1,0 +1,62 @@
+---
+title: Sonarr Webhook Integration
+description: Have Sonarr tell aura when an episode file changes, so aura applies its title card and season poster again.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+When Sonarr imports, upgrades or renames an episode file, your media server sees it as a new file, and the episode loses the title card aura applied. With this webhook, Sonarr tells aura straight away, and aura applies the episode's title card and its season poster again from your saved set.
+
+<Aside>
+  The show must have a saved set in aura with title cards, season posters or special season posters selected.
+  Otherwise there's nothing to apply, and aura ignores the webhook.
+</Aside>
+
+## Setting Up the Webhook in Sonarr
+
+<Steps>
+
+1. **Generate an API key** in aura, under **Settings > Authentication > API Key**, if you haven't already. Copy it straight away, it's only shown once.
+
+2. **Open Sonarr** and go to **Settings > Connect**.
+
+3. Click **+** to add a connection, and choose **Webhook**.
+
+4. Fill in the connection:
+
+   - **Name**: `aura`, or any name you like.
+   - **Notification Triggers**: check **On File Import**, **On File Upgrade** and **On Rename**.
+   - **Webhook URL**:
+
+     ```txt
+     http://<AURA_HOST>:<AURA_PORT>/api/sonarr/webhook?library=4K%20Series
+     ```
+
+     - Replace `<AURA_HOST>` with the address of the server aura runs on.
+     - Replace `<AURA_PORT>` with the port you open aura on, `3000` by default.
+     - Replace `4K%20Series` with the name of the library, with spaces written as `%20`.
+
+   - **Method**: `POST`
+   - **Username**: anything. aura doesn't check it, but Sonarr needs one when a password is set.
+   - **Password**: your aura API key.
+   - **Tags** (optional): only send the webhook for series with these tags.
+
+5. Click **Test** to check that it works, then **Save**.
+
+</Steps>
+
+<Aside>
+  Sonarr's Webhook connection can't send custom headers, so it sends the API key as the password instead of in the
+  `X-Api-Key` header. When authentication is on in aura, the webhook needs the API key.
+</Aside>
+
+## Checking It Works
+
+<Steps>
+
+1. Upgrade or rename an episode file in Sonarr.
+2. Open the [Logs](/AURA/how-to-use/logs/) page in aura. You should see a request from Sonarr.
+3. After about 10 seconds, aura applies the episode's title card and season poster again. It waits so Sonarr and your media server can finish with the file first.
+4. If you've turned on the **Sonarr Notification** in [Notifications](/AURA/settings/notifications/), you'll get a notification too.
+
+</Steps>

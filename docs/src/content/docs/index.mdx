@@ -1,0 +1,107 @@
+---
+title: aura
+description: Welcome to the aura documentation site.
+template: splash
+hero:
+  tagline: The Automated Utility for Retrieval of Assets. Browse, preview and apply MediUX image sets to your Plex, Emby, Jellyfin and Silo libraries.
+  image:
+    file: ../../assets/screenshots/home_page.png
+  actions:
+    - text: Get started
+      link: /AURA/installation/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/mediux-team/aura
+      icon: github
+      variant: minimal
+---
+
+import { Aside, Card, CardGrid, LinkCard, LinkButton, Steps } from "@astrojs/starlight/components";
+
+<div class="badges">
+
+[![Version](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/mediux-team/aura/master/version.json)](https://github.com/mediux-team/aura/pkgs/container/aura)
+[![Build](https://img.shields.io/github/actions/workflow/status/mediux-team/aura/aura.yml?label=Latest%20Build&logo=githubactions)](https://github.com/mediux-team/aura/actions/workflows/aura.yml)
+[![Beta Build](https://img.shields.io/github/actions/workflow/status/mediux-team/aura/aura-beta.yml?label=Beta%20Build&logo=githubactions)](https://github.com/mediux-team/aura/actions/workflows/aura-beta.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/mediux/aura?label=Docker%20Pulls&logo=docker)](https://hub.docker.com/r/mediux/aura/tags)
+![GHCR](https://img.shields.io/badge/dynamic/json?label=GitHub%20Pulls&logo=Github&url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fmediux-team%2Faura%2Faura&query=downloadCount)
+
+</div>
+
+<Aside type="caution" title="Beta">
+  This tool is currently in beta. While it has been tested locally, please use it at your own risk.
+</Aside>
+
+## Key Features
+
+<CardGrid>
+  <Card title="Cross-Server Compatibility" icon="puzzle">
+    Works with Plex, Emby, Jellyfin and Silo.
+  </Card>
+  <Card title="Visual Browsing" icon="seti:image">
+    Preview artwork in a clean, organized interface.
+  </Card>
+  <Card title="Automated Updates" icon="random">
+    Save selected image sets and keep them synced automatically.
+  </Card>
+  <Card title="Local Storage" icon="download">
+    Option to store images next to your media files for easy access.
+  </Card>
+  <Card title="Docker Support" icon="seti:docker">
+    Easily deploy using Docker or docker-compose.
+  </Card>
+  <Card title="Notifications" icon="comment">
+    Get notified on Discord, Pushover, Gotify or a webhook when images are downloaded.
+  </Card>
+</CardGrid>
+
+## Demo
+
+Check out the demo of aura in action! You can see how it looks and works before installing.
+
+Movie being processed and the results in Plex
+
+<img src="/AURA/demo/demo_movie.gif" alt="aura Movie Demo" loading="lazy" />
+
+Series being processed and the results in Plex
+
+<img src="/AURA/demo/demo_show.gif" alt="aura Show Demo" loading="lazy" />
+
+## Getting Started
+
+<Steps>
+
+1. Install using Docker or docker-compose. See [Installation](/AURA/installation/).
+2. Visit the web UI at `http://localhost:3000`.
+3. Configure the application during the onboarding setup.
+4. Browse your media server's contents.
+5. Choose and apply MediUX image sets.
+6. Optionally save selections for automatic updates. See [How to Use](/AURA/how-to-use/).
+
+</Steps>
+
+<Aside title="MediUX API token">
+  In order to get an API token for testing, please join the Discord below. Once you have joined, make your way to
+  repo-chats > mediux-team/aura. There is a pinned message that contains a shared token you can use for testing. Once
+  the new MediUX site is live, you will be able to have your own token.
+</Aside>
+
+## Join the Community
+
+<CardGrid>
+  <LinkCard title="Join our Discord" description="Get help, share feedback and find the testing token." href="https://discord.gg/YAKzwKPwyw" />
+  <LinkCard title="View Source on GitHub" description="Report bugs, request features and follow development." href="https://github.com/mediux-team/aura" />
+</CardGrid>
+
+## Support aura
+
+If aura is useful to you, you can support its development:
+
+<LinkButton href="https://buymeacoffee.com/xmoosex" icon="heart" variant="secondary">Buy Me a Coffee</LinkButton>
+
+---
+
+<small>
+**AI Disclaimer:** While most of the code in this repository was written by hand, some of the PR's have been generated
+with the help of AI tools.
+</small>

@@ -1,0 +1,28 @@
+---
+title: Unraid
+description: Install and run aura on Unraid from Community Apps.
+sidebar:
+  order: 4
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+<Steps>
+
+1. **Find aura in Community Apps.** In the Unraid web interface, open the **Apps** tab, search for **aura**, and select the app by **mediux-team**.
+
+2. **Check the template settings:**
+
+   - **Config path** (`/config`): where aura keeps its database, logs and backups. The default, `/mnt/user/appdata/aura`, is fine.
+   - **Media path**: only needed if you turn on [Save Images Locally](/AURA/settings/images/). Map it the same way as in your media server's container, so aura sees your movies and shows at the same paths.
+   - **Web UI port**: `3000` by default.
+
+3. **Click Apply** and wait for the container to start.
+
+4. **Open the web interface** at `http://<your-unraid-ip>:3000` and follow the [First Start](/AURA/installation/#first-start) steps. Unraid's **WebUI** option on the container opens it too.
+
+</Steps>
+
+<Aside>
+  To see the setup code, open the container's **Logs** from the Docker tab.
+</Aside>

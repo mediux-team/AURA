@@ -1,0 +1,69 @@
+/* aura's font and colors, the same as the app */
+@font-face {
+  font-family: "Gabarito";
+  src: url("/AURA/fonts/Gabarito-VariableFont_wght.ttf") format("truetype");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+:root {
+  --sl-font: "Gabarito", system-ui, sans-serif;
+
+  /* Dark mode: aura's purple on a deep violet background */
+  --sl-color-accent-low: #2a1f55;
+  --sl-color-accent: #926dff;
+  --sl-color-accent-high: #ddd2ff;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #ebe8f5;
+  --sl-color-gray-2: #c3bdd8;
+  --sl-color-gray-3: #8f88a8;
+  --sl-color-gray-4: #5a5373;
+  --sl-color-gray-5: #3a3452;
+  --sl-color-gray-6: #1d1830;
+  --sl-color-black: #110e1d;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #e5dcff;
+  --sl-color-accent: #6a45e0;
+  --sl-color-accent-high: #2e1a73;
+  --sl-color-white: #15111f;
+  --sl-color-gray-1: #241e36;
+  --sl-color-gray-2: #3a3452;
+  --sl-color-gray-3: #5f587a;
+  --sl-color-gray-4: #8f88a8;
+  --sl-color-gray-5: #c3bdd8;
+  --sl-color-gray-6: #ece8f8;
+  --sl-color-gray-7: #f6f4fc;
+  --sl-color-black: #ffffff;
+}
+
+/* A soft purple glow behind the home page hero */
+[data-has-hero] .page {
+  background:
+    radial-gradient(ellipse 80% 45% at 50% -10%, color-mix(in srgb, var(--sl-color-accent) 22%, transparent), transparent 70%),
+    var(--sl-color-black);
+}
+
+.hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Screenshots get rounded corners and a border */
+.sl-markdown-content img:not(.badges img) {
+  border-radius: 0.6rem;
+  border: 1px solid var(--sl-color-gray-5);
+}
+
+/* Badge rows stay on one line where they fit */
+.badges p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+}
+.badges img {
+  border: none;
+  margin: 0;
+}

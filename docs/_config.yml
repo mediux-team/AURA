@@ -1,6 +1,0 @@
-baseurl: ""
-title: Docs | aura
-baseurl: "/AURA"
-# Build settings
-remote_theme: just-the-docs/just-the-docs
-color_scheme: "dark"
