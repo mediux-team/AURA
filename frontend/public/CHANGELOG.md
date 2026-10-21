@@ -1,3 +1,11 @@
+## [0.9.112] - 2026-10-21
+
+### Fixed
+
+- Fixed adding a new notification provider (Discord, Pushover, Gotify or Webhook) failing to save with "unknown field enabled"
+
+---
+
 ## [0.9.111] - 2026-10-20
 
 ### Added

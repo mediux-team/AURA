@@ -238,25 +238,25 @@ export const ConfigSectionNotifications: React.FC<ConfigSectionNotificationsProp
       newEntry = {
         provider: "Discord",
         enabled: true,
-        discord: { enabled: true, webhook: "" },
+        discord: { webhook: "" },
       };
     } else if (type === "Pushover") {
       newEntry = {
         provider: "Pushover",
         enabled: true,
-        pushover: { enabled: true, user_key: "", api_token: "" },
+        pushover: { user_key: "", api_token: "" },
       };
     } else if (type === "Gotify") {
       newEntry = {
         provider: "Gotify",
         enabled: true,
-        gotify: { enabled: true, url: "", api_token: "" },
+        gotify: { url: "", api_token: "" },
       };
     } else if (type === "Webhook") {
       newEntry = {
         provider: "Webhook",
         enabled: true,
-        webhook: { enabled: true, url: "", headers: {} },
+        webhook: { url: "", headers: {} },
       };
     } else {
       return;

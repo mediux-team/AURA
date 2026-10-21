@@ -146,24 +146,20 @@ export interface AppConfigNotificationProviders {
 }
 
 export interface AppConfigNotificationDiscord {
-  enabled: boolean;
   webhook: string;
 }
 
 export interface AppConfigNotificationPushover {
-  enabled: boolean;
   user_key: string;
   api_token: string;
 }
 
 export interface AppConfigNotificationGotify {
-  enabled: boolean;
   url: string;
   api_token: string;
 }
 
 export interface AppConfigNotificationWebhook {
-  enabled: boolean;
   url: string;
   headers: { [key: string]: string }; // Key-value pairs for custom headers
 }
