@@ -1,4 +1,4 @@
-name: Docker Image CI and Release for aura Beta
+name: aura - Docker Image CI and Release (Beta)
 
 on:
     workflow_dispatch:

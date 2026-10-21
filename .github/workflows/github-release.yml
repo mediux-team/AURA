@@ -1,4 +1,4 @@
-name: Create GitHub Release
+name: aura - Create GitHub Release
 
 on:
     workflow_dispatch:
