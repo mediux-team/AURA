@@ -339,6 +339,14 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   {
     sectionId: "user-preferences",
     sectionLabel: "User Preferences",
+    label: "Auto Add New Collection Items by Default",
+    description: 'Check "Auto Add New Collection Items" when downloading a collection set',
+    keywords: ["collection", "auto add", "new movies", "download"],
+    configPath: "default_auto_add_new_collection_items",
+  },
+  {
+    sectionId: "user-preferences",
+    sectionLabel: "User Preferences",
     label: "Show Date Modified",
     description: "Show when poster sets were last modified",
     keywords: ["date", "modified", "updated"],

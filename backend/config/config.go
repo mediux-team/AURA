@@ -316,13 +316,14 @@ type Config_SonarrRadarrApp struct {
 }
 
 type Config_UserPreferences struct {
-	DownloadDefaults         []string                  `json:"download_defaults" yaml:"DownloadDefaults"`                   // Image types selected by default in the Download Modal.
-	ShowOnlyDownloadDefaults bool                      `json:"show_only_download_defaults" yaml:"ShowOnlyDownloadDefaults"` // Whether to only show the default image types in the Download Modal.
-	ShowDateModified         bool                      `json:"show_date_modified" yaml:"ShowDateModified"`                  // Whether to show the date modified on poster sets.
-	DefaultAddToQueue        bool                      `json:"default_add_to_queue" yaml:"DefaultAddToQueue"`               // Whether "Add to Queue" is checked by default in the Download Modal.
-	DefaultAddToDBOnly       bool                      `json:"default_add_to_db_only" yaml:"DefaultAddToDBOnly"`            // Whether "Add to Database Only" is checked by default in the Download Modal.
-	AutoDownloadNewItems     bool                      `json:"auto_download_new_items" yaml:"AutoDownloadNewItems"`         // Whether images are downloaded automatically for new items, from the favorite creators.
-	AutoUpgradeSets          bool                      `json:"auto_upgrade_sets" yaml:"AutoUpgradeSets"`                    // Whether to automatically upgrade sets when available.
-	FavoriteCreators         []string                  `json:"favorite_creators" yaml:"FavoriteCreators"`
-	PageViews                map[string]map[string]any `json:"page_views" yaml:"PageViews,omitempty"` // Each page's sort and filter options, by page, so they're the same on every device.                                                  // MediUX usernames ranked best first, the first is rank 1.
+	DownloadDefaults                 []string                  `json:"download_defaults" yaml:"DownloadDefaults"`                                     // Image types selected by default in the Download Modal.
+	ShowOnlyDownloadDefaults         bool                      `json:"show_only_download_defaults" yaml:"ShowOnlyDownloadDefaults"`                   // Whether to only show the default image types in the Download Modal.
+	ShowDateModified                 bool                      `json:"show_date_modified" yaml:"ShowDateModified"`                                    // Whether to show the date modified on poster sets.
+	DefaultAddToQueue                bool                      `json:"default_add_to_queue" yaml:"DefaultAddToQueue"`                                 // Whether "Add to Queue" is checked by default in the Download Modal.
+	DefaultAddToDBOnly               bool                      `json:"default_add_to_db_only" yaml:"DefaultAddToDBOnly"`                              // Whether "Add to Database Only" is checked by default in the Download Modal.
+	DefaultAutoAddNewCollectionItems bool                      `json:"default_auto_add_new_collection_items" yaml:"DefaultAutoAddNewCollectionItems"` // Whether "Auto Add New Collection Items" is checked by default in the Download Modal.
+	AutoDownloadNewItems             bool                      `json:"auto_download_new_items" yaml:"AutoDownloadNewItems"`                           // Whether images are downloaded automatically for new items, from the favorite creators.
+	AutoUpgradeSets                  bool                      `json:"auto_upgrade_sets" yaml:"AutoUpgradeSets"`                                      // Whether to automatically upgrade sets when available.
+	FavoriteCreators                 []string                  `json:"favorite_creators" yaml:"FavoriteCreators"`                                     // MediUX usernames ranked best first, the first is rank 1.
+	PageViews                        map[string]map[string]any `json:"page_views" yaml:"PageViews,omitempty"`                                         // Each page's sort and filter options, by page, so they're the same on every device.
 }

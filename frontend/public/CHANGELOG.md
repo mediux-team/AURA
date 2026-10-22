@@ -1,4 +1,12 @@
-## [0.9.113] - 2026-10-21
+## [0.9.115] - 2026-10-22
+
+### Added
+
+- Added option to have "Auto Add New Collection Items" checked by default in the Download Modal for better user experience.
+
+---
+
+## [0.9.114] - 2026-10-21
 
 ### Updated
 

@@ -78,6 +78,7 @@ export const defaultAppConfig = (): AppConfig =>
       show_only_download_defaults: false,
       show_date_modified: false,
       default_add_to_queue: false,
+      default_auto_add_new_collection_items: false,
       default_add_to_db_only: false,
       auto_download_new_items: false,
       auto_upgrade_sets: false,

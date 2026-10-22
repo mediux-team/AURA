@@ -558,12 +558,17 @@ definitions:
         description: Whether "Add to Queue" is checked by default in the Download
           Modal.
         type: boolean
+      default_auto_add_new_collection_items:
+        description: Whether "Auto Add New Collection Items" is checked by default
+          in the Download Modal.
+        type: boolean
       download_defaults:
         description: Image types selected by default in the Download Modal.
         items:
           type: string
         type: array
       favorite_creators:
+        description: MediUX usernames ranked best first, the first is rank 1.
         items:
           type: string
         type: array
@@ -572,8 +577,7 @@ definitions:
           additionalProperties: {}
           type: object
         description: Each page's sort and filter options, by page, so they're the
-          same on every device.                                                  //
-          MediUX usernames ranked best first, the first is rank 1.
+          same on every device.
         type: object
       show_date_modified:
         description: Whether to show the date modified on poster sets.
@@ -1245,6 +1249,11 @@ definitions:
     type: object
   models.DBSavedItem:
     properties:
+      collection_images:
+        allOf:
+        - $ref: '#/definitions/models.QueuedCollectionImages'
+        description: A collection's own poster and backdrop, applied to the media
+          server collection after the sets. They aren't saved.
       media_item:
         $ref: '#/definitions/models.MediaItem'
       poster_sets:
@@ -1520,6 +1529,15 @@ definitions:
           $ref: '#/definitions/models.SetRef'
         type: array
     type: object
+  models.QueuedCollectionImages:
+    properties:
+      collection:
+        $ref: '#/definitions/models.CollectionItem'
+      images:
+        items:
+          $ref: '#/definitions/models.ImageFile'
+        type: array
+    type: object
   models.SelectedTypes:
     properties:
       backdrop:
@@ -1535,6 +1553,11 @@ definitions:
     type: object
   models.SetRef:
     properties:
+      collection:
+        allOf:
+        - $ref: '#/definitions/models.CollectionItem'
+        description: For a collection set on a movie's page, the media server collection
+          its collection images apply to
       date_created:
         description: Creation date
         type: string

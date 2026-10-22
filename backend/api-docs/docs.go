@@ -5736,6 +5736,10 @@ const docTemplate = `{
                     "description": "Whether \"Add to Queue\" is checked by default in the Download Modal.",
                     "type": "boolean"
                 },
+                "default_auto_add_new_collection_items": {
+                    "description": "Whether \"Auto Add New Collection Items\" is checked by default in the Download Modal.",
+                    "type": "boolean"
+                },
                 "download_defaults": {
                     "description": "Image types selected by default in the Download Modal.",
                     "type": "array",
@@ -5744,13 +5748,14 @@ const docTemplate = `{
                     }
                 },
                 "favorite_creators": {
+                    "description": "MediUX usernames ranked best first, the first is rank 1.",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "page_views": {
-                    "description": "Each page's sort and filter options, by page, so they're the same on every device.                                                  // MediUX usernames ranked best first, the first is rank 1.",
+                    "description": "Each page's sort and filter options, by page, so they're the same on every device.",
                     "type": "object",
                     "additionalProperties": {
                         "type": "object",
@@ -6729,6 +6734,14 @@ const docTemplate = `{
         "models.DBSavedItem": {
             "type": "object",
             "properties": {
+                "collection_images": {
+                    "description": "A collection's own poster and backdrop, applied to the media server collection after the sets. They aren't saved.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.QueuedCollectionImages"
+                        }
+                    ]
+                },
                 "media_item": {
                     "$ref": "#/definitions/models.MediaItem"
                 },
@@ -7134,6 +7147,20 @@ const docTemplate = `{
                 }
             }
         },
+        "models.QueuedCollectionImages": {
+            "type": "object",
+            "properties": {
+                "collection": {
+                    "$ref": "#/definitions/models.CollectionItem"
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ImageFile"
+                    }
+                }
+            }
+        },
         "models.SelectedTypes": {
             "type": "object",
             "properties": {
@@ -7157,6 +7184,14 @@ const docTemplate = `{
         "models.SetRef": {
             "type": "object",
             "properties": {
+                "collection": {
+                    "description": "For a collection set on a movie's page, the media server collection its collection images apply to",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.CollectionItem"
+                        }
+                    ]
+                },
                 "date_created": {
                     "description": "Creation date",
                     "type": "string"

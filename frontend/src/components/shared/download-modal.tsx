@@ -313,6 +313,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const autoUpgradeSets = useUserPreferencesStore((state) => state.autoUpgradeSets);
 
   // State - Add New Collection Items
+const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
   const [autoAddNewCollectionItems, setAutoAddNewCollectionItems] = useState(false);
 
   // User Preferences
@@ -1822,6 +1823,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       onOpenChange={(open) => {
         if (open) {
           setAddToQueueOnly(defaultAddToQueue);
+setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
         } else {
           handleClose();
         }

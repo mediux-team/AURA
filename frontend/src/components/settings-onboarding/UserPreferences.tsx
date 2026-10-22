@@ -23,6 +23,10 @@ export function UserPreferencesCard() {
   const setDefaultAddToQueue = useUserPreferencesStore((state) => state.setDefaultAddToQueue);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const setDefaultAddToDBOnly = useUserPreferencesStore((state) => state.setDefaultAddToDBOnly);
+  const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
+  const setDefaultAutoAddNewCollectionItems = useUserPreferencesStore(
+    (state) => state.setDefaultAutoAddNewCollectionItems
+  );
 
   // View Density
   const { densityStep, setDensityStep } = useViewDensity();
@@ -164,6 +168,22 @@ export function UserPreferencesCard() {
               <p className="text-muted-foreground">
                 You can still uncheck it in the download modal to download the images.
               </p>
+            </PopoverHelp>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <Label>Auto Add New Collection Items by Default</Label>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={defaultAutoAddNewCollectionItems}
+              onCheckedChange={() => setDefaultAutoAddNewCollectionItems(!defaultAutoAddNewCollectionItems)}
+            />
+            <PopoverHelp ariaLabel="help-default-auto-add-new-collection-items">
+              <p className="mb-2">
+                If checked, 'Auto Add New Collection Items' will be selected when opening the download modal for a
+                collection set. Movies added to the collection later then get their images from the set automatically.
+              </p>
+              <p className="text-muted-foreground">You can still uncheck it in the download modal.</p>
             </PopoverHelp>
           </div>
         </div>

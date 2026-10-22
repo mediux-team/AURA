@@ -61,6 +61,10 @@ function MediaItemFilterContent({
   const setDefaultAddToQueue = useUserPreferencesStore((state) => state.setDefaultAddToQueue);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const setDefaultAddToDBOnly = useUserPreferencesStore((state) => state.setDefaultAddToDBOnly);
+const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
+  const setDefaultAutoAddNewCollectionItems = useUserPreferencesStore(
+    (state) => state.setDefaultAutoAddNewCollectionItems
+  );
 
   return (
     <div className="flex-grow space-y-4 overflow-y-auto px-4 py-2">
@@ -177,6 +181,30 @@ function MediaItemFilterContent({
             <p className="mb-2">
               If checked, 'Add to Database Only' will be selected for each item when opening the download modal, so the
               sets are saved without downloading any images.
+            </p>
+            <p className="text-muted-foreground">
+              You can always change this setting in this filter, or in the Settings Page{" "}
+              <Link href="/settings#preferences-section" className="underline">
+                User Preferences
+              </Link>{" "}
+              Section.
+            </p>
+          </PopoverHelp>
+        </div>
+<div className="flex items-center space-x-2 justify-between mt-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              className="ml-0"
+              checked={defaultAutoAddNewCollectionItems}
+              onCheckedChange={() => setDefaultAutoAddNewCollectionItems(!defaultAutoAddNewCollectionItems)}
+            />{" "}
+            <Label>Auto Add New Collection Items by default</Label>
+          </div>
+
+          <PopoverHelp ariaLabel="help-default-auto-add-new-collection-items">
+            <p className="mb-2">
+              If checked, 'Auto Add New Collection Items' will be selected when opening the download modal for a
+              collection set. Movies added to the collection later then get their images from the set automatically.
             </p>
             <p className="text-muted-foreground">
               You can always change this setting in this filter, or in the Settings Page{" "}
