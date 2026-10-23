@@ -45,14 +45,28 @@ export function CarouselDisplay({
                 ? set.images.filter((img) => img.type === "collection_backdrop")
                 : [];
               if (collectionPosters.length === 0 && collectionBackdrops.length === 0) return null;
+              // set.collection is only set when the collection is on the media server
+              const collectionClassName = `w-full ${!set.collection && dimNotFound ? "opacity-35" : ""}`;
               return (
                 <CarouselItem key={`${set.id}-collection`}>
                   <div className="space-y-2">
                     {collectionPosters.map((img) => (
-                      <AssetImage key={img.id} image={img} imageType="mediux" aspect="poster" className="w-full" />
+                      <AssetImage
+                        key={img.id}
+                        image={img}
+                        imageType="mediux"
+                        aspect="poster"
+                        className={collectionClassName}
+                      />
                     ))}
                     {collectionBackdrops.map((img) => (
-                      <AssetImage key={img.id} image={img} imageType="mediux" aspect="backdrop" className="w-full" />
+                      <AssetImage
+                        key={img.id}
+                        image={img}
+                        imageType="mediux"
+                        aspect="backdrop"
+                        className={collectionClassName}
+                      />
                     ))}
                   </div>
                 </CarouselItem>
