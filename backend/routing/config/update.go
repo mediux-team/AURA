@@ -261,6 +261,11 @@ func checkConfigDifferences_Auth(ctx context.Context, oldAuth config.Config_Auth
 			changed = true
 		}
 
+		if oldAuth.PasswordEnabled != newAuth.PasswordEnabled {
+			logAction.AppendResult("Auth.PasswordEnabled changed", fmt.Sprintf("from '%v' to '%v'", oldAuth.PasswordEnabled, newAuth.PasswordEnabled))
+			changed = true
+		}
+
 		if oldAuth.OIDC.Enabled != newAuth.OIDC.Enabled {
 			logAction.AppendResult("Auth.OIDC.Enabled changed", fmt.Sprintf("from '%v' to '%v'", oldAuth.OIDC.Enabled, newAuth.OIDC.Enabled))
 			changed = true
@@ -268,7 +273,7 @@ func checkConfigDifferences_Auth(ctx context.Context, oldAuth config.Config_Auth
 
 		if oldAuth.OIDC.IssuerURL != newAuth.OIDC.IssuerURL ||
 			oldAuth.OIDC.ClientID != newAuth.OIDC.ClientID ||
-			oldAuth.OIDC.RedirectURL != newAuth.OIDC.RedirectURL ||
+			!reflect.DeepEqual(oldAuth.OIDC.RedirectURLs, newAuth.OIDC.RedirectURLs) ||
 			!reflect.DeepEqual(oldAuth.OIDC.AllowedEmails, newAuth.OIDC.AllowedEmails) ||
 			!reflect.DeepEqual(oldAuth.OIDC.AllowedDomains, newAuth.OIDC.AllowedDomains) {
 			changed = true

@@ -77,8 +77,9 @@ type Config_Dev struct {
 	LocalPath string `json:"local_path" yaml:"LocalPath,omitempty"` // Local path for development mode.
 }
 type Config_Auth struct {
-	Enabled  bool   `json:"enabled" yaml:"Enabled"`             // Whether to enable authentication.
-	Password string `json:"password" yaml:"Password,omitempty"` // Password for authentication.
+	Enabled         bool   `json:"enabled" yaml:"Enabled"`                  // Whether to enable authentication.
+	PasswordEnabled bool   `json:"password_enabled" yaml:"PasswordEnabled"` // Whether logging in with the password is allowed. Turn it off to only log in with Single Sign-On.
+	Password        string `json:"password" yaml:"Password,omitempty"`      // Password for authentication.
 
 	// APIKeyHash is the Argon2id hash of the single global API key used for programmatic/integration
 	// access (e.g. Sonarr/Radarr webhooks, scripts, other apps).
@@ -106,7 +107,7 @@ type Config_Auth_OIDC struct {
 	IssuerURL      string   `json:"issuer_url,omitempty" yaml:"IssuerURL,omitempty"`           // OIDC issuer URL (used for discovery).
 	ClientID       string   `json:"client_id,omitempty" yaml:"ClientID,omitempty"`             // OIDC client ID.
 	ClientSecret   string   `json:"client_secret,omitempty" yaml:"ClientSecret,omitempty"`     // OIDC client secret.
-	RedirectURL    string   `json:"redirect_url,omitempty" yaml:"RedirectURL,omitempty"`       // Full callback URL registered with the IdP, e.g. https://aura.example.com/api/auth/oidc/callback.
+	RedirectURLs   []string `json:"redirect_urls,omitempty" yaml:"RedirectURLs,omitempty"`     // Callback URLs registered with the IdP, one for each address aura is opened at, e.g. https://aura.example.com/api/auth/oidc/callback.
 	AllowedEmails  []string `json:"allowed_emails,omitempty" yaml:"AllowedEmails,omitempty"`   // Optional allowlist of exact emails permitted to log in via OIDC. Empty = any authenticated IdP user is allowed.
 	AllowedDomains []string `json:"allowed_domains,omitempty" yaml:"AllowedDomains,omitempty"` // Optional allowlist of email domains (e.g. "example.com") permitted to log in via OIDC. Empty = any domain allowed.
 }

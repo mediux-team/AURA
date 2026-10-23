@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -16,6 +17,12 @@ import (
 )
 
 const oidcStateCookieName = "aura_oidc_state"
+
+// The Redirect URL the login started with, so the callback completes it with the same one
+const oidcRedirectCookieName = "aura_oidc_redirect"
+
+// The PKCE code verifier, so a stolen login code can't be used without it
+const oidcVerifierCookieName = "aura_oidc_verifier"
 const oidcStateTTLSeconds = 5 * 60
 
 var (
@@ -38,14 +45,22 @@ func InitOIDC(ctx context.Context) (Err logging.LogErrorInfo) {
 		return logging.LogErrorInfo{}
 	}
 
-	// The Redirect URL must point to aura's OIDC callback, otherwise the login can never complete
-	redirectURL, err := url.Parse(cfg.RedirectURL)
-	if err != nil || !strings.HasSuffix(strings.TrimRight(redirectURL.Path, "/"), "/api/auth/oidc/callback") {
-		logging.LOGGER.Error().Timestamp().Str("redirect_url", cfg.RedirectURL).Msg("OIDC Redirect URL does not point to aura's OIDC callback - OIDC login will be unavailable until this is fixed")
+	// Each Redirect URL must point to aura's OIDC callback, otherwise the login can never complete
+	if len(cfg.RedirectURLs) == 0 {
 		return logging.LogErrorInfo{
-			Message: "OIDC Redirect URL must point to aura's OIDC callback",
-			Help:    "Set it to your aura URL followed by /api/auth/oidc/callback (e.g. https://aura.example.com/api/auth/oidc/callback), and register the same URL with your identity provider",
-			Detail:  map[string]any{"redirect_url": cfg.RedirectURL},
+			Message: "OIDC needs at least one Redirect URL",
+			Help:    "Add your aura URL followed by /api/auth/oidc/callback (e.g. https://aura.example.com/api/auth/oidc/callback), and register the same URL with your identity provider",
+		}
+	}
+	for _, redirect := range cfg.RedirectURLs {
+		redirectURL, err := url.Parse(redirect)
+		if err != nil || !strings.HasSuffix(strings.TrimRight(redirectURL.Path, "/"), config.OIDCCallbackPath) {
+			logging.LOGGER.Error().Timestamp().Str("redirect_url", redirect).Msg("OIDC Redirect URL does not point to aura's OIDC callback - OIDC login will be unavailable until this is fixed")
+			return logging.LogErrorInfo{
+				Message: "OIDC Redirect URL must point to aura's OIDC callback",
+				Help:    "Set it to your aura URL followed by /api/auth/oidc/callback (e.g. https://aura.example.com/api/auth/oidc/callback), and register the same URL with your identity provider",
+				Detail:  map[string]any{"redirect_url": redirect},
+			}
 		}
 	}
 
@@ -63,7 +78,7 @@ func InitOIDC(ctx context.Context) (Err logging.LogErrorInfo) {
 	oidcOAuth2Cfg = &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		RedirectURL:  cfg.RedirectURL,
+		RedirectURL:  cfg.RedirectURLs[0],
 		Endpoint:     provider.Endpoint(),
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 	}
@@ -96,17 +111,60 @@ func OIDCLoginRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setOIDCLoginCookie(w, r, oidcStateCookieName, state)
+
+	// Come back to the address the login started from, when it has a Redirect URL
+	redirectIndex := redirectURLIndexForOrigin(r.URL.Query().Get("origin"))
+	setOIDCLoginCookie(w, r, oidcRedirectCookieName, strconv.Itoa(redirectIndex))
+
+	verifier := oauth2.GenerateVerifier()
+	setOIDCLoginCookie(w, r, oidcVerifierCookieName, verifier)
+
+	redirectURL := config.Current.Auth.OIDC.RedirectURLs[redirectIndex]
+	http.Redirect(w, r, oidcOAuth2Cfg.AuthCodeURL(state,
+		oauth2.SetAuthURLParam("redirect_uri", redirectURL),
+		oauth2.S256ChallengeOption(verifier),
+	), http.StatusFound)
+}
+
+// setOIDCLoginCookie keeps a value until the identity provider sends the browser back
+func setOIDCLoginCookie(w http.ResponseWriter, r *http.Request, name, value string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     oidcStateCookieName,
-		Value:    state,
+		Name:     name,
+		Value:    value,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   resolveSecure(r),
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   oidcStateTTLSeconds,
 	})
+}
 
-	http.Redirect(w, r, oidcOAuth2Cfg.AuthCodeURL(state), http.StatusFound)
+// redirectURLIndexForOrigin returns the Redirect URL with the same scheme and host as the origin.
+// Only the configured URLs can be picked, an origin without one uses the first.
+func redirectURLIndexForOrigin(origin string) int {
+	originURL, err := url.Parse(strings.TrimSpace(origin))
+	if err != nil || originURL.Host == "" {
+		return 0
+	}
+	for i, redirect := range config.Current.Auth.OIDC.RedirectURLs {
+		redirectURL, err := url.Parse(redirect)
+		if err == nil && strings.EqualFold(redirectURL.Scheme, originURL.Scheme) && strings.EqualFold(redirectURL.Host, originURL.Host) {
+			return i
+		}
+	}
+	return 0
+}
+
+// redirectURLFromCookie returns the Redirect URL the login started with
+func redirectURLFromCookie(r *http.Request) string {
+	redirectURLs := config.Current.Auth.OIDC.RedirectURLs
+	if cookie, err := r.Cookie(oidcRedirectCookieName); err == nil {
+		if i, err := strconv.Atoi(cookie.Value); err == nil && i >= 0 && i < len(redirectURLs) {
+			return redirectURLs[i]
+		}
+	}
+	return redirectURLs[0]
 }
 
 // OIDCCallback godoc
@@ -142,7 +200,17 @@ func OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauth2Token, err := oidcOAuth2Cfg.Exchange(ctx, code)
+	verifierCookie, err := r.Cookie(oidcVerifierCookieName)
+	if err != nil || verifierCookie.Value == "" {
+		logAction.SetError("OIDC code verifier missing", "The login attempt may have expired, try logging in again", nil)
+		http.Redirect(w, r, "/login?error=oidc_failed", http.StatusFound)
+		return
+	}
+
+	oauth2Token, err := oidcOAuth2Cfg.Exchange(ctx, code,
+		oauth2.SetAuthURLParam("redirect_uri", redirectURLFromCookie(r)),
+		oauth2.VerifierOption(verifierCookie.Value),
+	)
 	if err != nil {
 		logAction.SetError("OIDC code exchange failed", err.Error(), nil)
 		http.Redirect(w, r, "/login?error=oidc_failed", http.StatusFound)
@@ -223,15 +291,17 @@ func isOIDCIdentityAllowed(email string) bool {
 }
 
 func clearOIDCStateCookie(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     oidcStateCookieName,
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   resolveSecure(r),
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
-	})
+	for _, name := range []string{oidcStateCookieName, oidcRedirectCookieName, oidcVerifierCookieName} {
+		http.SetCookie(w, &http.Cookie{
+			Name:     name,
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   resolveSecure(r),
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+	}
 }
 
 func randomHexString(n int) (string, error) {
@@ -257,7 +327,7 @@ type authMethodsResponse struct {
 func GetAuthMethods(w http.ResponseWriter, r *http.Request) {
 	_, ld := logging.CreateLoggingContext(r.Context(), r.URL.Path)
 	httpx.SendResponse(w, ld, authMethodsResponse{
-		PasswordEnabled: config.AuthEnabled(),
+		PasswordEnabled: config.AuthEnabled() && config.Current.Auth.PasswordEnabled,
 		OIDCEnabled:     OIDCAvailable(),
 	})
 }

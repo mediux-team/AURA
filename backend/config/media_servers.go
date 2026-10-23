@@ -219,6 +219,24 @@ func ParseConfigYAML(data []byte) (cfg Config, err error) {
 		strings.EqualFold(episodeNaming.Images.SaveImagesLocally.EpisodeNamingConvention, "static") {
 		cfg.Images.SaveImagesLocally.NameTemplates.Titlecard = "S{{SeasonNumber}}E{{EpisodeNumber}}"
 	}
+	// Older config files have one OIDC RedirectURL, and always allow the password
+	var olderAuth struct {
+		Auth struct {
+			PasswordEnabled *bool `yaml:"PasswordEnabled"`
+			OIDC            struct {
+				RedirectURL string `yaml:"RedirectURL"`
+			} `yaml:"OIDC"`
+		} `yaml:"Auth"`
+	}
+	if yaml.Unmarshal(data, &olderAuth) == nil {
+		if olderAuth.Auth.PasswordEnabled == nil {
+			cfg.Auth.PasswordEnabled = true
+		}
+		if len(cfg.Auth.OIDC.RedirectURLs) == 0 && olderAuth.Auth.OIDC.RedirectURL != "" {
+			cfg.Auth.OIDC.RedirectURLs = []string{olderAuth.Auth.OIDC.RedirectURL}
+		}
+	}
+
 	if len(cfg.MediaServers) > 0 {
 		cfg.LoadMainMediaServer()
 		cfg.SyncMediaServers()

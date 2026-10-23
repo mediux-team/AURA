@@ -39,6 +39,10 @@ var configMigrations = []configMigration{
 		Description: "Add the collection poster and backdrop to UserPreferences.DownloadDefaults",
 		Migrate:     addCollectionImagesToDownloadDefaults,
 	},
+	{
+		Description: "Move Auth.OIDC.RedirectURL to Auth.OIDC.RedirectURLs",
+		Migrate:     moveRedirectURLToRedirectURLs,
+	},
 }
 
 // Version 1 is the first config schema, stored without any migrations
@@ -156,6 +160,31 @@ func addCollectionImagesToDownloadDefaults(ctx context.Context, tx *sql.Tx) erro
 	if _, err := tx.ExecContext(ctx, `
 UPDATE Config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = 'UserPreferences.DownloadDefaults';`, string(updated)); err != nil {
 		return fmt.Errorf("failed to save DownloadDefaults: %w", err)
+	}
+	return nil
+}
+
+// moveRedirectURLToRedirectURLs keeps the OIDC Redirect URL as the first of the Redirect URLs
+func moveRedirectURLToRedirectURLs(ctx context.Context, tx *sql.Tx) error {
+	var value string
+	err := tx.QueryRowContext(ctx, `SELECT value FROM Config WHERE key = 'Auth.OIDC.RedirectURL';`).Scan(&value)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get Auth.OIDC.RedirectURL: %w", err)
+	}
+	var redirectURL string
+	_ = json.Unmarshal([]byte(value), &redirectURL)
+	if redirectURL = strings.TrimSpace(redirectURL); redirectURL != "" {
+		urls, _ := json.Marshal([]string{redirectURL})
+		if _, err := tx.ExecContext(ctx, `
+INSERT OR REPLACE INTO Config (key, value, updated_at) VALUES ('Auth.OIDC.RedirectURLs', ?, CURRENT_TIMESTAMP);`, string(urls)); err != nil {
+			return fmt.Errorf("failed to save Auth.OIDC.RedirectURLs: %w", err)
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM Config WHERE key = 'Auth.OIDC.RedirectURL';`); err != nil {
+		return fmt.Errorf("failed to remove Auth.OIDC.RedirectURL: %w", err)
 	}
 	return nil
 }

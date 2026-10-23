@@ -40,6 +40,12 @@ func AttemptLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !config.Current.Auth.PasswordEnabled {
+		logAction.SetError("Password login is turned off", "Log in with Single Sign-On, or turn on the password in Settings > Authentication", nil)
+		httpx.SendResponse(w, ld, response)
+		return
+	}
+
 	if TokenAuth == nil {
 		logAction.SetError("Authentication not configured", "The authentication system is not properly configured", nil)
 		httpx.SendResponse(w, ld, response)

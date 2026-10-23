@@ -73,7 +73,12 @@ func ValidateAuth(ctx context.Context, Auth *Config_Auth) bool {
 
 	isValid := true
 
-	if Auth.Enabled {
+	if Auth.Enabled && !Auth.PasswordEnabled && !Auth.OIDC.Enabled {
+		logAction.SetError("Auth has no way to log in", "Turn on the password or Single Sign-On (OIDC) when auth is enabled", nil)
+		isValid = false
+	}
+
+	if Auth.Enabled && Auth.PasswordEnabled {
 		if Auth.Password == "" {
 			logAction.SetError("Auth.Password is not set", "Password must be set when auth is enabled", nil)
 			isValid = false
@@ -94,19 +99,32 @@ func ValidateAuth(ctx context.Context, Auth *Config_Auth) bool {
 			logAction.AppendWarning("message", fmt.Sprintf("Auth.OIDC.IssuerURL should not include /.well-known/openid-configuration, using '%s'", trimmed))
 			Auth.OIDC.IssuerURL = trimmed
 		}
-		Auth.OIDC.RedirectURL = strings.TrimSpace(Auth.OIDC.RedirectURL)
+		redirectURLs := []string{}
+		for _, redirectURL := range Auth.OIDC.RedirectURLs {
+			withPath := WithOIDCCallbackPath(redirectURL)
+			if withPath == "" {
+				continue
+			}
+			if withPath != strings.TrimSpace(redirectURL) {
+				logAction.AppendWarning("message", fmt.Sprintf("Auth.OIDC.RedirectURLs should end with %s, using '%s'", OIDCCallbackPath, withPath))
+			}
+			redirectURLs = append(redirectURLs, withPath)
+		}
+		Auth.OIDC.RedirectURLs = redirectURLs
 
-		if Auth.OIDC.IssuerURL == "" || Auth.OIDC.ClientID == "" || Auth.OIDC.ClientSecret == "" || Auth.OIDC.RedirectURL == "" {
-			logAction.SetError("Auth.OIDC is missing required fields", "IssuerURL, ClientID, ClientSecret, and RedirectURL are all required when OIDC is enabled", nil)
+		if Auth.OIDC.IssuerURL == "" || Auth.OIDC.ClientID == "" || Auth.OIDC.ClientSecret == "" || len(Auth.OIDC.RedirectURLs) == 0 {
+			logAction.SetError("Auth.OIDC is missing required fields", "IssuerURL, ClientID, ClientSecret, and at least one RedirectURL are required when OIDC is enabled", nil)
 			isValid = false
 		} else {
 			if _, err := url.ParseRequestURI(Auth.OIDC.IssuerURL); err != nil {
 				logAction.SetError("Auth.OIDC.IssuerURL is not a valid URL", err.Error(), nil)
 				isValid = false
 			}
-			if _, err := url.ParseRequestURI(Auth.OIDC.RedirectURL); err != nil {
-				logAction.SetError("Auth.OIDC.RedirectURL is not a valid URL", err.Error(), nil)
-				isValid = false
+			for _, redirectURL := range Auth.OIDC.RedirectURLs {
+				if _, err := url.ParseRequestURI(redirectURL); err != nil {
+					logAction.SetError("Auth.OIDC.RedirectURLs has a URL that isn't valid", err.Error(), map[string]any{"redirect_url": redirectURL})
+					isValid = false
+				}
 			}
 		}
 	}
@@ -671,4 +689,22 @@ func ValidateBackups(ctx context.Context, Backups *Config_Backups) bool {
 		return false
 	}
 	return true
+}
+
+// OIDCCallbackPath is where the identity provider sends the browser back to after logging in
+const OIDCCallbackPath = "/api/auth/oidc/callback"
+
+// WithOIDCCallbackPath adds the callback path to an aura address, e.g. https://aura.example.com
+func WithOIDCCallbackPath(redirectURL string) string {
+	redirectURL = strings.TrimRight(strings.TrimSpace(redirectURL), "/")
+	if redirectURL == "" || strings.HasSuffix(redirectURL, OIDCCallbackPath) {
+		return redirectURL
+	}
+	// Finish a callback path that was only partly typed
+	for _, partial := range []string{"/api/auth/oidc", "/api/auth", "/api"} {
+		if strings.HasSuffix(redirectURL, partial) {
+			return strings.TrimSuffix(redirectURL, partial) + OIDCCallbackPath
+		}
+	}
+	return redirectURL + OIDCCallbackPath
 }

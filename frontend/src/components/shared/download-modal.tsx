@@ -1092,7 +1092,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               {addToQueueOnly
                 ? "Applied to the collection on your media server when the Download Queue gets to them."
                 : "Applied to the collection on your media server."}{" "}
-              Collection images aren&apos;t saved, so Auto Download doesn&apos;t update them.
+              Collection images aren't saved, so Auto Download doesn't update them.
             </p>
           </div>
         )}

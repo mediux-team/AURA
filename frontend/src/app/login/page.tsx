@@ -32,6 +32,7 @@ function LoginForm() {
 
   const [passwordEnabled, setPasswordEnabled] = useState(true);
   const [oidcEnabled, setOidcEnabled] = useState(false);
+  const [oidcLoginURL, setOidcLoginURL] = useState("/api/auth/oidc/login");
 
   // Get Onboarding Status
   const status = useOnboardingStore((state) => state.status);
@@ -46,6 +47,8 @@ function LoginForm() {
 
   // Which login methods are available (password / OIDC SSO) - public endpoint, safe pre-login.
   useEffect(() => {
+    // Send the address aura is open at, so the identity provider returns to the same one
+    setOidcLoginURL(`/api/auth/oidc/login?origin=${encodeURIComponent(window.location.origin)}`);
     void GetAuthMethods().then((resp) => {
       if (resp.status !== "error" && resp.data) {
         setPasswordEnabled(resp.data.password_enabled);
@@ -58,9 +61,11 @@ function LoginForm() {
   useEffect(() => {
     const oidcError = searchParams.get("error");
     if (oidcError) {
-      setErrorMsg(OIDC_ERROR_MESSAGES[oidcError] || "Login failed. Please try again.");
+      let message = OIDC_ERROR_MESSAGES[oidcError] || "Login failed. Please try again.";
+      if (oidcError === "oidc_unavailable" && !passwordEnabled) message = "Single sign-on is not currently available.";
+      setErrorMsg(message);
     }
-  }, [searchParams]);
+  }, [searchParams, passwordEnabled]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,7 +106,7 @@ function LoginForm() {
           )}
 
           {oidcEnabled && (
-            <a href="/api/auth/oidc/login" className="block">
+            <a href={oidcLoginURL} className="block">
               <Button type="button" variant="outline" className="w-full">
                 <ShieldCheck className="mr-2 h-4 w-4" />
                 Sign in with SSO

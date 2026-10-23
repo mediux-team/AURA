@@ -61,6 +61,7 @@ func DefaultConfig() Config {
 	return Config{
 		Auth: Config_Auth{
 			Enabled:             false,
+			PasswordEnabled:     true,
 			SessionCookieSecure: "auto",
 		},
 		Logging: Config_Logging{

@@ -1,5 +1,5 @@
 import { GenerateAPIKey } from "@/services/auth/api-key";
-import { AlertTriangle, Check, Copy, KeyRound } from "lucide-react";
+import { AlertTriangle, Check, Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +23,7 @@ import type { AppConfigAuth } from "@/types/config/config";
 interface ConfigSectionAuthProps {
   value: AppConfigAuth;
   editing: boolean;
-  dirtyFields?: { enabled?: boolean; password?: boolean };
+  dirtyFields?: { enabled?: boolean; password_enabled?: boolean; password?: boolean };
   onChange: <K extends keyof AppConfigAuth>(field: K, value: AppConfigAuth[K]) => void;
   errorsUpdate?: (errors: Partial<Record<keyof AppConfigAuth, string>>) => void;
   // Whether a global API key has already been generated. The key itself is never sent to the
@@ -70,6 +70,68 @@ function CommaListInput({
         if (list.join(",") !== (value || []).join(",")) onChange(list);
       }}
     />
+  );
+}
+
+const OIDC_CALLBACK_PATH = "/api/auth/oidc/callback";
+
+// withCallbackPath adds the callback path to an aura address, e.g. https://aura.example.com
+const withCallbackPath = (url: string) => {
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (!trimmed || trimmed.endsWith(OIDC_CALLBACK_PATH)) return trimmed;
+  // Finish a callback path that was only partly typed
+  const partial = ["/api/auth/oidc", "/api/auth", "/api"].find((part) => trimmed.endsWith(part));
+  return (partial ? trimmed.slice(0, -partial.length) : trimmed) + OIDC_CALLBACK_PATH;
+};
+
+// RedirectURLsInput edits the Redirect URLs, one per row
+function RedirectURLsInput({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string[] | undefined;
+  disabled?: boolean;
+  onChange: (list: string[]) => void;
+}) {
+  // Always show at least one row to type in
+  const urls = value && value.length > 0 ? value : [""];
+  const updateURL = (idx: number, url: string) => onChange(urls.map((u, i) => (i === idx ? url : u)));
+  return (
+    <div className="space-y-2">
+      {urls.map((url, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <Input
+            id={idx === 0 ? "oidc-redirect" : undefined}
+            disabled={disabled}
+            placeholder={idx === 0 ? "https://aura.example.com" : "http://192.168.1.10:3000"}
+            value={url}
+            onChange={(e) => updateURL(idx, e.target.value)}
+            onBlur={() => {
+              const withPath = withCallbackPath(url);
+              if (withPath !== url) updateURL(idx, withPath);
+            }}
+          />
+          {!disabled && urls.length > 1 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Remove Redirect URL"
+              onClick={() => onChange(urls.filter((_, i) => i !== idx))}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ))}
+      {!disabled && (
+        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...urls, ""])}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Redirect URL
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -126,18 +188,22 @@ export const ConfigSectionAuth: React.FC<ConfigSectionAuthProps> = ({
   // Validation
   const errors = useMemo<Partial<Record<keyof AppConfigAuth, string>>>(() => {
     const errs: Partial<Record<keyof AppConfigAuth, string>> = {};
+    // Login Method Errors
+    if (value.enabled && !value.password_enabled && !value.oidc?.enabled) {
+      errs.password_enabled = "Turn on the password or Single Sign-On, so there is a way to log in.";
+    }
     // Password Errors
-    if (value.enabled) {
+    if (value.enabled && value.password_enabled) {
       const password = value.password.trim();
       if (password.length === 0) {
-        errs.password = "Password hash is required when authentication is enabled.";
+        errs.password = "Password hash is required when password login is enabled.";
       } else if (!password.startsWith("***") && !hashRegex.test(password)) {
         // A masked value is the saved hash, which aura keeps
         errs.password = "Invalid Argon2id hash format.";
       }
     }
     return errs;
-  }, [value.enabled, value.password]);
+  }, [value.enabled, value.password_enabled, value.password, value.oidc?.enabled]);
 
   // Emit errors upward
   useEffect(() => {
@@ -176,15 +242,42 @@ export const ConfigSectionAuth: React.FC<ConfigSectionAuthProps> = ({
           <Switch disabled={!editing} checked={value.enabled} onCheckedChange={(c) => onChange("enabled", c)} />
           {editing && (
             <PopoverHelp ariaLabel="help-auth-enabled">
-              <p>Turn on to enforce authentication. A valid Argon2id password hash must be provided below.</p>
+              <p>Turn on to enforce authentication. Log in with a password, Single Sign-On, or both.</p>
             </PopoverHelp>
           )}
         </div>
       </div>
 
-      <div className="flex">
-        <div className={cn("relative flex-1 border rounded-md p-3 space-y-2 transition")}>
-          <div>
+      {/* Password */}
+      <div
+        className={cn(
+          "border rounded-md p-3 space-y-3 transition",
+          "border-muted",
+          dirtyFields.password_enabled && "border-amber-500"
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <Label className="mr-2">Password Enabled</Label>
+          <div className="flex items-center gap-2">
+            <Switch
+              disabled={!editing}
+              checked={value.password_enabled}
+              onCheckedChange={(c) => onChange("password_enabled", c)}
+            />
+            {editing && (
+              <PopoverHelp ariaLabel="help-auth-password-enabled">
+                <p>
+                  Allow logging in with a password. Turn it off to only log in with Single Sign-On. The password field
+                  is then removed from the login page.
+                </p>
+              </PopoverHelp>
+            )}
+          </div>
+        </div>
+        {errors.password_enabled && <p className="text-xs text-red-500">{errors.password_enabled}</p>}
+
+        {value.password_enabled && (
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="auth-hash">Argon2id Password Hash</Label>
               {editing && (
@@ -216,9 +309,9 @@ export const ConfigSectionAuth: React.FC<ConfigSectionAuthProps> = ({
               onChange={(e) => onChange("password", e.target.value)}
               className={cn("w-full mt-1", dirtyFields.password && "ring-2 ring-amber-500")}
             />
+            {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
           </div>
-          {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-        </div>
+        )}
       </div>
 
       {/* API Key */}
@@ -257,7 +350,7 @@ export const ConfigSectionAuth: React.FC<ConfigSectionAuthProps> = ({
 
         {generatedKey && (
           <Alert>
-            <AlertTitle>Copy this key now - it won&apos;t be shown again</AlertTitle>
+            <AlertTitle>Copy this key now - it won't be shown again</AlertTitle>
             <AlertDescription>
               <div className="flex items-center gap-2 mt-2">
                 <code className="flex-1 break-all rounded bg-muted px-2 py-1 text-xs">{generatedKey}</code>
@@ -327,17 +420,17 @@ export const ConfigSectionAuth: React.FC<ConfigSectionAuthProps> = ({
             </div>
             <div>
               <Label htmlFor="oidc-redirect" className="mb-1 block">
-                Redirect URL
+                Redirect URLs
               </Label>
-              <Input
-                id="oidc-redirect"
+              <RedirectURLsInput
                 disabled={!editing}
-                placeholder="https://aura.example.com/api/auth/oidc/callback"
-                value={oidc.redirect_url || ""}
-                onChange={(e) => updateOidc("redirect_url", e.target.value)}
+                value={oidc.redirect_urls}
+                onChange={(list) => updateOidc("redirect_urls", list)}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Register this exact URL as an allowed redirect URI with your identity provider.
+                One for each address you open aura at, like a domain and an IP address. aura adds{" "}
+                <code>{OIDC_CALLBACK_PATH}</code> to the end. Register each full URL as an allowed redirect URI with
+                your identity provider.
               </p>
             </div>
             <div>

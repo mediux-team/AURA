@@ -217,6 +217,36 @@ func TestAddCollectionImagesToDownloadDefaults(t *testing.T) {
 	}
 }
 
+func TestMoveRedirectURLToRedirectURLs(t *testing.T) {
+	db := openTestConfigDB(t)
+	ctx := testContext()
+
+	// A config saved with one OIDC Redirect URL
+	if _, err := db.conn.Exec(`UPDATE ConfigSchemaVersion SET version = 4;`); err != nil {
+		t.Fatal(err)
+	}
+	if Err := db.SaveConfigValues(ctx, map[string]string{
+		"Auth.OIDC.Enabled":     `true`,
+		"Auth.OIDC.RedirectURL": `"https://aura.example.com/api/auth/oidc/callback"`,
+	}, false); Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	if Err := db.CreateConfigTables(ctx); Err.Message != "" {
+		t.Fatalf("CreateConfigTables: %s", Err.Message)
+	}
+
+	values, _ := db.GetAllConfigValues(ctx)
+	if _, found := values["Auth.OIDC.RedirectURL"]; found {
+		t.Error("Auth.OIDC.RedirectURL should be moved")
+	}
+	if got := values["Auth.OIDC.RedirectURLs"]; got != `["https://aura.example.com/api/auth/oidc/callback"]` {
+		t.Errorf("RedirectURLs = %s", got)
+	}
+	if values["Auth.OIDC.Enabled"] != `true` {
+		t.Error("other values should not change")
+	}
+}
+
 func writeConfigYAML(t *testing.T, url string) string {
 	t.Helper()
 	yamlFile := filepath.Join(config.ConfigPath, "config.yaml")

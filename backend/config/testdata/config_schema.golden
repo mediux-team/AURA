@@ -7,8 +7,9 @@ Auth.OIDC.ClientID: string
 Auth.OIDC.ClientSecret: string
 Auth.OIDC.Enabled: bool
 Auth.OIDC.IssuerURL: string
-Auth.OIDC.RedirectURL: string
+Auth.OIDC.RedirectURLs: []string
 Auth.Password: string
+Auth.PasswordEnabled: bool
 Auth.SessionCookieSecure: string
 Auth.TrustProxyForCookieSecure: bool
 Backups.Keep: int

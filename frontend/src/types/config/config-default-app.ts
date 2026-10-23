@@ -6,13 +6,14 @@ export const defaultAppConfig = (): AppConfig =>
   ({
     auth: {
       enabled: false,
+      password_enabled: true,
       password: "",
       oidc: {
         enabled: false,
         issuer_url: "",
         client_id: "",
         client_secret: "",
-        redirect_url: "",
+        redirect_urls: [],
         allowed_emails: [],
         allowed_domains: [],
       },

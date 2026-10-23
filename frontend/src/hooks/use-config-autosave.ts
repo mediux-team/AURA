@@ -17,7 +17,7 @@ import type { AppConfig } from "@/types/config/config";
 export const CONFIG_GROUP_KEYS: Partial<Record<AppConfigSection, readonly string[]>> = {
   media_server: ["type", "url", "api_token"],
   mediux: ["api_token"],
-  auth: ["enabled", "password", "oidc"],
+  auth: ["enabled", "password_enabled", "password", "oidc"],
   sonarr_radarr: ["applications"],
   notifications: ["providers"],
 };

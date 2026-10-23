@@ -19,6 +19,7 @@ export interface AppConfig {
 
 export interface AppConfigAuth {
   enabled: boolean; // Whether authentication is enabled
+  password_enabled: boolean; // Whether logging in with the password is allowed
   password: string; // Hashed password for authentication
   oidc: AppConfigAuthOIDC;
   session_cookie_secure?: string; // "auto" | "always" | "never"
@@ -31,7 +32,7 @@ export interface AppConfigAuthOIDC {
   issuer_url?: string;
   client_id?: string;
   client_secret?: string; // Masked (e.g. "***ab12") once a value is set - only sent back if changed.
-  redirect_url?: string;
+  redirect_urls?: string[]; // One for each address aura is opened at
   allowed_emails?: string[];
   allowed_domains?: string[];
 }

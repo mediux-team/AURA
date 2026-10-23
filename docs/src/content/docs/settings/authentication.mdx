@@ -13,7 +13,7 @@ aura has two ways to log in from a browser, a **password** and **Single Sign-On 
 
 ## Enabled
 
-Turn on to require a login before anyone can use aura. You need to set a password (below) first.
+Turn on to require a login before anyone can use aura. You need a way to log in first: a password (below), Single Sign-On, or both.
 
 <Aside type="caution">
   If aura can be reached from outside your home network, turn authentication on. For extra protection, put aura behind
@@ -21,9 +21,13 @@ Turn on to require a login before anyone can use aura. You need to set a passwor
   [Tinyauth](https://tinyauth.app/), or use the built-in Single Sign-On.
 </Aside>
 
+## Password Enabled
+
+Allow logging in with a password. On by default. Turn it off to only log in with [Single Sign-On](#single-sign-on-oidc): the password field is removed from the login page, and aura turns away password logins. Single Sign-On must be on to turn the password off.
+
 ## Argon2id Password Hash
 
-aura doesn't store your password, only an **Argon2id hash** of it. To create one:
+Only needed while **Password Enabled** is on. aura doesn't store your password, only an **Argon2id hash** of it. To create one:
 
 1. Open [Argon2.Online](https://argon2.online/) (also linked next to the field).
 2. Type your password, keep the default settings, and generate the hash.
@@ -42,11 +46,13 @@ A key for scripts and other apps, such as the [Sonarr webhook](/AURA/sonarr-webh
 
 ## Single Sign-On (OIDC)
 
-Log in through your own identity provider, such as Authelia, Authentik, Pocket ID or Keycloak. It works alongside the password, not instead of it.
+Log in through your own identity provider, such as Authelia, Authentik, Pocket ID or Keycloak. It works alongside the password, or on its own if you turn [Password Enabled](#password-enabled) off.
+
+aura uses PKCE for every login, so a login code that's intercepted can't be used. Identity providers that require PKCE, like Authelia or Pocket ID when set to, work without any changes.
 
 - **Issuer URL**: the base URL of your identity provider, for example `https://idp.example.com`. If you paste the `/.well-known/openid-configuration` address instead, aura removes that part for you.
 - **Client ID** and **Client Secret**: from the client you create for aura in your identity provider.
-- **Redirect URL**: your aura address followed by `/api/auth/oidc/callback`, for example `https://aura.example.com/api/auth/oidc/callback`. Register this exact URL with your identity provider. If it points anywhere else, Single Sign-On stays unavailable and saving shows why.
+- **Redirect URLs**: your aura address followed by `/api/auth/oidc/callback`, for example `https://aura.example.com/api/auth/oidc/callback`. Click **Add Redirect URL** to add one for each address you open aura at, for example a domain and an IP address. You can type just the address, like `http://192.168.1.50:3000`, and aura adds `/api/auth/oidc/callback` for you. aura uses the one that matches the address in your browser, or the first one if none match. Register each full URL with your identity provider. If one points anywhere else, Single Sign-On stays unavailable and saving shows why.
 - **Allowed Emails** and **Allowed Domains**: who may log in. Separate entries with commas.
 
 <Aside type="danger" title="Set an allowlist">
@@ -84,6 +90,7 @@ If you forget your password or your identity provider breaks, set the `AURA_DISA
 ```yaml
 Auth:
   Enabled: true
+  PasswordEnabled: true # false to only log in with Single Sign-On
   Password: YOUR_ARGON2ID_HASH
   SessionCookieSecure: auto # auto, always or never
   TrustProxyForCookieSecure: false
@@ -93,7 +100,9 @@ Auth:
     IssuerURL: https://idp.example.com
     ClientID: aura
     ClientSecret: YOUR_OIDC_CLIENT_SECRET
-    RedirectURL: https://aura.example.com/api/auth/oidc/callback
+    RedirectURLs:
+      - https://aura.example.com/api/auth/oidc/callback
+      - http://192.168.1.50:3000/api/auth/oidc/callback
     AllowedEmails:
       - you@example.com
     AllowedDomains:

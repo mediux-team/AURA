@@ -124,6 +124,14 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   {
     sectionId: "authentication",
     sectionLabel: "Authentication",
+    label: "Password Enabled",
+    description: "Allow logging in with the password",
+    keywords: ["password", "login", "sso only"],
+    configPath: "password_enabled",
+  },
+  {
+    sectionId: "authentication",
+    sectionLabel: "Authentication",
     label: "Argon2id Password Hash",
     description: "The password used to log in",
     keywords: ["password", "hash", "login"],
@@ -134,7 +142,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     sectionLabel: "Authentication",
     label: "Single Sign-On (OIDC)",
     description: "Log in with an identity provider",
-    keywords: ["oidc", "sso", "authentik", "authelia", "openid"],
+    keywords: ["oidc", "sso", "authentik", "authelia", "openid", "redirect url", "callback"],
     configPath: "oidc",
   },
   {
