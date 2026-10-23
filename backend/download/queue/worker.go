@@ -5,7 +5,6 @@ import (
 	"aura/logging"
 	"context"
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -104,11 +103,7 @@ func drainQueue(ctx context.Context) {
 }
 
 func processNextJob(ctx context.Context) (processed bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			logging.LOGGER.Error().Timestamp().Interface("recover", r).Str("stack", string(debug.Stack())).Msg("PANIC: in Download Queue worker")
-		}
-	}()
+	defer logging.RecoverPanic("Download Queue worker")
 
 	return ProcessNextQueueJob(ctx)
 }

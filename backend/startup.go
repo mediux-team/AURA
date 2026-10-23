@@ -208,6 +208,7 @@ func runWarmup() (success bool) {
 	// Cache: With a saved library, load the media server in the background
 	if loadedFromDatabase > 0 {
 		go func() {
+			defer logging.RecoverPanic("Loading Media Server Data in the Background")
 			ctx, ld := logging.CreateLoggingContext(context.Background(), "Warmup")
 			ctx = logging.WithCurrentAction(ctx, ld.AddAction("Loading Media Server Data in the Background", logging.LevelInfo))
 			defer ld.Log()

@@ -277,7 +277,7 @@ func addOnboardingRoutes(r *chi.Mux) {
 				triggered = true
 				if OnboardingComplete != nil {
 					logging.LOGGER.Info().Timestamp().Msg("Onboarding finalized, executing OnboardingComplete function")
-					go OnboardingComplete()
+					logging.Go("Onboarding Complete", OnboardingComplete)
 				}
 			})
 

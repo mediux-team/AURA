@@ -141,7 +141,21 @@ var (
 )
 
 func init() {
-	c = cron.New()
+	// A panic in a job is logged instead of stopping aura
+	c = cron.New(cron.WithChain(cron.Recover(cronLogger{})))
+}
+
+// cronLogger logs the cron library's errors, like a panic in a job
+type cronLogger struct{}
+
+func (cronLogger) Info(msg string, keysAndValues ...any) {}
+
+func (cronLogger) Error(err error, msg string, keysAndValues ...any) {
+	event := logging.LOGGER.Error().Timestamp().Err(err)
+	for i := 0; i+1 < len(keysAndValues); i += 2 {
+		event = event.Interface(fmt.Sprint(keysAndValues[i]), keysAndValues[i+1])
+	}
+	event.Msg("PANIC: in Cron Job")
 }
 
 func StartJobs() {

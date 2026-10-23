@@ -51,6 +51,7 @@ func StartRefreshMediaItemsAndCollectionsJob() error {
 
 func RunRefreshMediaItemsAndCollectionsJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Refresh Media Items and Collections Job")
 		recordManualRun(JobKeyRefreshMediaItemsAndCollections)
 		runRefreshMediaItemsAndCollectionsJobBody(context.Background())
 	}()

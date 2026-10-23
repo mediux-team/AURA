@@ -60,6 +60,7 @@ func StartUpgradeSavedSetsJob() error {
 
 func RunUpgradeSavedSetsJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Upgrade Saved Sets Job")
 		recordManualRun(JobKeyUpgradeSavedSets)
 		runUpgradeSavedSetsJobBody(context.Background())
 	}()

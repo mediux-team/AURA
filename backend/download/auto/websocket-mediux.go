@@ -24,6 +24,7 @@ const (
 
 func StartMediuxWebSocketClient() {
 	go func() {
+		defer logging.RecoverPanic("MediUX WebSocket")
 		for {
 			err := connectAndSubscribeMediux()
 			if err != nil {

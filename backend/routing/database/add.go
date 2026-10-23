@@ -143,6 +143,7 @@ func AddNewItemToDB(w http.ResponseWriter, r *http.Request) {
 	// If this is the first time adding the item, we need to update the cache
 	// Run this asynchronously
 	go func() {
+		defer logging.RecoverPanic("Update Saved Sets in the Cache")
 		_, _, dbSets, _ := database.CheckIfMediaItemExists(ctx, saveItem.MediaItem.TMDB_ID, saveItem.MediaItem.LibraryTitle, saveItem.MediaItem.Edition)
 		saveItem.MediaItem.DBSavedSets = dbSets
 		cache.LibraryStore.UpdateMediaItem(saveItem.MediaItem.LibraryTitle, &saveItem.MediaItem)
@@ -156,6 +157,7 @@ func AddNewItemToDB(w http.ResponseWriter, r *http.Request) {
 
 	// Handle any labels and tags asynchronously
 	go func() {
+		defer logging.RecoverPanic("Labels and Tags Handling")
 		ctx, ld := logging.CreateLoggingContext(context.Background(), "Labels and Tags Handling")
 		logAction := ld.AddAction("Handle Labels and Tags for Added Item", logging.LevelInfo)
 		ctx = logging.WithCurrentAction(ctx, logAction)

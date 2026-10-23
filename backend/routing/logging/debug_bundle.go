@@ -176,6 +176,7 @@ func debugBundleInfo(ctx context.Context, cfg *config.Config, redactor *config.R
 		}
 		wg.Add(1)
 		go func() {
+			defer logging.RecoverPanic("Debug Bundle Connection Check")
 			defer wg.Done()
 			connections[i] = checkConnection(ctx, server)
 		}()

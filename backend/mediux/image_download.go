@@ -92,7 +92,8 @@ func GetImage(ctx context.Context, assetID string, formatDate string, imageQuali
 
 	// Save it to the cache folder in the background
 	if config.Current.Images.CacheImages.Enabled {
-		go cacheImage(folderPath, fileNameBase+utils.GetExtensionFromContentType(imageType), imageData)
+		fileName := fileNameBase + utils.GetExtensionFromContentType(imageType)
+		logging.Go("Cache Image", func() { cacheImage(folderPath, fileName, imageData) })
 	}
 
 	return imageData, imageType, Err

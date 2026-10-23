@@ -61,6 +61,7 @@ func StartBackupDatabaseJob() error {
 
 func RunBackupDatabaseJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Backup Database Job")
 		recordManualRun(JobKeyBackupDatabase)
 		runBackupDatabaseJobBody(context.Background())
 	}()

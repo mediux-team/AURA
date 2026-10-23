@@ -51,6 +51,7 @@ func StartCheckMediuxSiteLinkJob() error {
 
 func RunCheckMediuxSiteLinkJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Check MediUX Site Link Job")
 		recordManualRun(JobKeyCheckMediuxSiteLink)
 		runCheckMediuxSiteLinkJobBody(context.Background())
 	}()

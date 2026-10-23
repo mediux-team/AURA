@@ -204,7 +204,7 @@ func applyConfigChanges(ctx context.Context, logAction *logging.LogAction, chang
 
 	// Load the libraries of new or changed media servers
 	if changes.mediaServersChanged {
-		go refreshOtherMediaServers()
+		logging.Go("Refresh Other Media Servers", refreshOtherMediaServers)
 	}
 
 	// Restart OIDC with the new Auth settings, so the login page shows the correct login options

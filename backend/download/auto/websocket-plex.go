@@ -66,6 +66,7 @@ func StartOrRestartPlexWebSocketClient() {
 	plexWSStopChan = stopChan
 
 	go func(stop <-chan struct{}) {
+		defer logging.RecoverPanic("Plex Event Listener")
 		for {
 			if config.Current.MediaServer.Type != "Plex" ||
 				!config.Current.MediaServer.EnablePlexEventListener {
@@ -224,7 +225,7 @@ func processPlexRefreshMessage(messageInfo PlexRefreshMessage) {
 
 	if cachedMediaItem, found := getCachedRefreshedMediaItem(refreshedItem.MediaItem.RatingKey); found {
 		refreshedItem.MediaItem = cachedMediaItem
-		go reApplySavedImages(refreshedItem)
+		logging.Go("Re-apply Saved Images", func() { reApplySavedImages(refreshedItem) })
 		return
 	}
 
@@ -259,7 +260,7 @@ func processPlexRefreshMessage(messageInfo PlexRefreshMessage) {
 		Str("item_type", refreshedItem.ItemType).
 		Msgf("Plex Event Listener: Detected metadata refresh for item %s", utils.MediaItemInfo(refreshedItem.MediaItem))
 
-	go reApplySavedImages(refreshedItem)
+	logging.Go("Re-apply Saved Images", func() { reApplySavedImages(refreshedItem) })
 }
 
 func getCachedRefreshedMediaItem(ratingKey string) (models.MediaItem, bool) {

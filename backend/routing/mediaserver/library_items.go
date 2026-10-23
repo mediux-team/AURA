@@ -107,6 +107,7 @@ func RefreshLibrary(w http.ResponseWriter, r *http.Request) {
 
 	if !mediaserver.CurrentLibraryProgress().Running {
 		go func() {
+			defer logging.RecoverPanic("Refresh Library")
 			ctx, ld := logging.CreateLoggingContext(context.Background(), "Refresh Library")
 			logAction := ld.AddAction("Refresh Library", logging.LevelInfo)
 			ctx = logging.WithCurrentAction(ctx, logAction)

@@ -60,6 +60,7 @@ func StartHandleTempIgnoredItemsJob() error {
 
 func RunHandleTempIgnoredItemsJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Handle Temp Ignored Items Job")
 		recordManualRun(JobKeyHandleTempIgnoredItems)
 		runHandleTempIgnoredItemsJobBody(context.Background())
 	}()

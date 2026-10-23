@@ -186,6 +186,7 @@ func SonarrWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		dbItem models.DBSavedItem,
 		payload SonarrWebHookOnUpgradePayload,
 	) {
+		defer logging.RecoverPanic("Sonarr Webhook")
 		eventTypeStr := ""
 		switch payload.IsUpgrade {
 		case true:
@@ -391,6 +392,7 @@ func processSonarrDownloadEvent(ctx context.Context, payload SonarrWebHookOnUpgr
 			}
 
 			go func(image models.ImageFile, result string) {
+				defer logging.RecoverPanic("Sonarr Webhook Notification")
 				sendFileDownloadNotification(*mediaItem, dbSet, image, payload.IsUpgrade, result)
 			}(image, result)
 		}

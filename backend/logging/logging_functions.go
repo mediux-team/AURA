@@ -55,7 +55,8 @@ func CreateLoggingContext(ctx context.Context, name string) (context.Context, *L
 func AddSubActionToContext(ctx context.Context, name, level string) (context.Context, *LogAction) {
 	parent := CurrentActionFromContext(ctx)
 	if parent == nil {
-		return ctx, nil
+		// Without a current action the sub-action isn't logged, but can still be used
+		parent = &LogAction{Level: LevelDebug}
 	}
 	sub := parent.AddSubAction(name, level)
 	ctx = WithCurrentAction(ctx, sub)

@@ -37,6 +37,7 @@ func Download(ctx context.Context, token DownloadToken, autoDownload bool) (imag
 // QueueInBackground queues the token's set without holding up the request
 func QueueInBackground(token DownloadToken, autoDownload bool) {
 	go func() {
+		defer logging.RecoverPanic("Silo Plugin Download")
 		ctx, ld := logging.CreateLoggingContext(context.Background(), "Silo Plugin Download")
 		logAction := ld.AddAction(fmt.Sprintf("Queue Set %s for %s %s", token.SetID, token.ItemType, token.TMDB_ID), logging.LevelInfo)
 		ctx = logging.WithCurrentAction(ctx, logAction)

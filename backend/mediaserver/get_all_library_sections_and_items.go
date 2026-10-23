@@ -55,7 +55,7 @@ func getAllLibrarySectionsAndItemsImpl(ctx context.Context) (success bool) {
 	cache.CollectionsStore.LastFullUpdate = time.Now().Unix()
 
 	// Other media servers load in the background, so a slow or unreachable one doesn't hold up aura
-	go RefreshOtherMediaServers()
+	logging.Go("Refresh Other Media Servers", RefreshOtherMediaServers)
 	return true
 }
 

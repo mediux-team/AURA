@@ -40,7 +40,7 @@ func CheckAllItems(ctx context.Context) (Err logging.LogErrorInfo) {
 	out, Err := database.GetAllSavedSets(ctx, models.DBFilter{ItemsPerPage: -1})
 	if Err.Message != "" {
 		getAllItemAction.Complete()
-		return *getAllItemAction.Error
+		return Err
 	}
 	getAllItemAction.Complete()
 

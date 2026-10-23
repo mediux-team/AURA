@@ -60,6 +60,7 @@ func StartRefreshMediuxUsersJob() error {
 
 func RunRefreshMediuxUsersJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Refresh MediUX Users Job")
 		recordManualRun(JobKeyRefreshMediuxUsers)
 		runRefreshMediuxUsersJobBody(context.Background())
 	}()

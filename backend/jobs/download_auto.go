@@ -65,6 +65,7 @@ func StartAutoDownloadJob() error {
 
 func RunAutoDownloadJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Auto Download Job")
 		recordManualRun(JobKeyAutoDownload)
 		runAutoDownloadJobBody(context.Background())
 	}()

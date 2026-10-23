@@ -421,6 +421,7 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 				// Send a notification to all configured notification services
 				// We do this asynchronously and don't wait for the result
 				go func(image ImageFileWithReason) {
+					defer logging.RecoverPanic("Auto Download Notification")
 					sendFileDownloadNotification(mediaItem, dbSet, image)
 				}(image)
 			}

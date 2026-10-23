@@ -247,6 +247,7 @@ func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.
 				// Send a notification to all configured notification services
 				// We do this asynchronously and don't wait for the result
 				go func(image ImageFileWithReason) {
+					defer logging.RecoverPanic("Auto Download Notification")
 					sendFileDownloadNotification(mediaItem, dbSet, image)
 				}(image)
 			}
@@ -376,6 +377,7 @@ func handleCollectionAutoAddNewItems(ctx context.Context, dbSet models.DBPosterS
 			}
 
 			go func(mediaItem models.MediaItem, imageFile models.ImageFile) {
+				defer logging.RecoverPanic("Auto Download Notification")
 				sendFileDownloadNotification(mediaItem, dbSet, ImageFileWithReason{
 					ImageFile:   imageFile,
 					ReasonTitle: "New Collection Item",

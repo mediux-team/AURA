@@ -253,6 +253,7 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 
 	// Handle any labels and tags asynchronously
 	go func() {
+		defer logging.RecoverPanic("Download Queue Labels and Tags")
 		ctx, ld := logging.CreateLoggingContext(context.Background(), "Download Queue - Labels and Tags Handling")
 		logAction := ld.AddAction("Handle Labels and Tags for Added Item", logging.LevelInfo)
 		ctx = logging.WithCurrentAction(ctx, logAction)

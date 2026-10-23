@@ -57,7 +57,7 @@ func HandleTempIgnoredItems(ctx context.Context) (Err logging.LogErrorInfo) {
 				continue
 			}
 			logging.LOGGER.Info().Timestamp().Str("tmdb_id", mediaItem.TMDB_ID).Str("library_title", mediaItem.LibraryTitle).Msgf("Stopped ignoring media item %s because %d are now available", mediaItem.Title, numOfSets)
-			go sendNotification(mediaItem, numOfSets, mainImage)
+			logging.Go("Temp Ignored Item Notification", func() { sendNotification(mediaItem, numOfSets, mainImage) })
 		} else if numOfSets > 0 && mediaItem.IgnoredMode == "until-new-set-available" {
 			// For "until-new-set-available" mode, we need to check if there are new sets available compared to the current sets when the item was ignored
 			if numOfSets > len(mediaItem.IgnoredSets) {
@@ -67,7 +67,7 @@ func HandleTempIgnoredItems(ctx context.Context) (Err logging.LogErrorInfo) {
 					continue
 				}
 				logging.LOGGER.Info().Timestamp().Str("tmdb_id", mediaItem.TMDB_ID).Str("library_title", mediaItem.LibraryTitle).Int("current_sets", len(mediaItem.IgnoredSets)).Int("new_sets", numOfSets).Msgf("New sets are available for media item %s, there are now %d sets available compared to %d sets when the item was ignored", mediaItem.Title, numOfSets, len(mediaItem.IgnoredSets))
-				go sendNotification(mediaItem, numOfSets, mainImage)
+				logging.Go("Temp Ignored Item Notification", func() { sendNotification(mediaItem, numOfSets, mainImage) })
 			}
 		}
 	}

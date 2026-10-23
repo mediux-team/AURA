@@ -60,6 +60,7 @@ func StartCheckForMediaItemChangesJob() error {
 
 func RunCheckForMediaItemChangesJobNow() {
 	go func() {
+		defer logging.RecoverPanic("Check for Media Item Changes Job")
 		recordManualRun(JobKeyCheckForMediaItemChanges)
 		runCheckForMediaItemChangesJobBody(context.Background())
 	}()
