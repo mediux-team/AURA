@@ -12,6 +12,10 @@
 
 - Fixed aura crashing while applying images to Emby.
 
+### Updated
+
+- Updated frontend dependencies to latest versions for better security and performance.
+
 ---
 
 ## [0.9.114] - 2026-10-21
