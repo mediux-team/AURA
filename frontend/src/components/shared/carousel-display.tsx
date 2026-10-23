@@ -9,21 +9,23 @@ import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
 import type { MediaItem } from "@/types/media-and-posters/media-item-and-library";
 import type { IncludedItem, SetRef } from "@/types/media-and-posters/sets";
-import type { TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS } from "@/types/ui-options";
+import type { TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS } from "@/types/ui-options";
 
 export function CarouselDisplay({
   sets,
   includedItems = {},
   dimNotFound = false,
+  currentTmdbId,
 }: {
   sets: SetRef[];
   includedItems?: { [tmdb_id: string]: IncludedItem };
   dimNotFound?: boolean;
+  currentTmdbId?: string; // The item the page is for, shown first after the collection's own images
 }) {
   const downloadDefaultTypes = useUserPreferencesStore((state) => state.downloadDefaults);
   const showOnlyDownloadDefaults = useUserPreferencesStore((state) => state.showOnlyDownloadDefaults);
 
-  function shouldShow(type: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS) {
+  function shouldShow(type: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS) {
     return !showOnlyDownloadDefaults || downloadDefaultTypes.includes(type);
   }
 
@@ -34,6 +36,29 @@ export function CarouselDisplay({
 
         return (
           <React.Fragment key={set.id}>
+            {/* The collection's own poster and backdrop, first */}
+            {(() => {
+              const collectionPosters = shouldShow("collection_poster")
+                ? set.images.filter((img) => img.type === "collection_poster")
+                : [];
+              const collectionBackdrops = shouldShow("collection_backdrop")
+                ? set.images.filter((img) => img.type === "collection_backdrop")
+                : [];
+              if (collectionPosters.length === 0 && collectionBackdrops.length === 0) return null;
+              return (
+                <CarouselItem key={`${set.id}-collection`}>
+                  <div className="space-y-2">
+                    {collectionPosters.map((img) => (
+                      <AssetImage key={img.id} image={img} imageType="mediux" aspect="poster" className="w-full" />
+                    ))}
+                    {collectionBackdrops.map((img) => (
+                      <AssetImage key={img.id} image={img} imageType="mediux" aspect="backdrop" className="w-full" />
+                    ))}
+                  </div>
+                </CarouselItem>
+              );
+            })()}
+
             {/* Posters and Backdrops grouped by item_tmdb_id */}
             {(() => {
               // Unique tmdbIds for posters/backdrops
@@ -51,8 +76,12 @@ export function CarouselDisplay({
                 ),
               ];
 
-              // Sort: available-first (only when dimNotFound=true), then by release date (newest first)
+              // Sort: the item the page is for, then available-first (only when dimNotFound=true),
+              // then by release date (newest first)
               const sortedTmdbIds = uniqueTmdbIds.sort((a, b) => {
+                if (currentTmdbId && (a === currentTmdbId) !== (b === currentTmdbId)) {
+                  return a === currentTmdbId ? -1 : 1;
+                }
                 if (dimNotFound) {
                   const aAvail =
                     isInServer(includedItems, a) && typeof isInServer(includedItems, a) !== "boolean" ? 1 : 0;

@@ -83,8 +83,8 @@ export const MakeMainMediaServerDialog: React.FC<MakeMainMediaServerDialogProps>
         <DialogHeader>
           <DialogTitle>Make {name} the main media server?</DialogTitle>
           <DialogDescription>
-            The Home page will show {name}&apos;s items, and only {name} will save images locally. Your saved sets move
-            to the same items on {name}.
+            The Home page will show {name}'s items, and only {name} will save images locally. Your saved sets move to
+            the same items on {name}.
           </DialogDescription>
         </DialogHeader>
 
@@ -100,7 +100,7 @@ export const MakeMainMediaServerDialog: React.FC<MakeMainMediaServerDialogProps>
             {plan.blocked && (
               <Alert className="border-amber-500 text-amber-500">
                 <TriangleAlert className="h-4 w-4" />
-                <AlertTitle>Can&apos;t switch right now</AlertTitle>
+                <AlertTitle>Can't switch right now</AlertTitle>
                 <AlertDescription>{plan.blocked}</AlertDescription>
               </Alert>
             )}

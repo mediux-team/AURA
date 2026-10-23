@@ -46,7 +46,22 @@ func AddItemToDownloadQueue(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the JSON structure
 	validateAction := logAction.AddSubAction("Validate Save Item", logging.LevelDebug)
-	if req.Item.MediaItem.Title == "" || req.Item.MediaItem.LibraryTitle == "" || req.Item.MediaItem.TMDB_ID == "" || req.Item.MediaItem.RatingKey == "" {
+
+	// Only collection images, applied to their media server collection
+	if req.Item.IsCollectionOnly() {
+		collection := req.Item.CollectionImages.Collection
+		if collection.RatingKey == "" || collection.LibraryTitle == "" {
+			validateAction.SetError("Invalid collection",
+				"Ensure that the collection has a rating key and library",
+				map[string]any{"collection": collection})
+			validateAction.Complete()
+			httpx.SendResponse(w, ld, response)
+			return
+		}
+	}
+
+	// Items with sets need their media item
+	if !req.Item.IsCollectionOnly() && (req.Item.MediaItem.Title == "" || req.Item.MediaItem.LibraryTitle == "" || req.Item.MediaItem.TMDB_ID == "" || req.Item.MediaItem.RatingKey == "") {
 		validateAction.SetError("Invalid Save Item structure",
 			"Ensure that the request body contains a valid Save Item with all required fields",
 			map[string]any{
@@ -57,8 +72,8 @@ func AddItemToDownloadQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make sure there is at least one Poster Set
-	if len(req.Item.PosterSets) == 0 {
+	// Make sure there is at least one Poster Set, or collection images to apply
+	if len(req.Item.PosterSets) == 0 && !req.Item.HasCollectionImages() {
 		validateAction.SetError("Invalid Save Item structure - No Poster Sets",
 			"Ensure that the Media Item contains at least one Poster Set",
 			map[string]any{

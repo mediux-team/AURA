@@ -7,13 +7,13 @@ import { useOnboardingStore } from "@/lib/stores/global-store-onboarding";
 import { GlobalStore } from "@/lib/stores/stores";
 
 import type { AppConfigUserPreferences, PageView } from "@/types/config/config";
-import { DOWNLOAD_IMAGE_TYPE_OPTIONS, type TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS } from "@/types/ui-options";
+import { DOWNLOAD_DEFAULT_TYPE_OPTIONS, type TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS } from "@/types/ui-options";
 
 // User Preferences are saved in the aura config, so they're the same on every device.
 // They are also kept locally, so pages don't show the defaults while loading.
 
 interface UserPreferences {
-  downloadDefaults: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS[];
+  downloadDefaults: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[];
   showOnlyDownloadDefaults: boolean;
   showDateModified: boolean;
   defaultAddToQueue: boolean;
@@ -36,7 +36,7 @@ interface UserPreferencesStore extends UserPreferences {
   saveError?: string;
   // Save the current preferences again after a failed save
   retrySave: () => void;
-  setDownloadDefaults: (downloadDefaults: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS[]) => void;
+  setDownloadDefaults: (downloadDefaults: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[]) => void;
   setShowOnlyDownloadDefaults: (showOnlyDownloadDefaults: boolean) => void;
   setShowDateModified: (showDateModified: boolean) => void;
   setDefaultAddToQueue: (defaultAddToQueue: boolean) => void;
@@ -54,11 +54,11 @@ interface UserPreferencesStore extends UserPreferences {
 }
 
 const defaultPreferences = (): UserPreferences => ({
-  downloadDefaults: DOWNLOAD_IMAGE_TYPE_OPTIONS.map((option) => option.value),
+  downloadDefaults: DOWNLOAD_DEFAULT_TYPE_OPTIONS.map((option) => option.value),
   showOnlyDownloadDefaults: false,
   showDateModified: false,
   defaultAddToQueue: false,
-defaultAutoAddNewCollectionItems: false,
+  defaultAutoAddNewCollectionItems: false,
   defaultAddToDBOnly: false,
   autoDownloadNewItems: false,
   autoUpgradeSets: false,
@@ -71,7 +71,7 @@ const toServerPreferences = (preferences: UserPreferences): AppConfigUserPrefere
   show_only_download_defaults: preferences.showOnlyDownloadDefaults,
   show_date_modified: preferences.showDateModified,
   default_add_to_queue: preferences.defaultAddToQueue,
-default_auto_add_new_collection_items: preferences.defaultAutoAddNewCollectionItems,
+  default_auto_add_new_collection_items: preferences.defaultAutoAddNewCollectionItems,
   default_add_to_db_only: preferences.defaultAddToDBOnly,
   auto_download_new_items: preferences.autoDownloadNewItems,
   auto_upgrade_sets: preferences.autoUpgradeSets,
@@ -84,7 +84,7 @@ const fromServerPreferences = (preferences: AppConfigUserPreferences): UserPrefe
   showOnlyDownloadDefaults: preferences.show_only_download_defaults ?? false,
   showDateModified: preferences.show_date_modified ?? false,
   defaultAddToQueue: preferences.default_add_to_queue ?? false,
-defaultAutoAddNewCollectionItems: preferences.default_auto_add_new_collection_items ?? false,
+  defaultAutoAddNewCollectionItems: preferences.default_auto_add_new_collection_items ?? false,
   defaultAddToDBOnly: preferences.default_add_to_db_only ?? false,
   autoDownloadNewItems: preferences.auto_download_new_items ?? false,
   autoUpgradeSets: preferences.auto_upgrade_sets ?? false,
@@ -141,7 +141,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
   persist(
     (set) => ({
       ...defaultPreferences(),
-      setDownloadDefaults: (downloadDefaults: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS[]) => {
+      setDownloadDefaults: (downloadDefaults: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[]) => {
         set({ downloadDefaults });
         queueServerSave();
       },
@@ -157,7 +157,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
         set({ defaultAddToQueue });
         queueServerSave();
       },
-setDefaultAutoAddNewCollectionItems: (defaultAutoAddNewCollectionItems: boolean) => {
+      setDefaultAutoAddNewCollectionItems: (defaultAutoAddNewCollectionItems: boolean) => {
         set({ defaultAutoAddNewCollectionItems });
         queueServerSave();
       },
@@ -198,7 +198,7 @@ setDefaultAutoAddNewCollectionItems: (defaultAutoAddNewCollectionItems: boolean)
         showOnlyDownloadDefaults: state.showOnlyDownloadDefaults,
         showDateModified: state.showDateModified,
         defaultAddToQueue: state.defaultAddToQueue,
-defaultAutoAddNewCollectionItems: state.defaultAutoAddNewCollectionItems,
+        defaultAutoAddNewCollectionItems: state.defaultAutoAddNewCollectionItems,
         defaultAddToDBOnly: state.defaultAddToDBOnly,
         autoDownloadNewItems: state.autoDownloadNewItems,
         autoUpgradeSets: state.autoUpgradeSets,
@@ -231,7 +231,7 @@ const syncFromServer = () => {
     showOnlyDownloadDefaults: store.showOnlyDownloadDefaults,
     showDateModified: store.showDateModified,
     defaultAddToQueue: store.defaultAddToQueue,
-defaultAutoAddNewCollectionItems: store.defaultAutoAddNewCollectionItems,
+    defaultAutoAddNewCollectionItems: store.defaultAutoAddNewCollectionItems,
     defaultAddToDBOnly: store.defaultAddToDBOnly,
     autoDownloadNewItems: store.autoDownloadNewItems ?? false,
     autoUpgradeSets: store.autoUpgradeSets ?? false,

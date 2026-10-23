@@ -1,5 +1,5 @@
 import type { AppConfig } from "@/types/config/config";
-import { DOWNLOAD_IMAGE_TYPE_OPTIONS } from "@/types/ui-options";
+import { DOWNLOAD_DEFAULT_TYPE_OPTIONS } from "@/types/ui-options";
 
 // Central default
 export const defaultAppConfig = (): AppConfig =>
@@ -74,7 +74,7 @@ export const defaultAppConfig = (): AppConfig =>
       applications: [{ type: "", library: "", url: "", api_token: "" }],
     },
     user_preferences: {
-      download_defaults: DOWNLOAD_IMAGE_TYPE_OPTIONS.map((option) => option.value),
+      download_defaults: DOWNLOAD_DEFAULT_TYPE_OPTIONS.map((option) => option.value),
       show_only_download_defaults: false,
       show_date_modified: false,
       default_add_to_queue: false,

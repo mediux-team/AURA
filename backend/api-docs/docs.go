@@ -5111,6 +5111,10 @@ const docTemplate = `{
                     "description": "Password for authentication.",
                     "type": "string"
                 },
+                "password_enabled": {
+                    "description": "Whether logging in with the password is allowed. Turn it off to only log in with Single Sign-On.",
+                    "type": "boolean"
+                },
                 "session_cookie_secure": {
                     "description": "SessionCookieSecure controls the Secure attribute of the browser session cookie.",
                     "type": "string"
@@ -5154,9 +5158,12 @@ const docTemplate = `{
                     "description": "OIDC issuer URL (used for discovery).",
                     "type": "string"
                 },
-                "redirect_url": {
-                    "description": "Full callback URL registered with the IdP, e.g. https://aura.example.com/api/auth/oidc/callback.",
-                    "type": "string"
+                "redirect_urls": {
+                    "description": "Callback URLs registered with the IdP, one for each address aura is opened at, e.g. https://aura.example.com/api/auth/oidc/callback.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

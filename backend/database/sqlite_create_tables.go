@@ -26,6 +26,7 @@ func (s *SQliteDB) CreateTables(ctx context.Context) (Err logging.LogErrorInfo) 
 		v7_CreateDownloadQueueJobsTable,
 		v7_CreateDownloadHistoryTable,
 		v8_CreateSiloItemIDsTable,
+		v14_CreateCollectionsTables,
 	}
 
 	for _, step := range steps {
@@ -443,6 +444,44 @@ CREATE TABLE SiloItemIDs (
 	_, err := conn.ExecContext(ctx, query)
 	if err != nil {
 		logAction.SetError("Failed to create SiloItemIDs table", err.Error(), map[string]any{
+			"error": err.Error(),
+			"query": query,
+		})
+		return *logAction.Error
+	}
+
+	return Err
+}
+
+func v14_CreateCollectionsTables(ctx context.Context, conn *sql.DB) (Err logging.LogErrorInfo) {
+	ctx, logAction := logging.AddSubActionToContext(ctx, "Creating Collections Tables", logging.LevelTrace)
+	defer logAction.Complete()
+	Err = logging.LogErrorInfo{}
+
+	query := `
+CREATE TABLE Collections (
+    rating_key TEXT PRIMARY KEY,
+    library_title TEXT NOT NULL,
+    collection_index TEXT NOT NULL DEFAULT '',
+    tmdb_id TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    child_count INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE CollectionItems (
+    collection_rating_key TEXT NOT NULL,
+    rating_key TEXT NOT NULL,
+    tmdb_id TEXT NOT NULL DEFAULT '',
+    library_title TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    year INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (collection_rating_key, rating_key)
+);
+CREATE INDEX idx_collectionitems_tmdb_id ON CollectionItems(tmdb_id);
+	`
+	_, err := conn.ExecContext(ctx, query)
+	if err != nil {
+		logAction.SetError("Failed to create Collections tables", err.Error(), map[string]any{
 			"error": err.Error(),
 			"query": query,
 		})

@@ -27,6 +27,18 @@ func TestCountJobImages(t *testing.T) {
 	if got := countJobImages(item); got != 2 {
 		t.Errorf("countJobImages = %d, want 2", got)
 	}
+
+	// A collection's poster and backdrop are applied too, with or without sets
+	item.CollectionImages = &models.QueuedCollectionImages{
+		Collection: models.CollectionItem{RatingKey: "c1", Title: "Toy Story", LibraryTitle: "Movies"},
+		Images:     []models.ImageFile{{Type: "collection_poster"}, {Type: "collection_backdrop"}},
+	}
+	if got := countJobImages(item); got != 4 {
+		t.Errorf("countJobImages with collection images = %d, want 4", got)
+	}
+	if got := countJobImages(models.DBSavedItem{CollectionImages: item.CollectionImages}); got != 2 {
+		t.Errorf("countJobImages with only collection images = %d, want 2", got)
+	}
 }
 
 func TestBroadcasterKeepsTheLatestProgress(t *testing.T) {

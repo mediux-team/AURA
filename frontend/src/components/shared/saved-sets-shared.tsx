@@ -156,7 +156,8 @@ export const refreshPosterSet = async ({
 };
 
 export const renderTypeBadges = (savedSet: DBSavedItem) => {
-  const selected = savedSet.poster_sets.reduce(
+  // A Download Queue entry with only collection images has no sets
+  const selected = (savedSet.poster_sets ?? []).reduce(
     (acc, ps) => {
       acc.poster ||= ps.selected_types?.poster === true;
       acc.backdrop ||= ps.selected_types?.backdrop === true;
@@ -211,6 +212,14 @@ export const renderTypeBadges = (savedSet: DBSavedItem) => {
     );
   }
 
+  // A Download Queue entry's collection images
+  for (const image of savedSet.collection_images?.images ?? []) {
+    badges.push(
+      <Badge key={image.type} className="bg-primary text-primary-foreground">
+        {image.type === "collection_poster" ? "Collection Poster" : "Collection Backdrop"}
+      </Badge>
+    );
+  }
   return badges;
 };
 

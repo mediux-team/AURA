@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -33,6 +34,10 @@ var configMigrations = []configMigration{
 	{
 		Description: "Replace Images.SaveImagesLocally.EpisodeNamingConvention with the title card file name",
 		Migrate:     moveEpisodeNamingConventionToTitlecardName,
+	},
+	{
+		Description: "Add the collection poster and backdrop to UserPreferences.DownloadDefaults",
+		Migrate:     addCollectionImagesToDownloadDefaults,
 	},
 }
 
@@ -121,6 +126,36 @@ INSERT OR REPLACE INTO Config (key, value, updated_at) VALUES ('Images.SaveImage
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM Config WHERE key = 'Images.SaveImagesLocally.EpisodeNamingConvention';`); err != nil {
 		return fmt.Errorf("failed to remove EpisodeNamingConvention: %w", err)
+	}
+	return nil
+}
+
+// addCollectionImagesToDownloadDefaults adds the new collection image types to the saved download defaults, like new installs have
+func addCollectionImagesToDownloadDefaults(ctx context.Context, tx *sql.Tx) error {
+	var value string
+	err := tx.QueryRowContext(ctx, `SELECT value FROM Config WHERE key = 'UserPreferences.DownloadDefaults';`).Scan(&value)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get DownloadDefaults: %w", err)
+	}
+	var defaults []string
+	if err := json.Unmarshal([]byte(value), &defaults); err != nil {
+		return nil
+	}
+	for _, imageType := range []string{"collection_poster", "collection_backdrop"} {
+		if !slices.Contains(defaults, imageType) {
+			defaults = append(defaults, imageType)
+		}
+	}
+	updated, err := json.Marshal(defaults)
+	if err != nil {
+		return fmt.Errorf("failed to build DownloadDefaults: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `
+UPDATE Config SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = 'UserPreferences.DownloadDefaults';`, string(updated)); err != nil {
+		return fmt.Errorf("failed to save DownloadDefaults: %w", err)
 	}
 	return nil
 }

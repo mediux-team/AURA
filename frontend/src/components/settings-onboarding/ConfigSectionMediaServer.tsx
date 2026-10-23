@@ -635,7 +635,7 @@ export const ConfigSectionMediaServer: React.FC<ConfigSectionMediaServerProps> =
               <p>API token used to authenticate requests to the media server.</p>
               {value.type === "Silo" && (
                 <p className="mt-2">
-                  For Silo, create the API key from an admin account. Setting the API key&apos;s rate tier to{" "}
+                  For Silo, create the API key from an admin account. Setting the API key's rate tier to{" "}
                   <span className="font-medium">elevated</span> in Silo is recommended, as Silo limits how many requests
                   an API key can make.
                 </p>
@@ -664,8 +664,8 @@ export const ConfigSectionMediaServer: React.FC<ConfigSectionMediaServerProps> =
               <PopoverHelp ariaLabel="help-media-server-user-id">
                 {value.type === "Silo" ? (
                   <p>
-                    Profile ID is required for Silo. It is the primary profile of the API key&apos;s account, and should
-                    be set automatically after URL & Token are valid.
+                    Profile ID is required for Silo. It is the primary profile of the API key's account, and should be
+                    set automatically after URL & Token are valid.
                   </p>
                 ) : (
                   <p>

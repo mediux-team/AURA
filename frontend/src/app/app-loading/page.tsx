@@ -162,7 +162,7 @@ const AppStatusPage: React.FC = () => {
                 <p className="font-medium text-foreground">Silo may take a little longer to load</p>
                 <p className="mt-1 text-muted-foreground">
                   Silo limits how many API requests aura can make, so loading your libraries can take a few minutes for
-                  larger libraries. Setting the API key&apos;s rate tier to{" "}
+                  larger libraries. Setting the API key's rate tier to{" "}
                   <span className="font-medium text-foreground">elevated</span> in Silo will speed this up.
                 </p>
               </div>

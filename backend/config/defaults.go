@@ -94,7 +94,7 @@ func DefaultConfig() Config {
 }
 
 // Image types that can be selected in the Download Modal
-var DownloadImageTypes = []string{"poster", "backdrop", "season_poster", "special_season_poster", "titlecard"}
+var DownloadImageTypes = []string{"poster", "backdrop", "season_poster", "special_season_poster", "titlecard", "collection_poster", "collection_backdrop"}
 
 func DefaultUserPreferences() Config_UserPreferences {
 	return Config_UserPreferences{

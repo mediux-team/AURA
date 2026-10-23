@@ -190,6 +190,33 @@ func TestMoveMediaServerToMediaServersNotSetUp(t *testing.T) {
 	}
 }
 
+func TestAddCollectionImagesToDownloadDefaults(t *testing.T) {
+	db := openTestConfigDB(t)
+	ctx := testContext()
+
+	// Download defaults saved before the collection image types
+	if _, err := db.conn.Exec(`UPDATE ConfigSchemaVersion SET version = 3;`); err != nil {
+		t.Fatal(err)
+	}
+	if Err := db.SaveConfigValues(ctx, map[string]string{
+		"UserPreferences.DownloadDefaults": `["poster","titlecard"]`,
+		"Mediux.ApiToken":                  `"mediux-token"`,
+	}, false); Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	if Err := db.CreateConfigTables(ctx); Err.Message != "" {
+		t.Fatalf("CreateConfigTables: %s", Err.Message)
+	}
+
+	values, _ := db.GetAllConfigValues(ctx)
+	if got := values["UserPreferences.DownloadDefaults"]; got != `["poster","titlecard","collection_poster","collection_backdrop"]` {
+		t.Errorf("DownloadDefaults = %s", got)
+	}
+	if values["Mediux.ApiToken"] != `"mediux-token"` {
+		t.Error("other values should not change")
+	}
+}
+
 func writeConfigYAML(t *testing.T, url string) string {
 	t.Helper()
 	yamlFile := filepath.Join(config.ConfigPath, "config.yaml")

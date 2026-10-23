@@ -213,7 +213,7 @@ export function FavoriteCreatorsCard() {
           <PopoverHelp ariaLabel="help-auto-upgrade-sets">
             <p className="mb-2">
               The Upgrade Saved Sets job replaces a saved set when a favorite creator ranked higher than its creator has
-              a set for the item. Any favorite creator ranks above creators who aren&apos;t favorites.
+              a set for the item. Any favorite creator ranks above creators who aren't favorites.
             </p>
             <p className="mb-2">
               The new set uses your Download Defaults with Auto Download on, and the old set is removed once the new one

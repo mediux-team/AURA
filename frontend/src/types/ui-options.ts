@@ -84,4 +84,12 @@ export const DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS: {
   { value: "collection_backdrop", label: "Collection Backdrop" },
 ];
 
+// Download Defaults can include the collection images, offered for collection sets on a movie's page
+export type TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS =
+  TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS | TYPE_DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS;
+export const DOWNLOAD_DEFAULT_TYPE_OPTIONS: {
+  value: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS;
+  label: string;
+}[] = [...DOWNLOAD_IMAGE_TYPE_OPTIONS, ...DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS];
+
 export type TYPE_MEDIA_ITEM_TYPE_OPTIONS = "movie" | "show";

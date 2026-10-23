@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/cn";
 import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
-import { DOWNLOAD_IMAGE_TYPE_OPTIONS } from "@/types/ui-options";
+import { DOWNLOAD_DEFAULT_TYPE_OPTIONS } from "@/types/ui-options";
 
 export function UserPreferencesCard() {
   // Download Defaults from User Preferences Store
@@ -96,7 +96,7 @@ export function UserPreferencesCard() {
           </PopoverHelp>
         </div>
         <div className="flex flex-wrap gap-2">
-          {DOWNLOAD_IMAGE_TYPE_OPTIONS.map((opt) => (
+          {DOWNLOAD_DEFAULT_TYPE_OPTIONS.map((opt) => (
             <Badge
               key={opt.value}
               className={cn(

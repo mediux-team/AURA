@@ -61,7 +61,8 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 			status = "warning"
 		}
 
-		message := fmt.Sprintf("%s (%s)", queueItem.MediaItem.Title, queueItem.MediaItem.LibraryTitle)
+		_, libraryTitle, _, title := queueItem.QueueEntry()
+		message := fmt.Sprintf("%s (%s)", title, libraryTitle)
 
 		finishErr := database.FinishDownloadQueueJob(ctx, job.ID, status, message, fileErrors, fileWarnings)
 		if finishErr.Message != "" {
@@ -80,6 +81,14 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 		_ = database.DeleteDownloadQueueJob(ctx, job.ID)
 	}
 
+	// Only collection images, applied to their media server collection
+	if queueItem.IsCollectionOnly() {
+		done, failed := 0, 0
+		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, &done, &failed, len(queueItem.CollectionImages.Images))...)
+		finalize()
+		return
+	}
+
 	if queueItem.MediaItem.RatingKey == "" || queueItem.MediaItem.Title == "" || queueItem.MediaItem.LibraryTitle == "" || queueItem.MediaItem.TMDB_ID == "" {
 		reason := "Media Item missing required fields: ratingKey/title/libraryTitle/tmdbId"
 		fileErrors = append(fileErrors, reason)
@@ -88,7 +97,7 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 		return
 	}
 
-	if len(queueItem.PosterSets) == 0 {
+	if len(queueItem.PosterSets) == 0 && !queueItem.HasCollectionImages() {
 		reason := "No poster sets found"
 		fileWarnings = append(fileWarnings, reason)
 		recordDownloadHistoryFailure(ctx, queueItem.MediaItem, models.DBPosterSetDetail{}, reason)
@@ -207,6 +216,17 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 		fileWarnings = append(fileWarnings, setWarnings...)
 	}
 
+	// The collection's own poster and backdrop, applied to the media server collection. They aren't saved.
+	if queueItem.HasCollectionImages() {
+		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, &done, &failed, total)...)
+	}
+
+	// Only collection images, there are no sets to save
+	if len(queueItem.PosterSets) == 0 {
+		finalize()
+		return
+	}
+
 	// The sets were just downloaded
 	for i := range queueItem.PosterSets {
 		queueItem.PosterSets[i].LastDownloaded = time.Now()
@@ -249,6 +269,27 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 		mediaserver.AddLabelToMediaItem(ctx, queueItem.MediaItem, selectedTypes)
 		sonarr_radarr.HandleTags(ctx, queueItem.MediaItem, selectedTypes)
 	}()
+}
+
+// applyCollectionImages applies a collection's own images to the media server collection, and returns the errors
+func applyCollectionImages(ctx context.Context, jobID int64, images *models.QueuedCollectionImages, done, failed *int, total int) (errors []string) {
+	collection := images.Collection
+	for _, image := range images.Images {
+		QueueBroadcaster.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{
+			JobID:          jobID,
+			MediaItemTitle: collection.Title,
+			ImageType:      image.Type,
+			Done:           *done,
+			Failed:         *failed,
+			Total:          total,
+		}})
+		if applyErr := mediaserver.ApplyCollectionImage(ctx, &collection, image); applyErr.Message != "" {
+			errors = append(errors, fmt.Sprintf("%s %s: %s", collection.Title, image.Type, applyErr.Message))
+			*failed++
+		}
+		*done++
+	}
+	return errors
 }
 
 // recordDownloadHistory keeps a set's failed download in the history. A set that downloaded without failures clears its earlier ones instead.
@@ -314,6 +355,9 @@ func countJobImages(queueItem models.DBSavedItem) (total int) {
 				total++
 			}
 		}
+	}
+	if queueItem.HasCollectionImages() {
+		total += len(queueItem.CollectionImages.Images)
 	}
 	return total
 }

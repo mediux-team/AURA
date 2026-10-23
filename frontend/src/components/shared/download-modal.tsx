@@ -1,5 +1,6 @@
 "use client";
 
+import type { CollectionItem } from "@/app/collections/page";
 import {
   compareSeasonImages,
   formatDownloadProgressShortText,
@@ -8,6 +9,7 @@ import {
 import { formatDownloadSize } from "@/helper/format-download-size";
 import { upsertSavedSets } from "@/helper/media-item-update-saved-sets";
 import { AddNewItemToDB } from "@/services/database/add";
+import { DownloadImageFileForCollectionItem } from "@/services/downloads/download-collection-image";
 import { downloadImageFileForMediaItem } from "@/services/downloads/download-image";
 import { AddItemToDownloadQueue } from "@/services/downloads/queue-add";
 import { GetMediaItemDetails } from "@/services/mediaserver/get-media-item-details";
@@ -68,8 +70,13 @@ import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
 import type { DBPosterSetDetail, DBSavedItem, PosterSet } from "@/types/database/db-poster-set";
 import type { MediaItem, SelectedTypes } from "@/types/media-and-posters/media-item-and-library";
-import type { BaseSetInfo, ImageFile } from "@/types/media-and-posters/sets";
-import { DOWNLOAD_IMAGE_TYPE_OPTIONS, TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS } from "@/types/ui-options";
+import type { BaseSetInfo, CollectionItemImageFile, ImageFile } from "@/types/media-and-posters/sets";
+import {
+  DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS,
+  DOWNLOAD_IMAGE_TYPE_OPTIONS,
+  TYPE_DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS,
+  TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS,
+} from "@/types/ui-options";
 
 export interface FormItemDisplay {
   MediaItem: MediaItem;
@@ -113,6 +120,15 @@ type AddToQueueTaskPayload = {
   dbItem: DBSavedItem;
 };
 
+// Applies a collection's own poster or backdrop to the media server collection
+type CollectionImageTaskPayload = {
+  kind: "collectionImage";
+  itemKey: string;
+  itemTitle: string;
+  collectionItem: CollectionItem;
+  imageFile: CollectionItemImageFile;
+};
+
 // Non-Retryable “record only” task (e.g. fetch latest media item failed)
 type NoteTaskPayload = {
   kind: "note";
@@ -120,7 +136,8 @@ type NoteTaskPayload = {
   itemTitle: string;
 };
 
-type TaskPayload = DownloadTaskPayload | AddToDBTaskPayload | AddToQueueTaskPayload | NoteTaskPayload;
+type TaskPayload =
+  DownloadTaskPayload | AddToDBTaskPayload | AddToQueueTaskPayload | CollectionImageTaskPayload | NoteTaskPayload;
 
 type Task = {
   id: string;
@@ -209,10 +226,12 @@ const formSchema = z
         addToDBOnly: z.boolean().optional(),
       })
     ),
+    collectionTypes: z.array(z.enum(["collection_poster", "collection_backdrop"])).optional(),
   })
   .refine(
     (data) =>
-      Object.values(data.selectedOptionsByItem).some((item) => Array.isArray(item.types) && item.types.length > 0),
+      Object.values(data.selectedOptionsByItem).some((item) => Array.isArray(item.types) && item.types.length > 0) ||
+      (data.collectionTypes?.length ?? 0) > 0,
     {
       message: "Please select at least one image type to download.",
       path: ["selectedOptionsByItem.message"],
@@ -226,7 +245,13 @@ export interface DownloadModalProps {
   onDownloadComplete?: (item: MediaItem) => void;
   // Libraries that share the same media server item (e.g. Silo), so the images apply to all of them
   sharedLibraryTitles?: string[];
+  // A collection set's own poster and backdrop, and the media server collection they apply to
+  collectionImages?: { collection: CollectionItem; images: CollectionItemImageFile[] };
 }
+
+// The key of the collection images in the download progress
+const COLLECTION_PROGRESS_KEY = "collection";
+
 interface DuplicateMap {
   [mediaItemKey: string]: {
     options: Array<{
@@ -271,6 +296,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   autoDownloadDefault = true, // Default to true if not provided
   onDownloadComplete,
   sharedLibraryTitles = [],
+  collectionImages,
 }) => {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
@@ -313,11 +339,17 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const autoUpgradeSets = useUserPreferencesStore((state) => state.autoUpgradeSets);
 
   // State - Add New Collection Items
-const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
-  const [autoAddNewCollectionItems, setAutoAddNewCollectionItems] = useState(false);
+  const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
+  const [autoAddNewCollectionItems, setAutoAddNewCollectionItems] = useState(defaultAutoAddNewCollectionItems);
 
   // User Preferences
   const { downloadDefaults } = useUserPreferencesStore();
+
+  // The collection image types this set has, checked to start when they're in the Download Defaults
+  const collectionImageTypes = DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS.map((opt) => opt.value).filter((type) =>
+    collectionImages?.images.some((img) => img.type === type)
+  );
+  const defaultCollectionTypes = collectionImageTypes.filter((type) => downloadDefaults.includes(type));
 
   // Media Store
   const { setMediaItem } = useMediaStore();
@@ -410,12 +442,17 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
         },
         {} as z.infer<typeof formSchema>["selectedOptionsByItem"]
       ),
+      collectionTypes: defaultCollectionTypes,
     },
   });
 
   const watchSelectedOptions = useWatch({
     control: form.control,
     name: "selectedOptionsByItem",
+  });
+  const watchCollectionTypes = useWatch({
+    control: form.control,
+    name: "collectionTypes",
   });
 
   // Reset form on mount
@@ -434,8 +471,11 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
         },
         {} as z.infer<typeof formSchema>["selectedOptionsByItem"]
       ),
+      collectionTypes: defaultCollectionTypes,
     });
-  }, [formItems, form, autoDownloadDefault, downloadDefaults, defaultAddToDBOnly]);
+    // defaultCollectionTypes comes from collectionImages and downloadDefaults
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formItems, form, autoDownloadDefault, downloadDefaults, defaultAddToDBOnly, collectionImages]);
 
   useEffect(() => {
     // If all the form items are set to "Add to Database Only", change button text
@@ -794,6 +834,39 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
     }
   };
 
+  const runCollectionImageTask = async (taskId: string, payload: CollectionImageTaskPayload): Promise<boolean> => {
+    updateTask(taskId, (t) => ({
+      ...t,
+      status: "in-progress",
+      attempts: (t.attempts ?? 0) + 1,
+      error: undefined,
+    }));
+    const label =
+      DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS.find((opt) => opt.value === payload.imageFile.type)?.label ??
+      payload.imageFile.type;
+    setCurrentText(`Applying ${label} to "${payload.itemTitle}"`, `Applying ${label}`);
+
+    try {
+      const resp = await DownloadImageFileForCollectionItem(
+        payload.imageFile.type,
+        payload.collectionItem,
+        payload.imageFile
+      );
+      if (resp.status === "error") {
+        throw new Error(resp.error?.message || "Unknown error");
+      }
+      updateTask(taskId, (t) => ({ ...t, status: "completed" }));
+      return true;
+    } catch (error) {
+      updateTask(taskId, (t) => ({
+        ...t,
+        status: "failed",
+        error: `"${payload.itemTitle}" - ${label} - ${error instanceof Error ? error.message : "Unknown error"}`,
+      }));
+      return false;
+    }
+  };
+
   const retryTask = async (taskId: string) => {
     const t = findTask(progress, taskId);
     if (!t) return;
@@ -807,6 +880,8 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
       await runAddToDBTask(taskId, t.payload);
     } else if (t.payload.kind === "addToQueue") {
       await runAddToQueueTask(taskId, t.payload);
+    } else if (t.payload.kind === "collectionImage") {
+      await runCollectionImageTask(taskId, t.payload);
     }
 
     setButtonTexts((prev) => ({ ...prev, download: "Download Again" }));
@@ -956,6 +1031,72 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
           </PopoverHelp>
         ) : null}
       </FormItem>
+    );
+  };
+
+  // The collection's own poster and backdrop, applied to the media server collection and not saved
+  const renderCollectionImages = (collection: CollectionItem) => {
+    const tasks = progress.items[COLLECTION_PROGRESS_KEY]?.tasks ?? [];
+    const statusOf = (type: TYPE_DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS) =>
+      tasks.find((t) => t.payload.kind === "collectionImage" && t.payload.imageFile.type === type)?.status;
+
+    return (
+      <FormField
+        key={COLLECTION_PROGRESS_KEY}
+        control={form.control}
+        name="collectionTypes"
+        render={({ field }) => (
+          <div
+            className={cn("rounded-md border p-4 rounded-lg mb-4", {
+              "border-green-500": tasks.length > 0 && tasks.every((t) => t.status === "completed"),
+              "border-destructive": tasks.some((t) => t.status === "failed"),
+            })}
+          >
+            <FormLabel className="text-md font-normal mb-4">Collection: {collection.title}</FormLabel>
+            <div className="flex flex-wrap gap-4">
+              {collectionImageTypes.map((type) => {
+                const status = statusOf(type);
+                return (
+                  <FormItem key={type} className="flex flex-row items-start space-x-2">
+                    <FormControl className="mt-1">
+                      <Checkbox
+                        checked={field.value?.includes(type) ?? false}
+                        onCheckedChange={(checked) =>
+                          field.onChange(
+                            checked ? [...(field.value ?? []), type] : (field.value ?? []).filter((t) => t !== type)
+                          )
+                        }
+                        className="h-5 w-5 sm:h-4 sm:w-4 cursor-pointer"
+                      />
+                    </FormControl>
+                    <FormLabel
+                      className={cn(
+                        "text-md font-normal cursor-pointer",
+                        status === "in-progress" ? "animate-pulse text-primary" : ""
+                      )}
+                    >
+                      {DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS.find((opt) => opt.value === type)?.label}
+                    </FormLabel>
+                    {status === "completed" ? (
+                      <Check className="h-4 w-4 text-green-500 mt-1" strokeWidth={3} />
+                    ) : status === "failed" ? (
+                      <X className="h-4 w-4 text-destructive mt-1" strokeWidth={3} />
+                    ) : status === "in-progress" ? (
+                      <Loader className="h-4 w-4 mt-1 animate-spin" />
+                    ) : null}
+                  </FormItem>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {addToQueueOnly
+                ? "Applied to the collection on your media server when the Download Queue gets to them."
+                : "Applied to the collection on your media server."}{" "}
+              Collection images aren&apos;t saved, so Auto Download doesn&apos;t update them.
+            </p>
+          </div>
+        )}
+      />
     );
   };
 
@@ -1297,6 +1438,11 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
       if ((selected.types?.length ?? 0) > 0) total += 1;
     }
 
+    // One task for each collection image type, or one queue entry for them with Add to Queue
+    if (collectionImages && (data.collectionTypes?.length ?? 0) > 0) {
+      total += addToQueueOnly ? 1 : (data.collectionTypes?.length ?? 0);
+    }
+
     return total;
   };
 
@@ -1326,6 +1472,17 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
       log("INFO", "Download Modal", "Debug Info", "Selected Types:", { watchSelectedOptions });
       log("INFO", "Download Modal", "Debug Info", "Add to Queue Only:", addToQueueOnly);
       log("INFO", "Download Modal", "Debug Info", "Auto Add New Collection Items:", autoAddNewCollectionItems);
+
+      // With Add to Queue, the collection images get their own queue entry
+      const selectedCollectionImages = collectionImages
+        ? (data.collectionTypes ?? [])
+            .map((type) => collectionImages.images.find((img) => img.type === type))
+            .filter((img): img is CollectionItemImageFile => img !== undefined)
+        : [];
+      const queuedCollectionImages =
+        addToQueueOnly && collectionImages && selectedCollectionImages.length > 0
+          ? { collection: collectionImages.collection, images: selectedCollectionImages }
+          : undefined;
 
       // Sort formItems by MediaItemTitle for consistent order
       const sortedFormItems = formItems;
@@ -1451,6 +1608,7 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
         // Add to queue only (for items that actually have types selected)
         if (addToQueueOnly) {
           const taskId = newId();
+          const queueDBItem: DBSavedItem = createdSavedItem.dbItem;
           addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
             id: taskId,
             status: "pending",
@@ -1460,7 +1618,7 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
               kind: "addToQueue",
               itemKey: getItemFormKey(item.MediaItem),
               itemTitle: item.MediaItem.title,
-              dbItem: createdSavedItem.dbItem,
+              dbItem: queueDBItem,
             },
           });
 
@@ -1468,7 +1626,7 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
             kind: "addToQueue",
             itemKey: getItemFormKey(item.MediaItem),
             itemTitle: item.MediaItem.title,
-            dbItem: createdSavedItem.dbItem,
+            dbItem: queueDBItem,
           });
           if (queued) {
             markItemSaved(latestMediaItem, item, {
@@ -1790,6 +1948,55 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
         }
       }
 
+      // With Add to Queue, the collection images get their own queue entry, listed by the collection
+      if (queuedCollectionImages && formItems.length > 0 && !cancelRef.current) {
+        const item = formItems[0];
+        const dbItem: DBSavedItem = {
+          media_item: item.MediaItem,
+          poster_sets: [],
+          collection_images: queuedCollectionImages,
+        };
+        const taskId = newId();
+        const payload: AddToQueueTaskPayload = {
+          kind: "addToQueue",
+          itemKey: COLLECTION_PROGRESS_KEY,
+          itemTitle: queuedCollectionImages.collection.title,
+          dbItem,
+        };
+        addTask(COLLECTION_PROGRESS_KEY, queuedCollectionImages.collection.title, {
+          id: taskId,
+          status: "pending",
+          label: `Add "${queuedCollectionImages.collection.title}" collection images to queue`,
+          attempts: 0,
+          payload,
+        });
+        await runAddToQueueTask(taskId, payload);
+      }
+
+      // The collection's own poster and backdrop, applied to the media server collection
+      if (collectionImages && !queuedCollectionImages && !cancelRef.current) {
+        for (const type of data.collectionTypes ?? []) {
+          const imageFile = collectionImages.images.find((img) => img.type === type);
+          if (!imageFile || cancelRef.current) continue;
+          const taskId = newId();
+          const payload: CollectionImageTaskPayload = {
+            kind: "collectionImage",
+            itemKey: COLLECTION_PROGRESS_KEY,
+            itemTitle: collectionImages.collection.title,
+            collectionItem: collectionImages.collection,
+            imageFile,
+          };
+          addTask(COLLECTION_PROGRESS_KEY, collectionImages.collection.title, {
+            id: taskId,
+            status: "pending",
+            label: DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS.find((opt) => opt.value === type)?.label ?? type,
+            attempts: 0,
+            payload,
+          });
+          await runCollectionImageTask(taskId, payload);
+        }
+      }
+
       setCurrentText("Completed!");
       setButtonTexts({
         cancel: "Close",
@@ -1823,7 +2030,7 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
       onOpenChange={(open) => {
         if (open) {
           setAddToQueueOnly(defaultAddToQueue);
-setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
+          setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
         } else {
           handleClose();
         }
@@ -1836,7 +2043,7 @@ setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
       <DialogPortal>
         <DialogOverlay />
         <DialogContent
-          className={cn("z-50", "max-h-[80vh] overflow-y-auto", "sm:max-w-[700px]", "border border-primary")}
+          className={cn("z-50", "max-h-[85vh] overflow-y-auto", "sm:max-w-[700px]", "border border-primary")}
         >
           <DialogHeader>
             <DialogTitle onClick={LOG_VALUES}>{baseSetInfo.title}</DialogTitle>
@@ -1869,6 +2076,11 @@ setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
           {formItems.length > 0 ? (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                {/* The collection's own poster and backdrop */}
+                {collectionImages &&
+                  collectionImageTypes.length > 0 &&
+                  renderCollectionImages(collectionImages.collection)}
+
                 {/* Form Items */}
                 {formItems.map(renderFormItem)}
 
@@ -1877,11 +2089,12 @@ setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
                   (item) =>
                     !watchSelectedOptions?.[getItemFormKey(item.MediaItem)]?.types?.length &&
                     !watchSelectedOptions?.[getItemFormKey(item.MediaItem)]?.addToDBOnly
-                ) && (
-                  <div className="text-sm text-destructive">
-                    No image types selected for download. Please select at least one image type to download.
-                  </div>
-                )}
+                ) &&
+                  !watchCollectionTypes?.length && (
+                    <div className="text-sm text-destructive">
+                      No image types selected for download. Please select at least one image type to download.
+                    </div>
+                  )}
 
                 {/* Auto Add New Collection Items 
 									Only show this button if the set is a collection and all of the items are movies that have Autodownload enabled and not set to Add to DB Only

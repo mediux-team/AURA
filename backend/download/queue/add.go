@@ -27,14 +27,15 @@ func AddToQueue(ctx context.Context, saveItem models.DBSavedItem) (Err logging.L
 
 	logAction.AppendResult("job_id", jobID)
 
+	tmdbID, libraryTitle, edition, title := saveItem.QueueEntry()
 	QueueBroadcaster.Publish(QueueEvent{
 		Type: "job_added",
 		Job: &database.DownloadQueueJob{
 			ID:             jobID,
-			TMDB_ID:        saveItem.MediaItem.TMDB_ID,
-			LibraryTitle:   saveItem.MediaItem.LibraryTitle,
-			Edition:        saveItem.MediaItem.Edition,
-			MediaItemTitle: saveItem.MediaItem.Title,
+			TMDB_ID:        tmdbID,
+			LibraryTitle:   libraryTitle,
+			Edition:        edition,
+			MediaItemTitle: title,
 			Payload:        saveItem,
 			Status:         "pending",
 			CreatedAt:      time.Now(),

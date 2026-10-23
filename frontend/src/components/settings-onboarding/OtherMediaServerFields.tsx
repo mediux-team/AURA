@@ -130,7 +130,7 @@ export const OtherMediaServerFields: React.FC<OtherMediaServerFieldsProps> = ({
                     </SelectItem>
                   ))}
                   <SelectItem value={NO_MATCH} className="cursor-pointer">
-                    Don&apos;t match
+                    Don't match
                   </SelectItem>
                 </SelectContent>
               </Select>

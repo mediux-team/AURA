@@ -3,6 +3,7 @@
 ### Added
 
 - Added option to have "Auto Add New Collection Items" checked by default in the Download Modal for better user experience.
+- Added option to download Collection Poster and Backdrop from Media Item page when applicable.
 
 ---
 

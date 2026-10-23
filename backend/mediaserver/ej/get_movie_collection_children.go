@@ -60,6 +60,7 @@ func (e *EJ) GetMovieCollectionChildrenItems(ctx context.Context, collection *mo
 		}
 		var itemInfo models.MediaItem
 		itemInfo.RatingKey = item.ID
+		itemInfo.TMDB_ID = item.ProviderIds.Tmdb
 		itemInfo.Type = map[string]string{
 			"Movie":  "movie",
 			"Series": "show",

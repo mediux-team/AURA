@@ -10,7 +10,7 @@ import (
 	"errors"
 )
 
-const LATEST_DB_VERSION = 13
+const LATEST_DB_VERSION = 14
 
 var Client DB
 
@@ -123,6 +123,8 @@ type DB interface {
 
 	// Remove the library items that are no longer on the main media server
 	FinishLibraryLoad(ctx context.Context, usedLibraries []string, loadedSince map[string]int64) logging.LogErrorInfo
+	SaveCollections(ctx context.Context, collections []models.CollectionItem) logging.LogErrorInfo
+	GetCollections(ctx context.Context) ([]models.CollectionItem, logging.LogErrorInfo)
 
 	// Move saved Media Items to the items on a new main media server, all or none of them
 	MoveMediaItems(ctx context.Context, moves []MediaItemMove) (Err logging.LogErrorInfo)
@@ -512,6 +514,22 @@ func GetLibraryItemsOnServer(ctx context.Context) ([]models.MediaItem, logging.L
 		return []models.MediaItem{}, logging.Error_DBClientNotInitialized()
 	}
 	return Client.GetLibraryItemsOnServer(ctx)
+}
+
+// SaveCollections replaces the main media server's collections and the movies in them
+func SaveCollections(ctx context.Context, collections []models.CollectionItem) logging.LogErrorInfo {
+	if Client == nil {
+		return logging.Error_DBClientNotInitialized()
+	}
+	return Client.SaveCollections(ctx, collections)
+}
+
+// GetCollections returns the main media server's collections and the movies in them
+func GetCollections(ctx context.Context) ([]models.CollectionItem, logging.LogErrorInfo) {
+	if Client == nil {
+		return []models.CollectionItem{}, logging.Error_DBClientNotInitialized()
+	}
+	return Client.GetCollections(ctx)
 }
 
 // FinishLibraryLoad removes the library items that are no longer on the main media server

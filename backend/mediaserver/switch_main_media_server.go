@@ -210,6 +210,9 @@ func SwitchMainMediaServer(ctx context.Context, serverID string) (plan SwitchMai
 	// Load the new main media server into the main cache, and the others again
 	cache.LibraryStore.ClearAllSections()
 	cache.CollectionsStore.ClearAllCollections()
+	if Err := database.SaveCollections(ctx, nil); Err.Message != "" {
+		logging.LOGGER.Warn().Timestamp().Str("error", Err.Message).Msg("Failed to remove the old main media server's collections")
+	}
 	GetAllLibrarySectionsAndItems(ctx, true)
 	return plan, logging.LogErrorInfo{}
 }

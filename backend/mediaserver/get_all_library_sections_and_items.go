@@ -5,6 +5,7 @@ import (
 	"aura/config"
 	"aura/database"
 	"aura/logging"
+	"aura/mediaserver/ej"
 	"aura/models"
 	"context"
 	"fmt"
@@ -91,6 +92,9 @@ func loadLibrariesIntoCache(ctx context.Context, server config.Config_MediaServe
 	}
 
 	ejRanCollections := false
+	// The collections found while loading, and whether every library's collections loaded
+	loadedCollections := map[string]bool{}
+	collectionsLoaded := true
 	// When each library that loaded in full started loading
 	loadedSince := map[string]int64{}
 	// Items the main cache didn't have, a library loading for the first time has none
@@ -108,10 +112,22 @@ func loadLibrariesIntoCache(ctx context.Context, server config.Config_MediaServe
 
 		// Update the collections cache for this section
 		if isMain && (section.Type == "movie" || section.Type == "mixed") && !ejRanCollections {
-			GetMovieCollections(ctx, section)
+			collections, collectionsErr := loadMovieCollections(ctx, server, section)
+			if collectionsErr.Message != "" {
+				collectionsLoaded = false
+			}
+			for _, collection := range collections {
+				loadedCollections[collection.RatingKey] = true
+			}
 			if server.Type == "Emby" || server.Type == "Jellyfin" {
 				ejRanCollections = true
 			}
+		}
+
+		// Plex adds each movie to its collections while the library loads, they keep their movies until it's done
+		if isMain && server.Type == "Plex" && (section.Type == "movie" || section.Type == "mixed") {
+			cache.CollectionsStore.StartLoadingMembers(section.Title)
+			defer cache.CollectionsStore.StopLoadingMembers(section.Title)
 		}
 
 		pageSize := libraryPageSize
@@ -187,6 +203,7 @@ func loadLibrariesIntoCache(ctx context.Context, server config.Config_MediaServe
 		if isMain {
 			updateLibraryLoad(section.Title, start, max(expectedTotal, start), true)
 			loadedSince[section.Title] = sectionStartedAt
+			cache.CollectionsStore.FinishLoadingMembers(section.Title)
 		}
 
 	}
@@ -199,6 +216,9 @@ func loadLibrariesIntoCache(ctx context.Context, server config.Config_MediaServe
 		if finishErr := database.FinishLibraryLoad(ctx, usedLibraries, loadedSince); finishErr.Message != "" {
 			logAction.AppendWarning("finish_library_load_error", finishErr.Message)
 		}
+		if collectionsLoaded {
+			finishCollectionsLoad(ctx, msClient, server, loadedCollections)
+		}
 		if len(newItems) > 0 && OnNewItems != nil {
 			logAction.AppendResult("new_items", len(newItems))
 			OnNewItems(ctx, newItems)
@@ -206,4 +226,46 @@ func loadLibrariesIntoCache(ctx context.Context, server config.Config_MediaServe
 	}
 	store.LastFullUpdate = time.Now().Unix()
 	return true
+}
+
+// finishCollectionsLoad removes the collections that are gone, gets the movies in each collection, and saves them
+func finishCollectionsLoad(ctx context.Context, msClient MediaServerInterface, server config.Config_MediaServer, loadedCollections map[string]bool) {
+	ctx, logAction := logging.AddSubActionToContext(ctx, "Saving Collections", logging.LevelDebug)
+	defer logAction.Complete()
+
+	cache.CollectionsStore.Retain(loadedCollections)
+
+	// Plex added the movies while the libraries loaded, the other media servers are asked for each collection
+	if server.Type != "Plex" {
+		for _, collection := range cache.CollectionsStore.GetAllCollections() {
+			if Err := msClient.GetMovieCollectionChildrenItems(ctx, &collection); Err.Message != "" {
+				logAction.AppendWarning(fmt.Sprintf("collection_%s", collection.RatingKey), Err.Message)
+				continue
+			}
+			cache.CollectionsStore.SetCollectionMembers(collection.RatingKey, collection.MediaItems)
+		}
+	}
+
+	collections := cache.CollectionsStore.GetAllCollections()
+	logAction.AppendResult("collections", len(collections))
+	if Err := database.SaveCollections(ctx, collections); Err.Message != "" {
+		logAction.AppendWarning("save_collections_error", Err.Message)
+	}
+}
+
+// loadMovieCollections gets the collections for a movie library. Emby and Jellyfin keep every collection
+// in their own Collections library, so that library is used instead.
+func loadMovieCollections(ctx context.Context, server config.Config_MediaServer, section models.LibrarySection) ([]models.CollectionItem, logging.LogErrorInfo) {
+	if server.Type == "Emby" || server.Type == "Jellyfin" {
+		collectionSection, Err := ej.GetMovieCollectionSection(ctx, server)
+		if Err.Message != "" {
+			return nil, Err
+		}
+		// No Collections library, so there are no collections
+		if collectionSection.ID == "" {
+			return []models.CollectionItem{}, logging.LogErrorInfo{}
+		}
+		section = collectionSection
+	}
+	return GetMovieCollections(ctx, section)
 }

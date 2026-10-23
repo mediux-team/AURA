@@ -26,7 +26,7 @@ import { ToggleGroup } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/cn";
 import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
-import { DOWNLOAD_IMAGE_TYPE_OPTIONS, TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS } from "@/types/ui-options";
+import { DOWNLOAD_DEFAULT_TYPE_OPTIONS, TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS } from "@/types/ui-options";
 
 type MediaItemFilterProps = {
   numberOfActiveFilters?: number;
@@ -61,7 +61,7 @@ function MediaItemFilterContent({
   const setDefaultAddToQueue = useUserPreferencesStore((state) => state.setDefaultAddToQueue);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const setDefaultAddToDBOnly = useUserPreferencesStore((state) => state.setDefaultAddToDBOnly);
-const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
+  const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
   const setDefaultAutoAddNewCollectionItems = useUserPreferencesStore(
     (state) => state.setDefaultAutoAddNewCollectionItems
   );
@@ -85,13 +85,13 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
           type="multiple"
           className="flex flex-wrap gap-2 ml-2 mt-2"
           value={downloadDefaultsTypes}
-          onValueChange={(value: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS[]) => {
+          onValueChange={(value: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[]) => {
             // Ensure at least one type is always selected
             if (value.length === 0) return;
             setDownloadDefaultsTypes(value);
           }}
         >
-          {DOWNLOAD_IMAGE_TYPE_OPTIONS.map((opt) => (
+          {DOWNLOAD_DEFAULT_TYPE_OPTIONS.map((opt) => (
             <Badge
               key={opt.value}
               className={cn(
@@ -191,7 +191,7 @@ const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => stat
             </p>
           </PopoverHelp>
         </div>
-<div className="flex items-center space-x-2 justify-between mt-4">
+        <div className="flex items-center space-x-2 justify-between mt-4">
           <div className="flex items-center space-x-2">
             <Switch
               className="ml-0"

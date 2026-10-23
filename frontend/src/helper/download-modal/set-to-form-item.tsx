@@ -18,6 +18,21 @@ const createBaseItem = (set: SetRef): FormItemDisplay => ({
   },
 });
 
+// When an item was released, for sorting newest first
+const releasedAt = (item: FormItemDisplay) => item.MediaItem.released_at || item.MediaItem.year || 0;
+
+// sortFormItems puts the item the page is for first, then the same item in other libraries,
+// then the rest newest first. Without a current item, every item is newest first.
+export const sortFormItems = (items: FormItemDisplay[], current?: MediaItem): FormItemDisplay[] => {
+  const rank = (item: FormItemDisplay) => {
+    if (!current) return 2;
+    if (item.MediaItem.rating_key === current.rating_key && item.MediaItem.library_title === current.library_title)
+      return 0;
+    return item.MediaItem.tmdb_id === current.tmdb_id ? 1 : 2;
+  };
+  return [...items].sort((a, b) => rank(a) - rank(b) || releasedAt(b) - releasedAt(a));
+};
+
 export const setRefsToFormItems = (
   sets: SetRef[],
   includedItems: { [tmdb_id: string]: IncludedItem }
@@ -57,5 +72,5 @@ export const setRefsToFormItems = (
     }
   });
 
-  return items;
+  return sortFormItems(items);
 };

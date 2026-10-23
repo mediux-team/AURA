@@ -28,9 +28,9 @@ type DownloadQueueJob struct {
 }
 
 func (s *SQliteDB) EnqueueDownloadQueueJob(ctx context.Context, item models.DBSavedItem) (jobID int64, Err logging.LogErrorInfo) {
+	tmdbID, libraryTitle, edition, title := item.QueueEntry()
 	ctx, logAction := logging.AddSubActionToContext(ctx,
-		fmt.Sprintf("Enqueue Download Queue Job for '%s' (%s | %s)",
-			item.MediaItem.Title, item.MediaItem.TMDB_ID, item.MediaItem.LibraryTitle),
+		fmt.Sprintf("Enqueue Download Queue Job for '%s' (%s | %s)", title, tmdbID, libraryTitle),
 		logging.LevelDebug)
 	defer logAction.Complete()
 
@@ -54,10 +54,10 @@ VALUES (?, ?, ?, ?, ?)
 RETURNING id;
 `
 	err = s.conn.QueryRowContext(ctx, q,
-		item.MediaItem.TMDB_ID,
-		item.MediaItem.LibraryTitle,
-		item.MediaItem.Edition,
-		item.MediaItem.Title,
+		tmdbID,
+		libraryTitle,
+		edition,
+		title,
 		string(payload),
 	).Scan(&jobID)
 	if err != nil {

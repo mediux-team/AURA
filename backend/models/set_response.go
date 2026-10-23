@@ -46,7 +46,8 @@ type ImageFile struct {
 
 type SetRef struct {
 	PosterSet
-	ItemIDs []string `json:"item_ids"` // IDs of items in the set
+	ItemIDs    []string        `json:"item_ids"`             // IDs of items in the set
+	Collection *CollectionItem `json:"collection,omitempty"` // For a collection set on a movie's page, the media server collection its collection images apply to
 }
 
 type BoxsetRef struct {

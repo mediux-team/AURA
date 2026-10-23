@@ -27,9 +27,10 @@ type movieCollectionSetsByTMDBID_MoviesByID struct {
 }
 
 type movieCollectionSetsByTMDBID_Collection struct {
-	Posters   []ImageAsset                        `json:"posters"`
-	Backdrops []ImageAsset                        `json:"backdrops"`
-	Movies    []movieCollectionSetsByTMDBID_Movie `json:"movies"`
+	ID        string                                        `json:"id"`
+	Posters   []movieCollectionSetsByTMDBID_ImageCollection `json:"posters"`
+	Backdrops []movieCollectionSetsByTMDBID_ImageCollection `json:"backdrops"`
+	Movies    []movieCollectionSetsByTMDBID_Movie           `json:"movies"`
 }
 
 type movieCollectionSetsByTMDBID_Movie struct {
@@ -165,6 +166,32 @@ func GetMovieItemCollectionSets(ctx context.Context, tmdbID string, itemLibraryT
 		}
 	}
 
+	// The collection's own poster and backdrop are in the same sets as the movies' images
+	mediuxCollection := movieCollectionSetsResponse.Data.Base.Collection
+	for _, poster := range mediuxCollection.Posters {
+		if img := convertMediuxImageAssetToImageFile(&poster.ImageAsset, "collection_poster"); img != nil {
+			agg := getOrCreateSet(poster.Collection)
+			agg.images = append(agg.images, *img)
+		}
+	}
+	for _, backdrop := range mediuxCollection.Backdrops {
+		if img := convertMediuxImageAssetToImageFile(&backdrop.ImageAsset, "collection_backdrop"); img != nil {
+			agg := getOrCreateSet(backdrop.Collection)
+			agg.images = append(agg.images, *img)
+		}
+	}
+
+	// The media server collection the collection images apply to
+	collectionMovieIDs := make([]string, 0, len(mediuxCollection.Movies))
+	for _, mediuxMovie := range mediuxCollection.Movies {
+		collectionMovieIDs = append(collectionMovieIDs, mediuxMovie.ID)
+	}
+	var serverCollection *models.CollectionItem
+	if match, found := cache.CollectionsStore.FindCollectionForMovie(mediuxCollection.ID, itemLibraryTitle, tmdbID, collectionMovieIDs); found {
+		serverCollection = &match
+		logAction.AppendResult("server_collection", match.Title)
+	}
+
 	// 3) Flatten into []SetRef, but only include sets that contain the requested tmdbID
 	for _, agg := range setMap {
 		itemIDs := make([]string, 0, len(agg.itemIDs))
@@ -173,18 +200,19 @@ func GetMovieItemCollectionSets(ctx context.Context, tmdbID string, itemLibraryT
 		}
 		// Only include the set if tmdbID is present in itemIDs
 		if slices.Contains(itemIDs, tmdbID) {
-			// imgs := agg.images
-			// // If there is a collection level poster or backdrop, add those in as well
-			// imgs = append(imgs, *convertMediuxImageAssetToImageFile(&movieCollectionSetsResponse.Data.Base.Collection.Posters[0], "collection_poster"))
-			// imgs = append(imgs, *convertMediuxImageAssetToImageFile(&movieCollectionSetsResponse.Data.Base.Collection.Backdrops[0], "collection_backdrop"))
-			// agg.images = imgs
-			sets = append(sets, models.SetRef{
+			setRef := models.SetRef{
 				PosterSet: models.PosterSet{
 					BaseSetInfo: agg.info,
 					Images:      agg.images,
 				},
 				ItemIDs: itemIDs,
-			})
+			}
+			if serverCollection != nil && slices.ContainsFunc(agg.images, func(img models.ImageFile) bool {
+				return img.Type == "collection_poster" || img.Type == "collection_backdrop"
+			}) {
+				setRef.Collection = serverCollection
+			}
+			sets = append(sets, setRef)
 		}
 	}
 	logAction.AppendResult("collections_returned", len(sets))

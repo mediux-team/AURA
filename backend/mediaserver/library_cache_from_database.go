@@ -44,5 +44,23 @@ func LoadLibraryCacheFromDatabase(ctx context.Context) (loaded int) {
 		loaded += len(libraryItems)
 	}
 	logAction.AppendResult("items", loaded)
+
+	// Collections and the movies in them, with each movie from the library cache when it's there
+	if loaded > 0 {
+		collections, collectionsErr := database.GetCollections(ctx)
+		if collectionsErr.Message != "" {
+			logAction.AppendWarning("collections_error", collectionsErr.Message)
+		} else {
+			for i := range collections {
+				for j, member := range collections[i].MediaItems {
+					if item, found := cache.LibraryStore.GetMediaItemFromSectionByRatingKey(member.LibraryTitle, member.RatingKey); found {
+						collections[i].MediaItems[j] = *item
+					}
+				}
+			}
+			cache.CollectionsStore.SetAllCollections(collections)
+			logAction.AppendResult("collections", len(collections))
+		}
+	}
 	return loaded
 }

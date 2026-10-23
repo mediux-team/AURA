@@ -25,6 +25,10 @@ export const formatImageTypeLabel = (image: ImageTypeLabelInput): string => {
       return `Season ${season ?? "??"} Poster`;
     case "titlecard":
       return `S${season ?? "??"}E${episode ?? "??"} Titlecard`;
+    case "collection_poster":
+      return "Collection Poster";
+    case "collection_backdrop":
+      return "Collection Backdrop";
     default:
       return "";
   }

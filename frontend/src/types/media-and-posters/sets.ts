@@ -1,7 +1,9 @@
+import type { CollectionItem } from "@/app/collections/page";
+
 import type { MediaItem } from "@/types/media-and-posters/media-item-and-library";
 import type {
   TYPE_DB_SET_TYPE_OPTIONS,
-  TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS,
+  TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS,
   TYPE_SET_TYPE_OPTIONS,
 } from "@/types/ui-options";
 
@@ -34,7 +36,7 @@ export interface BaseSetInfo {
 
 export interface ImageFile {
   id: string;
-  type: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS;
+  type: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS;
   modified: string;
   file_size: number;
   src: string;
@@ -50,6 +52,7 @@ export interface SetRef extends Omit<BaseSetInfo, "type"> {
   type: TYPE_DB_SET_TYPE_OPTIONS;
   images: ImageFile[];
   item_ids: string[];
+  collection?: CollectionItem; // For a collection set on a movie's page, the media server collection its collection images apply to
 }
 
 export interface CollectionItemSetRef extends Omit<BaseSetInfo, "images"> {

@@ -395,7 +395,7 @@ export const ConfigSectionAuth: React.FC<ConfigSectionAuthProps> = ({
                       Whether the login session cookie is marked Secure, so the browser only sends it over HTTPS.
                     </p>
                     <p className="text-muted-foreground">
-                      Keep Auto unless logging in doesn&apos;t stick (e.g. behind a reverse proxy that handles HTTPS).
+                      Keep Auto unless logging in doesn't stick (e.g. behind a reverse proxy that handles HTTPS).
                     </p>
                   </PopoverHelp>
                 )}

@@ -3,24 +3,44 @@ query getMovieItemCollectionSetsByTMDBID($tmdb_id: ID!) {
     collection_id {
       id
       collection_name
-      posters {
+      posters(
+        filter: { id: { _nnull: true }, collection_set: { id: { _nnull: true } } }
+      ) {
         id
         modified_on
         filesize
         src
         blurhash
-        movie(filter: { id: { _eq: null } }) {
+        collection_set {
           id
+          set_title
+          user_created {
+            username
+          }
+          date_created
+          date_updated
+          popularity
+          popularity_global
         }
       }
-      backdrops {
+      backdrops(
+        filter: { id: { _nnull: true }, collection_set: { id: { _nnull: true } } }
+      ) {
         id
         modified_on
         filesize
         src
         blurhash
-        movie(filter: { id: { _eq: null } }) {
+        collection_set {
           id
+          set_title
+          user_created {
+            username
+          }
+          date_created
+          date_updated
+          popularity
+          popularity_global
         }
       }
       movies {

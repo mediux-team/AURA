@@ -50,6 +50,14 @@ export function SetFileCounts({ mediaItem, set, includedItems }: SetFileCountsPr
     if (backdropCount > 0) parts.push(`${backdropCount} ${makePlural(backdropCount, "Backdrop")}`);
     primary = parts.join(" • ");
 
+    // The collection's own images, when the set has them
+    const collection = [
+      set.images?.some((img) => img.type === "collection_poster") ? "Collection Poster" : "",
+      set.images?.some((img) => img.type === "collection_backdrop") ? "Collection Backdrop" : "",
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
     const itemIDs = Array.from(
       new Set(
         (set.images ?? [])
@@ -76,6 +84,7 @@ export function SetFileCounts({ mediaItem, set, includedItems }: SetFileCountsPr
     }
 
     return {
+      collection,
       primary,
       secondary,
       breakdown: {
@@ -320,6 +329,9 @@ export function SetFileCounts({ mediaItem, set, includedItems }: SetFileCountsPr
     <div>
       {mediaItem.type === "movie" && movieResult && (
         <>
+          {movieResult.collection && (
+            <Lead className="text-sm text-muted-foreground ml-1">{movieResult.collection}</Lead>
+          )}
           {movieResult.primary && <Lead className="text-sm text-muted-foreground ml-1">{movieResult.primary}</Lead>}
           {movieResult.secondary && (
             <div className="flex items-center mb-2">

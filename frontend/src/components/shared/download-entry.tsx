@@ -124,12 +124,25 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
   const mediaItem: MediaItem | undefined = isQueue ? props.job.item.media_item : undefined;
   const posterSets = isQueue ? (Array.isArray(props.job.item.poster_sets) ? props.job.item.poster_sets : []) : [];
 
-  const title = isQueue ? mediaItem!.title : props.entry.media_item_title;
+  const collectionImages = isQueue ? props.job.item.collection_images : undefined;
+  // An entry with only collection images is shown as its collection
+  const collectionOnly = posterSets.length === 0 && !!collectionImages;
+  const collectionPoster = collectionImages?.images.find((img) => img.type === "collection_poster");
+
+  const title = collectionOnly
+    ? collectionImages!.collection.title
+    : isQueue
+      ? mediaItem!.title
+      : props.entry.media_item_title;
   const year = isQueue ? mediaItem!.year : props.entry.media_item_year;
-  const libraryTitle = isQueue ? mediaItem!.library_title : props.entry.library_title;
+  const libraryTitle = collectionOnly
+    ? collectionImages!.collection.library_title
+    : isQueue
+      ? mediaItem!.library_title
+      : props.entry.library_title;
   const edition = isQueue ? mediaItem!.edition : props.entry.edition;
   const ratingKey = isQueue ? mediaItem!.rating_key : props.entry.rating_key;
-  const imageCount = isQueue ? countSelectedImages(posterSets) : 0;
+  const imageCount = isQueue ? countSelectedImages(posterSets) + (collectionImages?.images.length ?? 0) : 0;
 
   const onDeleteConfirm = async () => {
     if (isQueue) {
@@ -192,7 +205,7 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
       <CardHeader>
         {/* Top Left: Auto Download Icon or the Download Result */}
         <div className="absolute top-2 left-2 flex items-center gap-2">
-          {isQueue ? (
+          {collectionOnly ? null : isQueue ? (
             posterSets.some((set) => set.auto_download) ? (
               <Popover>
                 <PopoverTrigger asChild>
@@ -255,8 +268,18 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
         </div>
       </CardHeader>
 
-      {/* Middle: Image */}
-      {ratingKey && (
+      {/* Middle: Image, the collection poster for collection images */}
+      {collectionOnly && collectionPoster && (
+        <div className="flex justify-center">
+          <AssetImage
+            image={collectionPoster}
+            imageType="mediux"
+            aspect="poster"
+            className="w-[90%] h-auto transition-transform hover:scale-105"
+          />
+        </div>
+      )}
+      {!collectionOnly && ratingKey && (
         <div className="flex justify-center">
           <AssetImage
             image={isQueue ? mediaItem! : ({ rating_key: ratingKey } as MediaItem)}
@@ -270,7 +293,7 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
       <CardContent className="p-0 ml-2 mr-2">
         {/* Title */}
         <H4>
-          {isQueue ? (
+          {isQueue && !collectionOnly ? (
             <Link
               href={"/media-item/"}
               className="text-primary hover:underline text-md"
@@ -287,8 +310,8 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
 
         <div className="flex flex-col gap-1 mb-2">
           <span className="text-xs sm:text-sm text-muted-foreground inline-block">
-            {year} · {libraryTitle}
-            {edition ? ` · ${edition}` : ""}
+            {collectionOnly ? "Collection" : year} · {libraryTitle}
+            {!collectionOnly && edition ? ` · ${edition}` : ""}
           </span>
 
           {isQueue && (
@@ -301,17 +324,27 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
         </div>
 
         {/* Set */}
-        {isQueue
-          ? posterSets.map((set) => (
+        {isQueue ? (
+          <>
+            {posterSets.map((set) => (
               <SetDetails key={set.id} title={set.title} id={set.id} creator={set.user_created} />
-            ))
-          : props.entry.set_id && (
-              <SetDetails title={props.entry.set_title} id={props.entry.set_id} creator={props.entry.set_creator} />
+            ))}
+            {collectionImages && !collectionOnly && (
+              <span className="w-full text-sm text-muted-foreground">
+                Collection: {collectionImages.collection.title}
+              </span>
             )}
+          </>
+        ) : (
+          props.entry.set_id && (
+            <SetDetails title={props.entry.set_title} id={props.entry.set_id} creator={props.entry.set_creator} />
+          )
+        )}
 
         <Separator className="my-4" />
 
         {isQueue ? (
+          collectionImages ||
           posterSets.some(
             (set) =>
               set.selected_types.poster ||

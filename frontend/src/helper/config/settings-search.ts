@@ -309,7 +309,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     sectionLabel: "User Preferences",
     label: "Download Defaults",
     description: "Image types selected by default when downloading",
-    keywords: ["download", "defaults", "poster", "backdrop", "titlecard"],
+    keywords: ["download", "defaults", "poster", "backdrop", "titlecard", "collection poster", "collection backdrop"],
     configPath: "download_defaults",
   },
   {

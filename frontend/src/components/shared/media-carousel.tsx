@@ -1,4 +1,4 @@
-import { setRefsToFormItems } from "@/helper/download-modal/set-to-form-item";
+import { setRefsToFormItems, sortFormItems } from "@/helper/download-modal/set-to-form-item";
 import { formatLastUpdatedDate } from "@/helper/format-date-last-updates";
 import { CircleAlert, Database, User, ZoomInIcon } from "lucide-react";
 
@@ -21,7 +21,7 @@ import { usePosterSetsStore } from "@/lib/stores/global-store-poster-sets";
 import { useSearchQueryStore } from "@/lib/stores/global-store-search-query";
 
 import type { MediaItem } from "@/types/media-and-posters/media-item-and-library";
-import type { IncludedItem, SetRef } from "@/types/media-and-posters/sets";
+import type { CollectionItemImageFile, IncludedItem, SetRef } from "@/types/media-and-posters/sets";
 
 type MediaCarouselProps = {
   set: SetRef;
@@ -85,7 +85,13 @@ export function MediaCarousel({
       .filter((item) => item.MediaItem.tmdb_id === otherItem.tmdb_id)
       .map((item) => ({ MediaItem: otherItem, Set: { ...item.Set } }))
   );
-  const downloadModalFormItems = [...baseFormItems, ...crossLibraryFormItems];
+  // The item the page is for first, then the same item in other libraries, then the rest newest first
+  const downloadModalFormItems = sortFormItems([...baseFormItems, ...crossLibraryFormItems], mediaItem);
+
+  // A collection set's own poster and backdrop, for the media server collection they apply to
+  const collectionImages = set.images.filter(
+    (img): img is CollectionItemImageFile => img.type === "collection_poster" || img.type === "collection_backdrop"
+  );
 
   return (
     <Carousel
@@ -182,6 +188,11 @@ export function MediaCarousel({
               formItems={downloadModalFormItems}
               sharedLibraryTitles={sharedLibraryTitles}
               onDownloadComplete={onMediaItemChange}
+              collectionImages={
+                set.collection && collectionImages.length > 0
+                  ? { collection: set.collection, images: collectionImages }
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -212,7 +223,12 @@ export function MediaCarousel({
       </div>
 
       <CarouselContent>
-        <CarouselDisplay sets={[set] as SetRef[]} includedItems={includedItems || {}} dimNotFound={dimNotFound} />
+        <CarouselDisplay
+          sets={[set] as SetRef[]}
+          includedItems={includedItems || {}}
+          dimNotFound={dimNotFound}
+          currentTmdbId={mediaItem.tmdb_id}
+        />
       </CarouselContent>
     </Carousel>
   );
