@@ -69,7 +69,7 @@ func (p *Plex) getLibrarySectionItems(ctx context.Context, section models.Librar
 	var plexResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Library Items Response")
 	if Err.Message != "" {
-		return items, totalSize, fetched, *logAction.Error
+		return items, totalSize, fetched, Err
 	}
 
 	totalSize = plexResp.MediaContainer.TotalSize
@@ -227,7 +227,7 @@ func fetchLatestEpisodeAddedAtByShow(ctx context.Context, msConfig config.Config
 	var countResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &countResp, "Plex Episode Count Response")
 	if Err.Message != "" {
-		return nil, *logAction.Error
+		return nil, Err
 	}
 	totalEpisodes := countResp.MediaContainer.TotalSize
 	if totalEpisodes == 0 {
@@ -248,7 +248,7 @@ func fetchLatestEpisodeAddedAtByShow(ctx context.Context, msConfig config.Config
 	var episodesResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &episodesResp, "Plex All Episodes Response")
 	if Err.Message != "" {
-		return nil, *logAction.Error
+		return nil, Err
 	}
 
 	latest := make(map[string]int64)

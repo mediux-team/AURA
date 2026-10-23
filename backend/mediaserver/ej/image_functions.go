@@ -50,7 +50,7 @@ func getCurrentImages(ctx context.Context, msConfig config.Config_MediaServer, i
 	// Decode the Response
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &images, fmt.Sprintf("%s Media Item Images Response", msConfig.Type))
 	if Err.Message != "" {
-		return images, *logAction.Error
+		return images, Err
 	}
 
 	logAction.AppendResult("image_count", len(images))
@@ -88,7 +88,7 @@ func getCurrentCollectionImages(ctx context.Context, msConfig config.Config_Medi
 	// Decode the Response
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &images, fmt.Sprintf("%s Collection Images Response", msConfig.Type))
 	if Err.Message != "" {
-		return images, *logAction.Error
+		return images, Err
 	}
 
 	logAction.AppendResult("image_count", len(images))

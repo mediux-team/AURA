@@ -37,7 +37,7 @@ func OAuth_CheckIDForAuth(ctx context.Context, plexID string) (isValid bool, aut
 	// Make the HTTP Request to Plex OAuth to check the pin
 	resp, respBody, Err := httpx.MakeHTTPRequest(ctx, URL, "GET", headers, 60, nil, "Plex OAuth Pin Check")
 	if Err.Message != "" {
-		return isValid, authToken, *logAction.Error
+		return isValid, authToken, Err
 	}
 	defer resp.Body.Close()
 
@@ -51,7 +51,7 @@ func OAuth_CheckIDForAuth(ctx context.Context, plexID string) (isValid bool, aut
 	var plexResp PlexGetPinResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex OAuth Pin Check Response")
 	if Err.Message != "" {
-		return isValid, authToken, *logAction.Error
+		return isValid, authToken, Err
 	}
 
 	// Determine if the pin is valid based on the presence of an Auth token

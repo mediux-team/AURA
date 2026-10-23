@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -137,7 +138,7 @@ func runMediaServerSync(ctx context.Context, server config.Config_MediaServer) {
 	logAction := ld.AddAction(fmt.Sprintf("Applying Saved Sets to %s", server.Name), logging.LevelInfo)
 	logCtx = logging.WithCurrentAction(logCtx, logAction)
 
-	err := syncMediaServer(ctx, logCtx, server)
+	err := syncMediaServerRecovered(ctx, logCtx, server)
 
 	syncMu.Lock()
 	now := time.Now()
@@ -161,6 +162,17 @@ func runMediaServerSync(ctx context.Context, server config.Config_MediaServer) {
 	}
 	logAction.Complete()
 	ld.Log()
+}
+
+// syncMediaServerRecovered runs the sync, and returns a panic as an error so aura keeps running
+func syncMediaServerRecovered(ctx, logCtx context.Context, server config.Config_MediaServer) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logging.LOGGER.Error().Timestamp().Interface("recover", r).Str("stack", string(debug.Stack())).Msg("PANIC: while applying saved sets to a media server")
+			err = fmt.Errorf("unexpected error: %v", r)
+		}
+	}()
+	return syncMediaServer(ctx, logCtx, server)
 }
 
 // syncMediaServer applies the saved sets. ctx is cancelled when the sync is stopped, logCtx is for logging.

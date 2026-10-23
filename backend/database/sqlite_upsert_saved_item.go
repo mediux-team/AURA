@@ -49,28 +49,28 @@ func (s *SQliteDB) UpsertSavedItem(ctx context.Context, newItem models.DBSavedIt
 
 	// 1) Delete Ignore entry for this Media Item if it exists
 	if errInfo := deleteIgnoredEntryForMediaItemIfExists(ctx, tx, newItem.MediaItem); errInfo.Message != "" {
-		return *logAction.Error
+		return errInfo
 	}
 
 	mediaItemRowID, errInfo := upsertMediaItem(ctx, tx, newItem.MediaItem)
 	if errInfo.Message != "" {
-		return *logAction.Error
+		return errInfo
 	}
 
 	// Upsert per-type details
 	switch newItem.MediaItem.Type {
 	case "movie":
 		if errInfo := upsertMovie(ctx, tx, newItem.MediaItem, mediaItemRowID); errInfo.Message != "" {
-			return *logAction.Error
+			return errInfo
 		}
 		logAction.AppendResult("action", "upsert_movie")
 	case "show":
 		seriesRowID, errInfo := upsertSeries(ctx, tx, newItem.MediaItem, mediaItemRowID)
 		if errInfo.Message != "" {
-			return *logAction.Error
+			return errInfo
 		}
 		if errInfo := reconcileSeasonsAndEpisodes(ctx, tx, newItem.MediaItem, seriesRowID); errInfo.Message != "" {
-			return *logAction.Error
+			return errInfo
 		}
 		logAction.AppendResult("action", "upsert_show_reconcile")
 	default:
@@ -440,7 +440,7 @@ func reconcileSeasonsAndEpisodes(ctx context.Context, tx *sql.Tx, mediaItem mode
 	for _, sn := range seasons {
 		seasonRowID, errInfo := upsertSeason(ctx, tx, seriesRowID, sn.RatingKey, sn.SeasonNumber, lenOr0(sn.Episodes))
 		if errInfo.Message != "" {
-			return *logAction.Error
+			return errInfo
 		}
 
 		if sn.Episodes == nil {
@@ -464,7 +464,7 @@ func reconcileSeasonsAndEpisodes(ctx context.Context, tx *sql.Tx, mediaItem mode
 
 		for _, ep := range sn.Episodes {
 			if errInfo := upsertEpisode(ctx, tx, seasonRowID, ep); errInfo.Message != "" {
-				return *logAction.Error
+				return errInfo
 			}
 		}
 	}

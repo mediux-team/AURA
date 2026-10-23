@@ -38,7 +38,7 @@ func GetMovieCollectionSection(ctx context.Context, msConfig config.Config_Media
 	var ejResp EmbyJellyLibrarySectionsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Library Sections Response", msConfig.Type))
 	if Err.Message != "" {
-		return section, *logAction.Error
+		return section, Err
 	}
 
 	for _, item := range ejResp.Items {

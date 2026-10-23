@@ -47,7 +47,7 @@ func (p *Plex) GetMovieCollections(ctx context.Context, library models.LibrarySe
 	var plexResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Movie Collections Response")
 	if Err.Message != "" {
-		return collections, *logAction.Error
+		return collections, Err
 	}
 
 	for _, collection := range plexResp.MediaContainer.Metadata {

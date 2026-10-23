@@ -36,7 +36,7 @@ func OAuth_GetServerConnections(ctx context.Context, authToken string) (connecti
 	// Make the HTTP Request to Plex OAuth to get server connections
 	resp, respBody, Err := httpx.MakeHTTPRequest(ctx, URL, "GET", headers, 60, nil, "Plex OAuth")
 	if Err.Message != "" {
-		return connections, *logAction.Error
+		return connections, Err
 	}
 	defer resp.Body.Close()
 
@@ -50,7 +50,7 @@ func OAuth_GetServerConnections(ctx context.Context, authToken string) (connecti
 	var plexResp []PlexServersResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex OAuth Server Connections Response")
 	if Err.Message != "" {
-		return connections, *logAction.Error
+		return connections, Err
 	}
 
 	// Remove any servers that are not owned by the user

@@ -23,7 +23,7 @@ func (p *Plex) ApplyCollectionImage(ctx context.Context, collectionItem *models.
 	// Get the MediUX Image URL
 	imageURL, Err := mediux.ConstructImageUrl(ctx, imageFile.ID, imageFile.Modified.String(), mediux.ImageQualityOriginal)
 	if Err.Message != "" {
-		return *logAction.Error
+		return Err
 	}
 
 	// POST Method is used when not using a local image

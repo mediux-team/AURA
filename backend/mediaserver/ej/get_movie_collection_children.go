@@ -47,7 +47,7 @@ func (e *EJ) GetMovieCollectionChildrenItems(ctx context.Context, collection *mo
 	var ejResp EmbyJellyLibraryItemsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Collection Children Response", e.Config.Type))
 	if Err.Message != "" {
-		return *logAction.Error
+		return Err
 	}
 
 	var items []models.MediaItem

@@ -42,7 +42,7 @@ func (e *EJ) GetAdminUser(ctx context.Context, msConfig config.Config_MediaServe
 	var ejResp EmbyJellyUserIDResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s User ID Response", msConfig.Type))
 	if Err.Message != "" {
-		return userID, *logAction.Error
+		return userID, Err
 	}
 
 	// Find the first Admin user ID

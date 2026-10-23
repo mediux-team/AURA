@@ -5,6 +5,7 @@ import (
 	"aura/models"
 	"context"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -107,5 +108,20 @@ func TestSyncMediaServerStopsAndRunsOneAtATime(t *testing.T) {
 	state := waitForSync(t)
 	if !state.Stopped || state.Applied != 0 || state.Error != "" {
 		t.Errorf("got %+v, want stopped before anything was applied", state)
+	}
+}
+
+func TestSyncMediaServerPanicFailsTheSync(t *testing.T) {
+	setupSyncTest(t, func(ctx context.Context) ([]models.DBSavedItem, error) {
+		var item *models.DBSavedItem
+		return []models.DBSavedItem{*item}, nil
+	})
+
+	if _, err := StartMediaServerSync("silo"); err != nil {
+		t.Fatalf("StartMediaServerSync: %v", err)
+	}
+	// The sync fails instead of stopping aura
+	if state := waitForSync(t); !strings.HasPrefix(state.Error, "unexpected error:") {
+		t.Errorf("Error = %q, want the panic", state.Error)
 	}
 }

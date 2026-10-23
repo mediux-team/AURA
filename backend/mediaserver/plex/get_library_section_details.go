@@ -39,7 +39,7 @@ func (p *Plex) GetLibrarySectionDetails(ctx context.Context, library *models.Lib
 	var plexResp PlexLibrarySectionsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Library Sections Response")
 	if Err.Message != "" {
-		return found, *logAction.Error
+		return found, Err
 	}
 
 	// Find the specific library section and update its details

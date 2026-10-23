@@ -42,20 +42,20 @@ func applyImageToMediaItem(ctx context.Context, msConfig config.Config_MediaServ
 		// Get current images
 		currentImages, Err := getCurrentImages(ctx, msConfig, item, "Current")
 		if Err.Message != "" {
-			return *logAction.Error
+			return Err
 		}
 
 		// Upload the new image
 		Err = uploadImage(ctx, msConfig, item, itemRatingKey, imageFile, imageData, imageType)
 		if Err.Message != "" {
-			return *logAction.Error
+			return Err
 		}
 
 		if len(currentImages) != 0 {
 			// Get images after upload
 			updatedImages, Err := getCurrentImages(ctx, msConfig, item, "Updated")
 			if Err.Message != "" {
-				return *logAction.Error
+				return Err
 			}
 
 			// Find the new image's ID
@@ -74,7 +74,7 @@ func applyImageToMediaItem(ctx context.Context, msConfig config.Config_MediaServ
 			if newImage.ImageIndex != 0 {
 				err := updateImageIndex(ctx, msConfig, item, newImage)
 				if err.Message != "" {
-					return *logAction.Error
+					return err
 				}
 			}
 		}

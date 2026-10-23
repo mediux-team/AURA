@@ -41,7 +41,7 @@ func (e *EJ) GetLibrarySectionDetails(ctx context.Context, library *models.Libra
 	var ejResp EmbyJellyLibrarySectionsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Library Sections Response", serverType))
 	if Err.Message != "" {
-		return found, *logAction.Error
+		return found, Err
 	}
 
 	logAction.AppendResult("total_sections", len(ejResp.Items))
@@ -91,7 +91,7 @@ func (e *EJ) GetLibrarySectionDetails(ctx context.Context, library *models.Libra
 	var pathResps []EmbyJellyVirtualFoldersResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &pathResps, fmt.Sprintf("%s Library Section Path Response", serverType))
 	if Err.Message != "" {
-		return found, *logAction.Error
+		return found, Err
 	}
 
 	for _, folder := range pathResps {

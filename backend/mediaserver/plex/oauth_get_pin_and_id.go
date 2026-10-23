@@ -44,7 +44,7 @@ func OAuth_GetPinAndID(ctx context.Context) (pin string, id int64, Err logging.L
 	// Make the HTTP Request to Plex OAuth
 	resp, respBody, Err := httpx.MakeHTTPRequest(ctx, URL, "POST", headers, 60, nil, "Plex OAuth")
 	if Err.Message != "" {
-		return pin, id, *logAction.Error
+		return pin, id, Err
 	}
 	defer resp.Body.Close()
 
@@ -58,7 +58,7 @@ func OAuth_GetPinAndID(ctx context.Context) (pin string, id int64, Err logging.L
 	var plexResp PlexGetPinResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex OAuth Get Pin Response")
 	if Err.Message != "" {
-		return pin, id, *logAction.Error
+		return pin, id, Err
 	}
 
 	pin = plexResp.Pin

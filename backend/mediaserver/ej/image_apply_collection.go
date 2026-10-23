@@ -74,7 +74,7 @@ func (ej *EJ) ApplyCollectionImage(ctx context.Context, collectionItem *models.C
 			if newImage.ImageIndex != 0 {
 				err := updateCollectionImageIndex(ctx, ej.Config, collectionItem, newImage)
 				if err.Message != "" {
-					return *logAction.Error
+					return err
 				}
 			}
 		}

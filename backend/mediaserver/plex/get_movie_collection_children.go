@@ -45,7 +45,7 @@ func (p *Plex) GetMovieCollectionChildrenItems(ctx context.Context, collection *
 	var plexResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Collection Children Response")
 	if Err.Message != "" {
-		return *logAction.Error
+		return Err
 	}
 
 	var items []models.MediaItem

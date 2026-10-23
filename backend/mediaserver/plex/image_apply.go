@@ -28,7 +28,7 @@ func applyImageToMediaItemViaMediuxURL(ctx context.Context, msConfig config.Conf
 	// Construct the MediUX Image URL
 	imageURL, Err := mediux.ConstructImageUrl(ctx, imageFile.ID, imageFile.Modified.String(), mediux.ImageQualityOriginal)
 	if Err.Message != "" {
-		return *logAction.Error
+		return Err
 	}
 
 	// Refresh the Plex Item

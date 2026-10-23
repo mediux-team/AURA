@@ -32,6 +32,7 @@ type fakeJellyfin struct {
 	uploads   map[string][]byte // Path to the decoded image
 	types     map[string]string // Path to the Content-Type
 	backdrops []EmbyJellyItemImagesResponse
+	indexErr  string // Moving a backdrop fails with this, like Emby without access to the media folder
 }
 
 func newFakeJellyfin(t *testing.T) (*fakeJellyfin, *EJ) {
@@ -70,6 +71,9 @@ func newFakeJellyfin(t *testing.T) (*fakeJellyfin, *EJ) {
 	})
 	mux.HandleFunc("POST /Items/{key}/Images/Backdrop/{index}/Index", func(w http.ResponseWriter, r *http.Request) {
 		f.record(r)
+		if f.indexErr != "" {
+			http.Error(w, f.indexErr, http.StatusInternalServerError)
+		}
 	})
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
@@ -134,6 +138,18 @@ func TestEJDownloadApplyImage(t *testing.T) {
 	}
 	if !slices.Contains(fake.requests, "POST /Items/200/Images/Backdrop/1/Index?newIndex=0") {
 		t.Errorf("the new backdrop should be moved to index 0, requests = %v", fake.requests)
+	}
+}
+
+func TestEJBackdropIndexFails(t *testing.T) {
+	fake, e := newFakeJellyfin(t)
+	fake.indexErr = "Access to the path '/media/Movie (2025)/backdrop.jpg' is denied."
+	movie := &models.MediaItem{Type: "movie", Title: "Movie", RatingKey: "100"}
+
+	// The error from moving the backdrop is returned, not a panic
+	Err := e.DownloadApplyImageToMediaItem(testContext(), movie, models.ImageFile{ID: "backdrop", Type: "backdrop"})
+	if Err.Message == "" {
+		t.Fatal("expected an error when the backdrop can't be moved")
 	}
 }
 

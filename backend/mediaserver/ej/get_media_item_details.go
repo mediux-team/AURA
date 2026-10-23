@@ -51,7 +51,7 @@ func (e *EJ) GetMediaItemDetails(ctx context.Context, item *models.MediaItem) (f
 	var ejResp EmbyJellyItemContentResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Media Item Details Response", e.Config.Type))
 	if Err.Message != "" {
-		return found, *logAction.Error
+		return found, Err
 	}
 
 	// If item doesn't have a TMDB ID, skip it
@@ -219,7 +219,7 @@ func fetchSeasonsForShow(ctx context.Context, msConfig config.Config_MediaServer
 		}
 		season, Err := fetchEpisodesForSeason(ctx, msConfig, itemInfo.RatingKey, season)
 		if Err.Message != "" {
-			return *logAction.Error
+			return Err
 		}
 		if len(season.Episodes) == 0 {
 			continue
@@ -272,7 +272,7 @@ func fetchEpisodesForSeason(ctx context.Context, msConfig config.Config_MediaSer
 	var ejResp EmbyJellyItemContentChildResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Season Episodes Response", msConfig.Type))
 	if Err.Message != "" {
-		return season, *logAction.Error
+		return season, Err
 	}
 
 	for _, ejEpisode := range ejResp.Items {

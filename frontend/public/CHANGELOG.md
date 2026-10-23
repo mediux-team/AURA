@@ -8,6 +8,10 @@
 - Added option to remove password login but still have OIDC login.
 - Added PKCE to OIDC.
 
+### Fixed
+
+- Fixed aura crashing while applying images to Emby.
+
 ---
 
 ## [0.9.114] - 2026-10-21

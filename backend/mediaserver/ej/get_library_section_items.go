@@ -76,7 +76,7 @@ func (e *EJ) getLibrarySectionItems(ctx context.Context, section models.LibraryS
 	var ejResp EmbyJellyLibraryItemsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Library Section Items Response", e.Config.Type))
 	if Err.Message != "" {
-		return items, totalSize, fetched, *logAction.Error
+		return items, totalSize, fetched, Err
 	}
 
 	// Check to see if any items were returned
@@ -214,7 +214,7 @@ func splitCollectionIntoIndividualItems(ctx context.Context, msConfig config.Con
 	var ejResp EmbyJellyLibraryItemsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s BoxSet Individual Items Response", msConfig.Type))
 	if Err.Message != "" {
-		return items, *logAction.Error
+		return items, Err
 	}
 
 	// Check to see if any items were returned

@@ -39,7 +39,7 @@ func (e *EJ) GetLibrarySections(ctx context.Context, msConfig config.Config_Medi
 	var ejResp EmbyJellyLibrarySectionsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, fmt.Sprintf("%s Library Sections Response", msConfig.Type))
 	if Err.Message != "" {
-		return sections, *logAction.Error
+		return sections, Err
 	}
 
 	logAction.AppendResult("total_sections", len(ejResp.Items))

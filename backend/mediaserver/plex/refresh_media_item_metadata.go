@@ -50,7 +50,7 @@ func RefreshItemMetadata(ctx context.Context, msConfig config.Config_MediaServer
 	// We run this in a separate goroutine to avoid blocking
 	currentImages, Err := getAllImages(ctx, msConfig, item, refreshKey, "All", "poster")
 	if Err.Message != "" {
-		return *logAction.Error
+		return Err
 	}
 
 	if len(currentImages) > 0 {

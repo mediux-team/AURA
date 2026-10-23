@@ -47,7 +47,7 @@ func (e *EJ) GetMovieCollections(ctx context.Context, library models.LibrarySect
 	var ejResp EmbyJellyLibraryItemsResponse
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &ejResp, "Emby/Jellyfin Movie Collections Response")
 	if Err.Message != "" {
-		return collections, *logAction.Error
+		return collections, Err
 	}
 
 	// Now we loop through the items and build out the collection items

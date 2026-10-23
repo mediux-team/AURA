@@ -32,7 +32,7 @@ func (s *SQliteDB) CreateTables(ctx context.Context) (Err logging.LogErrorInfo) 
 	for _, step := range steps {
 		errInfo := step(ctx, s.conn)
 		if errInfo.Message != "" {
-			return *logAction.Error
+			return errInfo
 		}
 	}
 

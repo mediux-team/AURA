@@ -49,7 +49,7 @@ func (p *Plex) GetMediaItemDetails(ctx context.Context, item *models.MediaItem) 
 	var plexResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Media Item Details Response")
 	if Err.Message != "" {
-		return found, *logAction.Error
+		return found, Err
 	}
 
 	// Check if any metadata was returned
@@ -62,7 +62,7 @@ func (p *Plex) GetMediaItemDetails(ctx context.Context, item *models.MediaItem) 
 	metadata := plexResp.MediaContainer.Metadata[0]
 	extracted, Err := extractMediaItemFromResponse(ctx, p.Config, metadata)
 	if Err.Message != "" {
-		return found, *logAction.Error
+		return found, Err
 	}
 	*item = *extracted
 
@@ -153,7 +153,7 @@ func extractMediaItemFromResponse(ctx context.Context, msConfig config.Config_Me
 		// For shows, fetch seasons and episodes
 		Err = fetchSeasonsAndEpisodesForShow(ctx, msConfig, item)
 		if Err.Message != "" {
-			return item, *logAction.Error
+			return item, Err
 		}
 		item.Series.SeasonCount = metadata.ChildCount
 		item.Series.EpisodeCount = metadata.LeafCount
@@ -229,7 +229,7 @@ func fetchSeasonsAndEpisodesForShow(ctx context.Context, msConfig config.Config_
 	var plexResp PlexLibraryItemsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Show Seasons and Episodes Response")
 	if Err.Message != "" {
-		return *logAction.Error
+		return Err
 	}
 
 	// Group Episodes by Season Number

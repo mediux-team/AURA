@@ -48,7 +48,7 @@ func getAllImages(ctx context.Context, msConfig config.Config_MediaServer, item 
 	var respData PlexGetAllImagesWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &respData, fmt.Sprintf("%s Media Item Images Response", msConfig.Type))
 	if Err.Message != "" {
-		return images, *logAction.Error
+		return images, Err
 	}
 
 	for _, img := range respData.MediaContainer.Metadata {

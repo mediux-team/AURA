@@ -38,7 +38,7 @@ func (p *Plex) GetLibrarySections(ctx context.Context, msConfig config.Config_Me
 	var plexResp PlexLibrarySectionsWrapper
 	Err = httpx.DecodeResponseToJSON(ctx, respBody, &plexResp, "Plex Library Sections Response")
 	if Err.Message != "" {
-		return sections, *logAction.Error
+		return sections, Err
 	}
 
 	// Map the Plex library sections to the LibrarySection model
