@@ -123,7 +123,7 @@ func TestBestSetUnrankedGoLastNewestFirst(t *testing.T) {
 		testSet("old", "a", "movie", 0, day(1), "1"),
 		testSet("new", "a", "movie", 0, day(5), "1"),
 	}}
-	set, _, found := bestSet(models.MediaItem{TMDB_ID: "1", Type: "movie"}, []map[string][]models.SetRef{nil, byItem})
+	set, _, found := bestSet(models.MediaItem{TMDB_ID: "1", Type: "movie"}, []map[string][]models.SetRef{nil, byItem}, nil)
 	if !found || set.ID != "new" {
 		t.Errorf("best set = %q, %v, want the newest of the unranked sets", set.ID, found)
 	}

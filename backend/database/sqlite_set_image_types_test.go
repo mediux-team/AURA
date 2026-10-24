@@ -106,3 +106,44 @@ func TestSavedSetAutoUpgradeSetting(t *testing.T) {
 		t.Errorf("after removing a set = %v", got)
 	}
 }
+
+func TestSavingASetMovesOnlyItsTypes(t *testing.T) {
+	db := openTestMediaDB(t)
+	ctx := testContext()
+	set := func(id string, types models.SelectedTypes) models.DBPosterSetDetail {
+		return models.DBPosterSetDetail{PosterSet: models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: id, Type: "show", Title: id, UserCreated: id}}, SelectedTypes: types}
+	}
+	save := func(sets ...models.DBPosterSetDetail) map[string]models.SelectedTypes {
+		t.Helper()
+		item := models.DBSavedItem{
+			MediaItem:  models.MediaItem{TMDB_ID: "2", LibraryTitle: "Series", RatingKey: "2", Type: "show", Title: "Show", Year: 2020, Series: &models.MediaItemSeries{}},
+			PosterSets: sets,
+		}
+		if Err := db.UpsertSavedItem(ctx, item); Err.Message != "" {
+			t.Fatal(Err.Message)
+		}
+		out, Err := db.GetAllSavedSets(ctx, models.DBFilter{ItemsPerPage: -1})
+		if Err.Message != "" || len(out.Items) != 1 {
+			t.Fatalf("saved = %d %s", len(out.Items), Err.Message)
+		}
+		got := map[string]models.SelectedTypes{}
+		for _, saved := range out.Items[0].PosterSets {
+			got[saved.ID] = saved.SelectedTypes
+		}
+		return got
+	}
+
+	save(set("old", models.SelectedTypes{Poster: true, Titlecard: true}))
+
+	// The new set takes the poster, the old set keeps its titlecards
+	got := save(set("new", models.SelectedTypes{Poster: true}))
+	if len(got) != 2 || got["old"] != (models.SelectedTypes{Titlecard: true}) || got["new"] != (models.SelectedTypes{Poster: true}) {
+		t.Errorf("after the poster moved = %+v", got)
+	}
+
+	// Once the titlecards move too, the old set has nothing left and is removed
+	got = save(set("new", models.SelectedTypes{Poster: true, Titlecard: true}))
+	if len(got) != 1 || got["new"] != (models.SelectedTypes{Poster: true, Titlecard: true}) {
+		t.Errorf("after the titlecards moved = %+v", got)
+	}
+}

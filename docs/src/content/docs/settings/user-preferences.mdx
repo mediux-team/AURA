@@ -65,12 +65,15 @@ The **play button** does the same for every movie and show already in your libra
 
 ### Automatically Upgrade Sets
 
-The **Upgrade Saved Sets** job checks your saved sets against your favorite creators. When a creator ranked higher than a set's creator has a set for the item, the new set replaces it:
+The **Upgrade Saved Sets** job checks your saved sets against your favorite creators. Each image type is upgraded on its own: when a creator ranked higher than the set's creator has that type for the item, their set takes it over.
 
 - Any favorite creator ranks above creators who aren't favorites.
-- The new set uses your download defaults, with Auto Download on, and is added to the Download Queue.
-- The old set is removed once the new one is saved.
-- Sets with **Auto Upgrade** turned off are never replaced. Turn it off in the download window, or when you edit a saved set.
+- Only the types the new set has move to it. The rest stay with the old set. For example, if your saved set has title cards and a favorite creator's set only has a poster, the poster comes from the favorite and the title cards stay.
+- Types in your [download defaults](#download-defaults) that the item doesn't have yet are added from a favorite creator's set when it has them.
+- The new set has Auto Download on, and is added to the Download Queue.
+- The old set is removed once all of its types have moved.
+- When a favorite creator adds a type later, like title cards, the next run moves it to their set.
+- Sets with **Auto Upgrade** turned off keep their types. Turn it off in the download window, or when you edit a saved set.
 
 The **play button** runs the upgrade now. You can also upgrade chosen sets from the [Saved Sets](/AURA/how-to-use/saved-sets/) page.
 

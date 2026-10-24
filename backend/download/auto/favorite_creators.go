@@ -62,7 +62,7 @@ func DownloadFromFavoriteCreators(ctx context.Context, items []models.MediaItem,
 		}
 		result.Checked++
 
-		set, _, found := bestSet(item, setsByRank)
+		set, _, found := bestSet(item, setsByRank, nil)
 		if !found {
 			result.NoSet++
 			continue
@@ -149,12 +149,13 @@ func queuedItems(ctx context.Context) map[string]bool {
 	return queued
 }
 
-// bestSet returns the best ranked creator's most popular set for the item, unranked sets last, and the creator's rank from 0
-func bestSet(item models.MediaItem, setsByRank []map[string][]models.SetRef) (models.SetRef, int, bool) {
+// bestSet returns the best ranked creator's most popular set for the item, unranked sets last, and the creator's rank from 0.
+// has, when given, keeps only the sets it returns true for.
+func bestSet(item models.MediaItem, setsByRank []map[string][]models.SetRef, has func(set models.SetRef) bool) (models.SetRef, int, bool) {
 	for rank, byItem := range setsByRank {
 		candidates := []models.SetRef{}
 		for _, set := range byItem[item.TMDB_ID] {
-			if set.Type == item.Type {
+			if set.Type == item.Type && (has == nil || has(set)) {
 				candidates = append(candidates, set)
 			}
 		}
