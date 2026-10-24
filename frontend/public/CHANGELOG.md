@@ -8,6 +8,7 @@
 
 - Fixed issue where aura "Automatic Upgrade" would select all Download Default types for the Favorite Creator, even when they didn't exist. Now upgrading to favorite creators only takes the image types the favorite creator has, and keeps the rest from your saved set. Types a favorite creator adds later are picked up on the next upgrade.
 - Fixed issue where errors would appear for Sonarr tags for some shows.
+- Fixed issue where setup was not saving the media server after the media servers were removed, which sent aura back to setup on the next restart.
 
 ---
 

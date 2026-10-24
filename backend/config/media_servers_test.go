@@ -256,3 +256,22 @@ func TestSyncMediaServersDuringSetup(t *testing.T) {
 		t.Errorf("other media server = %+v", silo)
 	}
 }
+
+func TestSyncMediaServersWithAStaleMainServer(t *testing.T) {
+	// The media servers were removed, but MainMediaServer still has the old ID
+	cfg := DefaultConfig()
+	cfg.MainMediaServer = "removed-server"
+	cfg.MediaServer = Config_MediaServer{Type: "Silo", URL: "http://silo:8090", ApiToken: "token", Libraries: libraries("Movies")}
+	cfg.SyncMediaServers()
+
+	if len(cfg.MediaServers) != 1 || cfg.MediaServers[0].Type != "Silo" || cfg.MainMediaServer != cfg.MediaServers[0].ID || cfg.MainMediaServer == "removed-server" {
+		t.Fatalf("MediaServers = %+v, MainMediaServer = %q, want Silo saved as the main media server", cfg.MediaServers, cfg.MainMediaServer)
+	}
+
+	// After saving and loading again, Silo is still the main media server
+	cfg.MediaServer = Config_MediaServer{}
+	cfg.LoadMainMediaServer()
+	if cfg.MediaServer.Type != "Silo" || len(cfg.MediaServer.Libraries) != 1 {
+		t.Errorf("loaded main media server = %+v", cfg.MediaServer)
+	}
+}

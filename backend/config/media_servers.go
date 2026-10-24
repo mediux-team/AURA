@@ -92,8 +92,8 @@ func (config *Config) SyncMediaServers() {
 			server.Name = server.Type
 		}
 		config.MediaServers[i] = server
-	} else if config.MainMediaServer == "" && config.MediaServer.Type != "" {
-		// No main media server yet, so add it first
+	} else if config.MediaServer.Type != "" {
+		// No main media server yet, or its ID doesn't match a saved media server, so add it first
 		server := config.MediaServer.clone()
 		server.ID = NewMediaServerID()
 		if server.Name == "" {
