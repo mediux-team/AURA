@@ -186,23 +186,12 @@ func srHandleTags(ctx context.Context, app config.Config_SonarrRadarrApp, item m
 		}
 
 		// Build finalTags: start with current tags from srItem, add all tags from app.Add
-		var currentTagIDs []int64
-		switch app.Type {
-		case "Sonarr":
-			srSonarrItem, ok := srItem.(SR_SonarrItem)
-			if !ok {
-				logAction.SetError("Type Assertion Failed", "Failed to assert type to SR_SonarrItem", nil)
-				return *logAction.Error
-			}
-			currentTagIDs = srSonarrItem.Tags
-		case "Radarr":
-			srRadarrItem, ok := srItem.(SR_RadarrItem)
-			if !ok {
-				logAction.SetError("Type Assertion Failed", "Failed to assert type to SR_RadarrItem", nil)
-				return *logAction.Error
-			}
-			currentTagIDs = srRadarrItem.Tags
+		item, ok := srItem.(SR_Item)
+		if !ok {
+			logAction.SetError("Type Assertion Failed", "Failed to assert type to SR_Item", nil)
+			return *logAction.Error
 		}
+		currentTagIDs := item.Tags
 
 		// Build a set of tag IDs to avoid duplicates
 		finalTagIDSet := make(map[int64]struct{})
@@ -269,20 +258,9 @@ func srHandleTags(ctx context.Context, app config.Config_SonarrRadarrApp, item m
 			}
 		}
 
-		// Assign final tags to srItem
-		switch app.Type {
-		case "Sonarr":
-			srSonarrItem, _ := srItem.(SR_SonarrItem)
-			srSonarrItem.Tags = finalTagIDs
-			srItem = srSonarrItem
-		case "Radarr":
-			srRadarrItem, _ := srItem.(SR_RadarrItem)
-			srRadarrItem.Tags = finalTagIDs
-			srItem = srRadarrItem
-		}
-
 		// Update the item in Sonarr/Radarr with the new tags
-		Err = UpdateItemInfo(ctx, app, srItem)
+		item.Tags = finalTagIDs
+		Err = UpdateItemInfo(ctx, app, item)
 		if Err.Message != "" {
 			return Err
 		}

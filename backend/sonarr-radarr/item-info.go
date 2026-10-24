@@ -5,7 +5,6 @@ import (
 	"aura/logging"
 	"aura/utils/httpx"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"path"
@@ -140,27 +139,11 @@ func srGetItemInfoFromTMDBID(ctx context.Context, app config.Config_SonarrRadarr
 	}
 
 	// Parse the full item response body
-	switch app.Type {
-	case "Sonarr":
-		var item SR_SonarrItem
-		err = json.Unmarshal(respBody, &item)
-		if err != nil {
-			actionFetchFullInfo.SetError("Failed to decode Sonarr item info", "Ensure the response format is correct", map[string]any{"error": err.Error()})
-			return nil, *actionFetchFullInfo.Error
-		}
-		actionFetchFullInfo.Complete()
-		return item, logging.LogErrorInfo{}
-	case "Radarr":
-		var item SR_RadarrItem
-		err = json.Unmarshal(respBody, &item)
-		if err != nil {
-			actionFetchFullInfo.SetError("Failed to decode Radarr item info", "Ensure the response format is correct", map[string]any{"error": err.Error()})
-			return nil, *actionFetchFullInfo.Error
-		}
-		actionFetchFullInfo.Complete()
-		return item, logging.LogErrorInfo{}
-	default:
-		actionFetchFullInfo.SetError("Unsupported application type", "Ensure the application type is either 'Sonarr' or 'Radarr'", map[string]any{"appType": app.Type})
+	item, err := parseSRItem(respBody)
+	if err != nil {
+		actionFetchFullInfo.SetError(fmt.Sprintf("Failed to decode %s item info", app.Type), "Ensure the response format is correct", map[string]any{"error": err.Error()})
 		return nil, *actionFetchFullInfo.Error
 	}
+	actionFetchFullInfo.Complete()
+	return item, logging.LogErrorInfo{}
 }

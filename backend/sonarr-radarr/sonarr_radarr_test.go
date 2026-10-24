@@ -6,8 +6,10 @@ import (
 	"aura/models"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
@@ -23,8 +25,14 @@ type fakeSonarr struct {
 	mu      sync.Mutex
 	tags    []SonarrRadarrTag
 	putTags []int64
+	putBody map[string]any
 	apiKeys []string
 }
+
+// fakeSeries is a series as Sonarr sends it, with fields aura doesn't use
+const fakeSeries = `{"id":5,"title":"Show","tags":[1,2],"monitorNewItems":"all","languageProfileId":1,
+"alternateTitles":[{"title":"Show Alt","seasonNumber":1,"sceneSeasonNumber":1,"sceneOrigin":"tvdb"}],
+"seasons":[{"seasonNumber":0,"monitored":false},{"seasonNumber":1,"monitored":true}]}`
 
 func newFakeSonarr(t *testing.T) (*fakeSonarr, *httptest.Server) {
 	t.Helper()
@@ -60,16 +68,21 @@ func newFakeSonarr(t *testing.T) (*fakeSonarr, *httptest.Server) {
 	})
 	mux.HandleFunc("GET /api/v3/series/5", func(w http.ResponseWriter, r *http.Request) {
 		f.record(r)
-		_, _ = w.Write([]byte(`{"id":5,"title":"Show","tags":[1,2]}`))
+		_, _ = w.Write([]byte(fakeSeries))
 	})
 	mux.HandleFunc("PUT /api/v3/series/5", func(w http.ResponseWriter, r *http.Request) {
 		f.record(r)
-		var item SR_SonarrItem
-		_ = json.NewDecoder(r.Body).Decode(&item)
+		body, _ := io.ReadAll(r.Body)
+		var item struct {
+			Tags []int64 `json:"tags"`
+		}
+		var fields map[string]any
+		_ = json.Unmarshal(body, &item)
+		_ = json.Unmarshal(body, &fields)
 		f.mu.Lock()
-		f.putTags = item.Tags
+		f.putTags, f.putBody = item.Tags, fields
 		f.mu.Unlock()
-		_ = json.NewEncoder(w).Encode(item)
+		_, _ = w.Write(body)
 	})
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
@@ -112,7 +125,7 @@ func TestSonarrRequests(t *testing.T) {
 		t.Errorf("AddNewTags = %v, %s", added, Err.Message)
 	}
 	item, Err := GetItemInfoFromTMDBID(testContext(), app, 10)
-	if series, ok := item.(SR_SonarrItem); Err.Message != "" || !ok || series.ID != 5 {
+	if series, ok := item.(SR_Item); Err.Message != "" || !ok || series.ID != 5 || !slices.Equal(series.Tags, []int64{1, 2}) {
 		t.Errorf("GetItemInfoFromTMDBID = %+v, %s", item, Err.Message)
 	}
 	if _, Err := GetItemInfoFromTMDBID(testContext(), app, 99); Err.Message == "" {
@@ -146,6 +159,14 @@ func TestHandleTags(t *testing.T) {
 	if !slices.Equal(fake.putTags, []int64{1, 3, 4}) {
 		t.Errorf("tags sent to Sonarr = %v, want [1 3 4]", fake.putTags)
 	}
+	// Every other field is sent back as Sonarr sent it
+	var want map[string]any
+	_ = json.Unmarshal([]byte(fakeSeries), &want)
+	delete(want, "tags")
+	delete(fake.putBody, "tags")
+	if !reflect.DeepEqual(fake.putBody, want) {
+		t.Errorf("series sent to Sonarr = %v, want %v", fake.putBody, want)
+	}
 	labels := []string{}
 	for _, tag := range fake.tags {
 		labels = append(labels, tag.Label)
@@ -161,5 +182,27 @@ func TestHandleTags(t *testing.T) {
 	}
 	if Err := HandleTags(testContext(), models.MediaItem{Type: "episode", TMDB_ID: "10", LibraryTitle: "Series"}, models.SelectedTypes{}); Err.Message == "" {
 		t.Error("an episode should fail")
+	}
+}
+
+func TestSRItemKeepsItsFields(t *testing.T) {
+	item, err := parseSRItem([]byte(fakeSeries))
+	if err != nil {
+		t.Fatalf("parseSRItem: %v", err)
+	}
+	if item.ID != 5 || !slices.Equal(item.Tags, []int64{1, 2}) {
+		t.Errorf("item = %d %v", item.ID, item.Tags)
+	}
+
+	// Removing every tag still sends an empty list
+	item.Tags = nil
+	body, err := json.Marshal(item)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent map[string]json.RawMessage
+	_ = json.Unmarshal(body, &sent)
+	if string(sent["tags"]) != "[]" || string(sent["languageProfileId"]) != "1" {
+		t.Errorf("sent = %s", body)
 	}
 }

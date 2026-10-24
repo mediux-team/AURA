@@ -15,32 +15,21 @@ func UpdateItemInfo(ctx context.Context, app config.Config_SonarrRadarrApp, item
 	defer logAction.Complete()
 
 	// Determine the endpoint and the item ID
+	srItem, ok := item.(SR_Item)
+	if !ok {
+		logAction.SetError(fmt.Sprintf("Invalid Item Type for %s", app.Type),
+			"Ensure the item provided is of type SR_Item",
+			map[string]any{
+				"item_type": fmt.Sprintf("%T", item),
+			})
+		return *logAction.Error
+	}
+	itemID := srItem.ID
 	urlEndpoint := ""
-	var itemID int64
 	switch app.Type {
 	case "Sonarr":
-		srItem, ok := item.(SR_SonarrItem)
-		if !ok {
-			logAction.SetError("Invalid Item Type for Sonarr",
-				"Ensure the item provided is of type SonarrItem",
-				map[string]any{
-					"item_type": fmt.Sprintf("%T", item),
-				})
-			return *logAction.Error
-		}
-		itemID = srItem.ID
 		urlEndpoint = "series"
 	case "Radarr":
-		srItem, ok := item.(SR_RadarrItem)
-		if !ok {
-			logAction.SetError("Invalid Item Type for Radarr",
-				"Ensure the item provided is of type RadarrItem",
-				map[string]any{
-					"item_type": fmt.Sprintf("%T", item),
-				})
-			return *logAction.Error
-		}
-		itemID = srItem.ID
 		urlEndpoint = "movie"
 	default:
 		logAction.SetError("Unsupported Sonarr/Radarr Type",
