@@ -38,7 +38,7 @@ export function AppFooter({ version = "dev" }: AppFooterProps) {
           >
             MediUX
             <div className="relative ml-1 w-[16px] h-[16px] rounded-t-md overflow-hidden">
-              <Image src="/mediux_logo.svg" alt="Logo" fill className="object-contain" priority />
+              <Image src="/mediux_logo.svg" alt="Logo" fill className="object-contain" />
             </div>
           </Link>
 

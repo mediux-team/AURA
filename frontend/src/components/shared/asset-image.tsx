@@ -185,10 +185,10 @@ export function AssetImage({
             imageClassName
           )}
           unoptimized
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
           draggable={false}
           style={{ userSelect: "none" }}
-          priority={priority}
           placeholder={blurDataURL ? "blur" : undefined}
           blurDataURL={blurDataURL}
           onLoad={() => setImageLoaded(true)}

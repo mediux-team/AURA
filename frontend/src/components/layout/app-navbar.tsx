@@ -229,7 +229,7 @@ export function Navbar({ version = "dev" }: AppNavbarProps) {
             height: logoSrc === "/aura_logo.svg" ? "30px" : "35px",
           }}
         >
-          <Image src={logoSrc} alt="Logo" fill className="object-contain filter" priority />
+          <Image src={logoSrc} alt="Logo" fill className="object-contain filter" loading="eager" />
         </div>
       </div>
 

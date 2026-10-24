@@ -241,8 +241,12 @@ export default function Home() {
                   />
                 </div>
               ) : (
-                data.items.map((item) => (
-                  <HomeMediaItemCard key={`${item.library_title}-${item.rating_key}`} item={item as MediaItem} />
+                data.items.map((item, index) => (
+                  <HomeMediaItemCard
+                    key={`${item.library_title}-${item.rating_key}`}
+                    item={item as MediaItem}
+                    priority={index < 6}
+                  />
                 ))
               )}
             </ResponsiveGrid>

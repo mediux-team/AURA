@@ -19,9 +19,10 @@ import type { MediaItem } from "@/types/media-and-posters/media-item-and-library
 
 interface HomeMediaItemCardProps {
   item: MediaItem | CollectionItem;
+  priority?: boolean; // Load the poster right away, for the cards at the top of the page
 }
 
-const HomeMediaItemCard: React.FC<HomeMediaItemCardProps> = ({ item }) => {
+const HomeMediaItemCard: React.FC<HomeMediaItemCardProps> = ({ item, priority = false }) => {
   const router = useRouter();
 
   const { setMediaItem } = useMediaStore();
@@ -89,6 +90,7 @@ const HomeMediaItemCard: React.FC<HomeMediaItemCardProps> = ({ item }) => {
         image={item}
         imageType={isMediaItem(item) ? "item" : "collection"}
         className="w-[100%] h-auto transition-transform hover:scale-102 rounded-xl mb-0"
+        priority={priority}
       />
 
       {/* Badges */}
