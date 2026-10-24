@@ -355,6 +355,14 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   {
     sectionId: "user-preferences",
     sectionLabel: "User Preferences",
+    label: "Auto Upgrade by Default",
+    description: 'Check "Auto Upgrade" when downloading',
+    keywords: ["upgrade", "favorite creators", "keep", "download"],
+    configPath: "default_auto_upgrade",
+  },
+  {
+    sectionId: "user-preferences",
+    sectionLabel: "User Preferences",
     label: "Show Date Modified",
     description: "Show when poster sets were last modified",
     keywords: ["date", "modified", "updated"],

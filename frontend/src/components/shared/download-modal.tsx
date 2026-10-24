@@ -337,6 +337,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const [addToQueueOnly, setAddToQueueOnly] = useState(defaultAddToQueue);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const autoUpgradeSets = useUserPreferencesStore((state) => state.autoUpgradeSets);
+  const defaultAutoUpgrade = useUserPreferencesStore((state) => state.defaultAutoUpgrade);
 
   // State - Add New Collection Items
   const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
@@ -434,7 +435,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           acc[getItemFormKey(item.MediaItem)] = {
             types: computeAssetTypes(item).filter((type) => downloadDefaults.includes(type)),
             autodownload: autoDownloadDefault,
-            autoupgrade: true,
+            autoupgrade: defaultAutoUpgrade,
             addToDBOnly: defaultAddToDBOnly,
             source: item.Set.type === "movie" || item.Set.type === "collection" ? item.Set.type : undefined,
           };
@@ -463,7 +464,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           acc[getItemFormKey(item.MediaItem)] = {
             types: computeAssetTypes(item).filter((type) => downloadDefaults.includes(type)),
             autodownload: autoDownloadDefault,
-            autoupgrade: true,
+            autoupgrade: defaultAutoUpgrade,
             addToDBOnly: defaultAddToDBOnly,
             source: item.Set.type === "movie" || item.Set.type === "collection" ? item.Set.type : undefined,
           };
@@ -475,7 +476,15 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     });
     // defaultCollectionTypes comes from collectionImages and downloadDefaults
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formItems, form, autoDownloadDefault, downloadDefaults, defaultAddToDBOnly, collectionImages]);
+  }, [
+    formItems,
+    form,
+    autoDownloadDefault,
+    downloadDefaults,
+    defaultAddToDBOnly,
+    defaultAutoUpgrade,
+    collectionImages,
+  ]);
 
   useEffect(() => {
     // If all the form items are set to "Add to Database Only", change button text

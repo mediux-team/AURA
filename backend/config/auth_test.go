@@ -90,3 +90,18 @@ Auth:
 		t.Errorf("newer auth = %+v", cfg.Auth)
 	}
 }
+
+func TestParseConfigYAMLDefaultAutoUpgrade(t *testing.T) {
+	// Older config files don't have it, so new sets keep Auto Upgrade on
+	cfg, err := ParseConfigYAML([]byte("UserPreferences:\n  DefaultAddToQueue: true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.UserPreferences.DefaultAutoUpgrade {
+		t.Error("DefaultAutoUpgrade should default to true")
+	}
+	cfg, err = ParseConfigYAML([]byte("UserPreferences:\n  DefaultAutoUpgrade: false\n"))
+	if err != nil || cfg.UserPreferences.DefaultAutoUpgrade {
+		t.Errorf("DefaultAutoUpgrade false should be kept, got %v %v", cfg.UserPreferences.DefaultAutoUpgrade, err)
+	}
+}

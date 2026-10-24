@@ -1,5 +1,9 @@
 ## [0.9.116] - 2026-10-24
 
+### Added
+
+- Added Auto Upgrade by Default to User Preferences, to choose whether Auto Upgrade is checked when you download a set.
+
 ### Fixed
 
 - Fixed issue where aura "Automatic Upgrade" would select all Download Default types for the Favorite Creator, even when they didn't exist. Now upgrading to favorite creators only takes the image types the favorite creator has, and keeps the rest from your saved set. Types a favorite creator adds later are picked up on the next upgrade.

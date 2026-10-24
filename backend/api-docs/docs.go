@@ -5747,6 +5747,10 @@ const docTemplate = `{
                     "description": "Whether \"Auto Add New Collection Items\" is checked by default in the Download Modal.",
                     "type": "boolean"
                 },
+                "default_auto_upgrade": {
+                    "description": "Whether \"Auto Upgrade\" is checked by default in the Download Modal.",
+                    "type": "boolean"
+                },
                 "download_defaults": {
                     "description": "Image types selected by default in the Download Modal.",
                     "type": "array",

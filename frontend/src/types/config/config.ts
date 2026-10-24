@@ -205,6 +205,7 @@ export interface AppConfigUserPreferences {
   show_date_modified: boolean; // Whether to show the date modified on poster sets
   default_add_to_queue: boolean; // Whether "Add to Queue" is checked by default in the Download Modal
   default_auto_add_new_collection_items?: boolean; // Whether "Auto Add New Collection Items" is checked by default in the Download Modal
+  default_auto_upgrade?: boolean; // Whether "Auto Upgrade" is checked by default in the Download Modal
   default_add_to_db_only: boolean; // Whether "Add to Database Only" is checked by default in the Download Modal
   auto_download_new_items: boolean; // Whether new items get images from the favorite creators automatically
   auto_upgrade_sets: boolean; // Whether to automatically upgrade sets to a better version when available

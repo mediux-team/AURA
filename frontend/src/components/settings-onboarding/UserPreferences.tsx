@@ -27,6 +27,8 @@ export function UserPreferencesCard() {
   const setDefaultAutoAddNewCollectionItems = useUserPreferencesStore(
     (state) => state.setDefaultAutoAddNewCollectionItems
   );
+  const defaultAutoUpgrade = useUserPreferencesStore((state) => state.defaultAutoUpgrade);
+  const setDefaultAutoUpgrade = useUserPreferencesStore((state) => state.setDefaultAutoUpgrade);
 
   // View Density
   const { densityStep, setDensityStep } = useViewDensity();
@@ -184,6 +186,22 @@ export function UserPreferencesCard() {
                 collection set. Movies added to the collection later then get their images from the set automatically.
               </p>
               <p className="text-muted-foreground">You can still uncheck it in the download modal.</p>
+            </PopoverHelp>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <Label>Auto Upgrade by Default</Label>
+          <div className="flex items-center gap-2">
+            <Switch checked={defaultAutoUpgrade} onCheckedChange={() => setDefaultAutoUpgrade(!defaultAutoUpgrade)} />
+            <PopoverHelp ariaLabel="help-default-auto-upgrade">
+              <p className="mb-2">
+                If checked, 'Auto Upgrade' will be selected for each item when opening the download modal, so a higher
+                ranked favorite creator can replace the set's images later. Turn it off to keep the sets you download.
+              </p>
+              <p className="text-muted-foreground">
+                Upgrades only happen while Automatically Upgrade Sets is on. You can still change it in the download
+                modal.
+              </p>
             </PopoverHelp>
           </div>
         </div>

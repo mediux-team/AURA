@@ -127,6 +127,7 @@ UserPreferences.AutoUpgradeSets: bool
 UserPreferences.DefaultAddToDBOnly: bool
 UserPreferences.DefaultAddToQueue: bool
 UserPreferences.DefaultAutoAddNewCollectionItems: bool
+UserPreferences.DefaultAutoUpgrade: bool
 UserPreferences.DownloadDefaults: []string
 UserPreferences.FavoriteCreators: []string
 UserPreferences.PageViews: map[string]map[string]interface {}

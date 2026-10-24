@@ -104,6 +104,7 @@ func DefaultUserPreferences() Config_UserPreferences {
 		ShowDateModified:                 false,
 		DefaultAddToQueue:                false,
 		DefaultAutoAddNewCollectionItems: false,
+		DefaultAutoUpgrade:               true,
 		DefaultAddToDBOnly:               false,
 		AutoDownloadNewItems:             false,
 		AutoUpgradeSets:                  false,
