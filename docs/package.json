@@ -3,15 +3,30 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier -l --write \"**/*.{ts,tsx,md,mdx,json,js,jsx,mjs}\"",
+    "format:check": "prettier -l \"**/*.{ts,tsx,md,mdx,json,js,jsx,mjs}\"",
+    "typecheck": "astro sync && tsc --noEmit",
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.42.6",
-    "astro": "^7.2.10",
-    "sharp": "^0.35.3"
+    "@astrojs/starlight": "^0.42.7",
+    "astro": "^7.4.2",
+    "sharp": "^0.35.5"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
+  }
 }

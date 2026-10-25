@@ -2,6 +2,7 @@ node_modules
 .next
 build
 dist
+next-env.d.ts
 
 public/*
 !public/

@@ -34,27 +34,27 @@ Set a folder to save every image there instead, for example for another app that
 
 The file name of each image type, without the extension, which aura adds for you. The standard names work with every media server, so most people never need to change them.
 
-| Image                 | Standard name                   | Saved as, for example                     |
-| --------------------- | ------------------------------- | ----------------------------------------- |
-| Poster                | `poster`                        | `Alien (1979)/poster.jpg`                 |
-| Backdrop              | `backdrop`                      | `Alien (1979)/backdrop.jpg`               |
-| Season Poster         | `season{{SeasonNumber}}-poster` | `Severance/season01-poster.jpg`           |
-| Special Season Poster | `season-specials-poster`        | `Severance/season-specials-poster.jpg`    |
+| Image                 | Standard name                   | Saved as, for example                              |
+| --------------------- | ------------------------------- | -------------------------------------------------- |
+| Poster                | `poster`                        | `Alien (1979)/poster.jpg`                          |
+| Backdrop              | `backdrop`                      | `Alien (1979)/backdrop.jpg`                        |
+| Season Poster         | `season{{SeasonNumber}}-poster` | `Severance/season01-poster.jpg`                    |
+| Special Season Poster | `season-specials-poster`        | `Severance/season-specials-poster.jpg`             |
 | Title Card            | `{{EpisodeFileName}}-thumb`     | `Severance/Season 01/Severance - S01E01-thumb.jpg` |
 
 Use the **+** button next to a field to add a variable:
 
-| Variable              | Value                                                   |
-| --------------------- | ------------------------------------------------------- |
-| `{{Title}}`           | The movie or show title                                 |
-| `{{Year}}`            | The release year                                        |
-| `{{TMDBID}}`          | The TMDB ID                                             |
-| `{{LibraryTitle}}`    | The library's name on the media server                  |
-| `{{LibraryID}}`       | The library's ID on the media server                    |
-| `{{Edition}}`         | The movie's edition, for example `Director's Cut`       |
-| `{{SeasonNumber}}`    | The season number, two digits                           |
-| `{{EpisodeNumber}}`   | The episode number, two digits                          |
-| `{{EpisodeFileName}}` | The episode's file name, without its extension          |
+| Variable              | Value                                             |
+| --------------------- | ------------------------------------------------- |
+| `{{Title}}`           | The movie or show title                           |
+| `{{Year}}`            | The release year                                  |
+| `{{TMDBID}}`          | The TMDB ID                                       |
+| `{{LibraryTitle}}`    | The library's name on the media server            |
+| `{{LibraryID}}`       | The library's ID on the media server              |
+| `{{Edition}}`         | The movie's edition, for example `Director's Cut` |
+| `{{SeasonNumber}}`    | The season number, two digits                     |
+| `{{EpisodeNumber}}`   | The episode number, two digits                    |
+| `{{EpisodeFileName}}` | The episode's file name, without its extension    |
 
 - Use `/` to save into folders.
 - A name that starts with `/` is placed in the **Path** folder instead of next to the media.
@@ -90,5 +90,5 @@ Images:
 
 <Aside>
   Older config files have `EpisodeNamingConvention` instead of a title card name. A config with `static` gets the title
-  card name `S{{SeasonNumber}}E{{EpisodeNumber}}`.
+  card name <code>{"S{{SeasonNumber}}E{{EpisodeNumber}}"}</code>.
 </Aside>

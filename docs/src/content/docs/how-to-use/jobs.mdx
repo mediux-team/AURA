@@ -2,7 +2,7 @@
 title: Jobs
 description: The background jobs that keep aura up to date, and when they run.
 sidebar:
-    order: 10
+  order: 10
 ---
 
 import { Aside } from "@astrojs/starlight/components";
@@ -34,41 +34,40 @@ Each job shows when it ran last and when it runs next. Changes save automaticall
 | **Check MediUX Site Link**              | Every hour            | MediUX has a live site and a testing site. This checks whether the testing site is up, and uses the live site if it isn't.                                                                                                                                                                                                            |
 
 <Aside>
-	The Download Queue isn't listed here. It runs all the time, and starts each
-	download as soon as it's added.
+  The Download Queue isn't listed here. It runs all the time, and starts each download as soon as it's added.
 </Aside>
 
 ## In the Config File
 
 ```yaml
 Jobs:
-    AutoDownload:
-        Enabled: true
-        Cron: "0 0 * * *"
-    CheckForNewMediaItems:
-        Enabled: true
-        Cron: "*/10 * * * *"
-    RefreshMediaItemsAndCollections:
-        Enabled: true
-        Cron: "0 4 * * *"
-    CheckForMediaItemChanges:
-        Enabled: true
-        Cron: "0 */6 * * *"
-    HandleTempIgnoredItems:
-        Enabled: true
-        Cron: "0 */6 * * *"
-    UpgradeSavedSets:
-        Enabled: true
-        Cron: "0 4 * * *"
-    BackupDatabase:
-        Enabled: true
-        Cron: "0 3 * * *"
-    RefreshMediuxUsers:
-        Enabled: true
-        Cron: "0 */12 * * *"
-    CheckMediuxSiteLink:
-        Enabled: true
-        Cron: "0 */1 * * *"
+  AutoDownload:
+    Enabled: true
+    Cron: "0 0 * * *"
+  CheckForNewMediaItems:
+    Enabled: true
+    Cron: "*/10 * * * *"
+  RefreshMediaItemsAndCollections:
+    Enabled: true
+    Cron: "0 4 * * *"
+  CheckForMediaItemChanges:
+    Enabled: true
+    Cron: "0 */6 * * *"
+  HandleTempIgnoredItems:
+    Enabled: true
+    Cron: "0 */6 * * *"
+  UpgradeSavedSets:
+    Enabled: true
+    Cron: "0 4 * * *"
+  BackupDatabase:
+    Enabled: true
+    Cron: "0 3 * * *"
+  RefreshMediuxUsers:
+    Enabled: true
+    Cron: "0 */12 * * *"
+  CheckMediuxSiteLink:
+    Enabled: true
+    Cron: "0 */1 * * *"
 ```
 
 Jobs you leave out use their defaults, so you only need to list the ones you change.

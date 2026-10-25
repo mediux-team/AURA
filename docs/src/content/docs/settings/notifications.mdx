@@ -49,17 +49,17 @@ Each kind of notification has a template. Turn a notification off to stop sendin
 
 If you change a template and want the original back, click **Restore Default**.
 
-| Notification                           | Sent when                                                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **App Startup**                        | aura starts.                                                                                                |
-| **Test Notification**                  | You test a provider.                                                                                        |
-| **Auto Download**                      | The Auto Download job downloads a new or updated image for one of your saved sets.                          |
-| **Download Queue**                     | A set in the [Download Queue](/AURA/how-to-use/download-queue/) finishes downloading.                       |
-| **Auto Download New Item**             | A set from one of your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) is downloaded for a new item. |
-| **New Sets Available for Ignored Item** | An item you ignored until a set is available now has sets on MediUX.                                       |
-| **Check For Media Item Changes Job**   | A saved item has changed or can no longer be found on your media server.                                    |
-| **Sonarr Notification**                | The [Sonarr webhook](/AURA/sonarr-webhook-integration/) downloads title cards for an upgraded episode.      |
-| **Silo Plugin**                        | A set chosen in Silo with aura's Silo plugin is downloaded. Only shown when you have a Silo media server.   |
+| Notification                            | Sent when                                                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **App Startup**                         | aura starts.                                                                                                                                      |
+| **Test Notification**                   | You test a provider.                                                                                                                              |
+| **Auto Download**                       | The Auto Download job downloads a new or updated image for one of your saved sets.                                                                |
+| **Download Queue**                      | A set in the [Download Queue](/AURA/how-to-use/download-queue/) finishes downloading.                                                             |
+| **Auto Download New Item**              | A set from one of your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) is downloaded for a new item. |
+| **New Sets Available for Ignored Item** | An item you ignored until a set is available now has sets on MediUX.                                                                              |
+| **Check For Media Item Changes Job**    | A saved item has changed or can no longer be found on your media server.                                                                          |
+| **Sonarr Notification**                 | The [Sonarr webhook](/AURA/sonarr-webhook-integration/) downloads title cards for an upgraded episode.                                            |
+| **Silo Plugin**                         | A set chosen in Silo with aura's Silo plugin is downloaded. Only shown when you have a Silo media server.                                         |
 
 ## In the Config File
 
@@ -97,6 +97,4 @@ Notifications:
 
 Templates you leave out use their defaults. The other template names are `AppStartup`, `TestNotification`, `DownloadQueue`, `NewItemAutoDownload`, `NewSetsAvailableForIgnoredItems`, `CheckForMediaItemChangesJob`, `SonarrNotification` and `SiloPlugin`.
 
-<Aside>
-  `Provider` is case-sensitive: use `Discord`, `Pushover`, `Gotify` or `Webhook`.
-</Aside>
+<Aside>`Provider` is case-sensitive: use `Discord`, `Pushover`, `Gotify` or `Webhook`.</Aside>

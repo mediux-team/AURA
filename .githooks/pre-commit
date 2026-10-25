@@ -15,6 +15,10 @@ has_backend_changes() {
   echo "$STAGED_FILES" | grep -q '^backend/'
 }
 
+has_docs_changes() {
+  echo "$STAGED_FILES" | grep -q '^docs/'
+}
+
 # Only run swagger generation when swagger-relevant backend files changed
 needs_swagger_regen() {
   echo "$STAGED_FILES" | grep -Eq '^backend/(main\.go|startup\.go|routing/|models/|api-docs/|mediaserver/|config/)'
@@ -27,10 +31,27 @@ if has_non_release_frontend_changes; then
   echo "[hook] frontend typecheck"
   npm --prefix frontend run typecheck
 
-  echo "[hook] frontend format"
-  npm --prefix frontend run format
+  echo "[hook] frontend format check"
+  npm --prefix frontend run format:check || {
+    echo "[hook] run 'npm --prefix frontend run format' and stage the changes"
+    exit 1
+  }
 else
   echo "[hook] only changelog/version frontend files changed; skipping frontend lint/typecheck/format"
+fi
+
+if has_docs_changes; then
+  echo "[hook] docs lint"
+  npm --prefix docs run lint -- --max-warnings=0
+
+  echo "[hook] docs typecheck"
+  npm --prefix docs run typecheck
+
+  echo "[hook] docs format check"
+  npm --prefix docs run format:check || {
+    echo "[hook] run 'npm --prefix docs run format' and stage the changes"
+    exit 1
+  }
 fi
 
 if has_backend_changes; then

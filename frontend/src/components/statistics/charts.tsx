@@ -1,6 +1,6 @@
 "use client";
 
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { type StatisticsPeriod, formatBytes, formatNumber, formatPeriodDate } from "@/components/statistics/format";
 import {
@@ -80,7 +80,28 @@ const growthConfig = {
   shows: { label: "Shows", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
-// GrowthChart is how many movies and shows the libraries had, by when they were added
+// niceStep is the round step of 1, 2 or 5 times a power of 10 closest to a third of the range
+const niceStep = (range: number) => {
+  const rough = range / 3;
+  const power = Math.pow(10, Math.floor(Math.log10(rough)));
+  const step = [1, 2, 5, 10]
+    .map((n) => n * power)
+    .reduce((best, n) => (Math.abs(n - rough) < Math.abs(best - rough) ? n : best));
+  return Math.max(1, Math.round(step));
+};
+
+// axisTicks is ticks a round step apart from the low end, ending exactly at the high end
+const axisTicks = (low: number, high: number) => {
+  if (high <= low) return [low];
+  const step = niceStep(high - low);
+  const ticks: number[] = [];
+  // Leave out a tick that's too close to the high end
+  for (let tick = low; tick < high - step / 2; tick += step) ticks.push(tick);
+  return [...ticks, high];
+};
+
+// GrowthChart is how many movies and shows the libraries had, by when they were added.
+// Movies and shows each have their own axis, from the first day of the chart to today.
 export function GrowthChart({
   growth,
   period,
@@ -88,28 +109,50 @@ export function GrowthChart({
   growth: { date: string; movies: number; shows: number }[];
   period: StatisticsPeriod;
 }) {
+  const first = growth[0];
+  const last = growth[growth.length - 1];
+  // A series without any items isn't shown
+  const series = (["movies", "shows"] as const).filter((key) => last && last[key] > 0);
+
   return (
     <ChartContainer config={growthConfig} className={CHART_CLASS}>
-      <AreaChart data={growth} margin={{ left: 0, right: 8 }}>
+      <LineChart data={growth} margin={{ left: 0, right: 0 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="date" {...axisProps} tickFormatter={(date: string) => formatPeriodDate(date, period)} />
-        <YAxis {...axisProps} width={48} allowDecimals={false} tickFormatter={formatNumber} />
+        {series.map((key, index) => {
+          const low = first[key];
+          const high = last[key];
+          return (
+            <YAxis
+              key={key}
+              yAxisId={key}
+              orientation={index === 0 ? "left" : "right"}
+              {...axisProps}
+              width={48}
+              domain={high > low ? [low, high] : [Math.max(low - 1, 0), high + 1]}
+              ticks={axisTicks(low, high)}
+              minTickGap={0}
+              tick={{ fill: `var(--color-${key})` }}
+              tickFormatter={formatNumber}
+            />
+          );
+        })}
         <ChartTooltip
           content={<ChartTooltipContent labelFormatter={(date) => formatPeriodDate(date, period, true)} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
-        {(["movies", "shows"] as const).map((key) => (
-          <Area
+        {series.map((key) => (
+          <Line
             key={key}
+            yAxisId={key}
             dataKey={key}
             type="monotone"
-            stackId="growth"
             stroke={`var(--color-${key})`}
-            fill={`var(--color-${key})`}
-            fillOpacity={0.3}
+            strokeWidth={2}
+            dot={false}
           />
         ))}
-      </AreaChart>
+      </LineChart>
     </ChartContainer>
   );
 }
