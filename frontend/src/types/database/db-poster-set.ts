@@ -1,7 +1,7 @@
 import type { CollectionItem } from "@/app/collections/page";
 
 import type { MediaItem, SelectedTypes } from "@/types/media-and-posters/media-item-and-library";
-import type { BaseSetInfo, CollectionItemImageFile, ImageFile } from "@/types/media-and-posters/sets";
+import type { BaseSetInfo, CollectionItemImageFile, ImageFile, SetSummary } from "@/types/media-and-posters/sets";
 import type { TYPE_DB_SET_TYPE_OPTIONS } from "@/types/ui-options";
 
 // What is used to save a record into the database
@@ -12,7 +12,7 @@ export interface DBSavedItem {
   media_item: MediaItem;
   poster_sets: DBPosterSetDetail[];
   // A collection's own poster and backdrop, applied to the media server collection by the Download Queue. They aren't saved.
-  collection_images?: { collection: CollectionItem; images: CollectionItemImageFile[] };
+  collection_images?: { collection: CollectionItem; images: CollectionItemImageFile[]; set?: SetSummary };
 }
 
 export interface DBPosterSetDetail extends PosterSet {

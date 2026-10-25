@@ -11,6 +11,7 @@ import (
 	"aura/mediaserver"
 	"aura/mediux"
 	"aura/models"
+	"aura/statistics"
 	"aura/utils"
 	"aura/utils/httpx"
 	"context"
@@ -212,7 +213,9 @@ func runWarmup() (success bool) {
 			ctx, ld := logging.CreateLoggingContext(context.Background(), "Warmup")
 			ctx = logging.WithCurrentAction(ctx, ld.AddAction("Loading Media Server Data in the Background", logging.LevelInfo))
 			defer ld.Log()
-			_ = mediaserver.GetAllLibrarySectionsAndItems(ctx, false)
+			if mediaserver.GetAllLibrarySectionsAndItems(ctx, false) {
+				statistics.RecordLibrarySnapshot(ctx)
+			}
 			logMediaServerCache()
 		}()
 	}

@@ -9,6 +9,7 @@ import {
 import { formatDownloadSize } from "@/helper/format-download-size";
 import { upsertSavedSets } from "@/helper/media-item-update-saved-sets";
 import { AddNewItemToDB } from "@/services/database/add";
+import type { DownloadResult } from "@/services/database/add";
 import { DownloadImageFileForCollectionItem } from "@/services/downloads/download-collection-image";
 import { downloadImageFileForMediaItem } from "@/services/downloads/download-image";
 import { AddItemToDownloadQueue } from "@/services/downloads/queue-add";
@@ -70,7 +71,7 @@ import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
 import type { DBPosterSetDetail, DBSavedItem, PosterSet } from "@/types/database/db-poster-set";
 import type { MediaItem, SelectedTypes } from "@/types/media-and-posters/media-item-and-library";
-import type { BaseSetInfo, CollectionItemImageFile, ImageFile } from "@/types/media-and-posters/sets";
+import type { BaseSetInfo, CollectionItemImageFile, ImageFile, SetSummary } from "@/types/media-and-posters/sets";
 import {
   DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS,
   DOWNLOAD_IMAGE_TYPE_OPTIONS,
@@ -111,6 +112,7 @@ type AddToDBTaskPayload = {
   mediaItem: MediaItem;
   posterSet: DBPosterSetDetail;
   addToDBOnly: boolean;
+  downloadResult?: DownloadResult; // The images downloaded for the set, for the statistics
 };
 
 type AddToQueueTaskPayload = {
@@ -331,6 +333,14 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
 
   // State - Duplicate Media Items
   const [duplicates, setDuplicates] = useState<DuplicateMap>({});
+
+  // The set, sent with collection images for the statistics
+  const setSummary: SetSummary = {
+    id: baseSetInfo.id,
+    title: baseSetInfo.title,
+    type: baseSetInfo.type,
+    user_created: baseSetInfo.user_created,
+  };
 
   // State - Add to Queue Only (defaults to the user preference)
   const defaultAddToQueue = useUserPreferencesStore((state) => state.defaultAddToQueue);
@@ -800,7 +810,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         payload.mediaItem,
         payload.posterSet,
         payload.addToDBOnly,
-        autoAddNewCollectionItems
+        autoAddNewCollectionItems,
+        payload.downloadResult
       );
       if (resp.status === "error") {
         throw new Error(resp.error?.message || (typeof resp.error === "string" ? resp.error : "Unknown error"));
@@ -859,7 +870,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       const resp = await DownloadImageFileForCollectionItem(
         payload.imageFile.type,
         payload.collectionItem,
-        payload.imageFile
+        payload.imageFile,
+        setSummary
       );
       if (resp.status === "error") {
         throw new Error(resp.error?.message || "Unknown error");
@@ -1490,7 +1502,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         : [];
       const queuedCollectionImages =
         addToQueueOnly && collectionImages && selectedCollectionImages.length > 0
-          ? { collection: collectionImages.collection, images: selectedCollectionImages }
+          ? { collection: collectionImages.collection, images: selectedCollectionImages, set: setSummary }
           : undefined;
 
       // Sort formItems by MediaItemTitle for consistent order
@@ -1900,6 +1912,14 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         }
 
         const downloadedAtLeastOneForItem = downloadResults.some(Boolean);
+        // The results are in the same order as the jobs
+        const orderedJobs = [...posterJobs, ...backdropJobs, ...otherJobs];
+        const downloadResult: DownloadResult = {
+          downloadedImageIds: orderedJobs
+            .filter((_, index) => downloadResults[index])
+            .map((job) => job.payload.imageFile.id),
+          failedImages: downloadResults.filter((ok) => !ok).length,
+        };
 
         // Only add to DB if at least one download succeeded
         if (!downloadedAtLeastOneForItem) {
@@ -1934,6 +1954,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
             mediaItem: createdSavedItem.dbItem.media_item,
             posterSet: createdSavedItem.dbItem.poster_sets[0],
             addToDBOnly: selectedOptions.addToDBOnly || false,
+            downloadResult,
           },
         });
 
@@ -1944,6 +1965,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           mediaItem: createdSavedItem.dbItem.media_item,
           posterSet: createdSavedItem.dbItem.poster_sets[0],
           addToDBOnly: selectedOptions.addToDBOnly || false,
+          downloadResult,
         });
 
         if (ok) {

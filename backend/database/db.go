@@ -10,7 +10,7 @@ import (
 	"errors"
 )
 
-const LATEST_DB_VERSION = 14
+const LATEST_DB_VERSION = 16
 
 var Client DB
 
@@ -157,6 +157,9 @@ type DB interface {
 
 	// Insert a Download History entry, or update the one for the same item and set
 	InsertDownloadHistoryEntry(ctx context.Context, entry DownloadHistoryEntry) (Err logging.LogErrorInfo)
+
+	// Record a set downloaded, updated or applied again, for the statistics
+	InsertDownloadEvent(ctx context.Context, event models.DownloadEvent) (Err logging.LogErrorInfo)
 
 	// Get Download History entries
 	GetDownloadHistory(ctx context.Context, limit, offset int) (entries []DownloadHistoryEntry, total int, Err logging.LogErrorInfo)
@@ -601,6 +604,13 @@ func InsertDownloadHistoryEntry(ctx context.Context, entry DownloadHistoryEntry)
 		return logging.Error_DBClientNotInitialized()
 	}
 	return Client.InsertDownloadHistoryEntry(ctx, entry)
+}
+
+func InsertDownloadEvent(ctx context.Context, event models.DownloadEvent) (Err logging.LogErrorInfo) {
+	if Client == nil {
+		return logging.Error_DBClientNotInitialized()
+	}
+	return Client.InsertDownloadEvent(ctx, event)
 }
 
 func GetDownloadHistory(ctx context.Context, limit, offset int) (entries []DownloadHistoryEntry, total int, Err logging.LogErrorInfo) {

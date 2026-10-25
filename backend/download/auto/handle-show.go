@@ -1,6 +1,7 @@
 package autodownload
 
 import (
+	"aura/database"
 	"aura/logging"
 	"aura/mediaserver"
 	"aura/mediux"
@@ -400,6 +401,7 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 			Msgf("Image check results for set %s", dbSet.ID)
 
 		_, imageRedownloadsAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Downloading %d updated images for set %s (ID: %s)", len(imagesToRedownload), dbSet.Title, dbSet.ID), logging.LevelInfo)
+		event := models.NewDownloadEvent(mediaItem, dbSet.PosterSet, models.SourceAutoDownload, models.DownloadKindUpdate)
 		for idx, image := range imagesToRedownload {
 			// Redownload the image
 			imageRedownloadResult := make(map[string]any)
@@ -408,6 +410,7 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 			imageRedownloadResult["redownload_reason"] = image.Reason
 			Err.Message = ""
 			Err := mediaserver.DownloadApplyImageToMediaItem(ctx, &mediaItem, image.ImageFile)
+			event.AddImage(image.ImageFile, Err.Message == "")
 			if Err.Message != "" {
 				imageRedownloadResult["redownload_result"] = "error"
 				imageRedownloadResult["redownload_error"] = Err.Message
@@ -427,6 +430,7 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 			}
 		}
 		imageRedownloadsAction.Complete()
+		database.RecordDownloadEvent(ctx, event)
 
 		// Reinsert the set into the DB item with the updated image info and download date so that it is up to date for the next check
 		Err = insertRedownloadedSetIntoDB(ctx, mediaItem, mediuxSet.PosterSet, dbItem, dbSet)

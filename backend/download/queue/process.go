@@ -84,7 +84,7 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 	// Only collection images, applied to their media server collection
 	if queueItem.IsCollectionOnly() {
 		done, failed := 0, 0
-		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, &done, &failed, len(queueItem.CollectionImages.Images))...)
+		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, queueItem.Source, &done, &failed, len(queueItem.CollectionImages.Images))...)
 		finalize()
 		return
 	}
@@ -161,6 +161,7 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 			continue
 		}
 
+		event := models.NewDownloadEvent(queueItem.MediaItem, posterSet.PosterSet, queueItem.Source, models.DownloadKindDownload)
 		for idx, image := range models.SortImagesForApply(posterSet.Images) {
 			if !models.IsKnownImageType(image.Type) {
 				subAction.AppendWarning(fmt.Sprintf("job_%d_image_%d", job.ID, idx), fmt.Sprintf("Image has unrecognized type '%s'", image.Type))
@@ -196,9 +197,11 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 				result.FailureReason = downloadErr.Message
 				failed++
 			}
+			event.AddImage(image, downloadErr.Message == "")
 			done++
 			imageResults = append(imageResults, result)
 		}
+		database.RecordDownloadEvent(ctx, event)
 
 		// Per-set notification (success/warning/error)
 		SendNotification(
@@ -218,7 +221,7 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 
 	// The collection's own poster and backdrop, applied to the media server collection. They aren't saved.
 	if queueItem.HasCollectionImages() {
-		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, &done, &failed, total)...)
+		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, queueItem.Source, &done, &failed, total)...)
 	}
 
 	// Only collection images, there are no sets to save
@@ -273,8 +276,10 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 }
 
 // applyCollectionImages applies a collection's own images to the media server collection, and returns the errors
-func applyCollectionImages(ctx context.Context, jobID int64, images *models.QueuedCollectionImages, done, failed *int, total int) (errors []string) {
+func applyCollectionImages(ctx context.Context, jobID int64, images *models.QueuedCollectionImages, source string, done, failed *int, total int) (errors []string) {
 	collection := images.Collection
+	event := models.NewCollectionDownloadEvent(collection, images.Set, source)
+	defer func() { database.RecordDownloadEvent(ctx, event) }()
 	for _, image := range images.Images {
 		QueueBroadcaster.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{
 			JobID:          jobID,
@@ -284,10 +289,12 @@ func applyCollectionImages(ctx context.Context, jobID int64, images *models.Queu
 			Failed:         *failed,
 			Total:          total,
 		}})
-		if applyErr := mediaserver.ApplyCollectionImage(ctx, &collection, image); applyErr.Message != "" {
+		applyErr := mediaserver.ApplyCollectionImage(ctx, &collection, image)
+		if applyErr.Message != "" {
 			errors = append(errors, fmt.Sprintf("%s %s: %s", collection.Title, image.Type, applyErr.Message))
 			*failed++
 		}
+		event.AddImage(image, applyErr.Message == "")
 		*done++
 	}
 	return errors

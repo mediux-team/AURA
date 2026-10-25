@@ -2,6 +2,14 @@
 
 ### Added
 
+- Added new Statistics Page to show users how libraries have grown and how aura has shaped them.
+
+---
+
+## [0.9.116] - 2026-10-24
+
+### Added
+
 - Added Auto Upgrade by Default to User Preferences, to choose whether Auto Upgrade is checked when you download a set.
 
 ### Fixed

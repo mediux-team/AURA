@@ -115,6 +115,18 @@ func RunMigrations() (migrationsPerformed int, Err logging.LogErrorInfo) {
 				return migrationsPerformed, migrateErr
 			}
 			migrationsPerformed++
+		case 14:
+			migrateErr = migrate_14_to_15(ctx)
+			if migrateErr.Message != "" {
+				return migrationsPerformed, migrateErr
+			}
+			migrationsPerformed++
+		case 15:
+			migrateErr = migrate_15_to_16(ctx)
+			if migrateErr.Message != "" {
+				return migrationsPerformed, migrateErr
+			}
+			migrationsPerformed++
 		default:
 			logging.LOGGER.Error().Msgf("No migration path for database version %d", v)
 			return migrationsPerformed, logging.LogErrorInfo{Message: "No migration path for database version %d"}

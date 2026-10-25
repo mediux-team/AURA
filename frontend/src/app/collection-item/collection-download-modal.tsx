@@ -179,7 +179,12 @@ const CollectionsDownloadModal: React.FC<CollectionsDownloadModalProps> = ({ ite
         }
       }, 50);
 
-      const response = await DownloadImageFileForCollectionItem(imageType, collectionItem, imageFile);
+      const response = await DownloadImageFileForCollectionItem(imageType, collectionItem, imageFile, {
+        id: set.id,
+        title: set.title,
+        type: set.type,
+        user_created: set.user_created,
+      });
       if (response.status === "error") {
         throw new Error(response.error?.message || `Unknown error downloading ${imageLabel}`);
       }

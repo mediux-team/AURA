@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -263,5 +264,28 @@ func TestEJSpecialsStayInTheSpecialsSeason(t *testing.T) {
 	}
 	if !slices.Equal(got[0], []string{"s0e2"}) || !slices.Equal(got[2], []string{"s2e1", "s2e2", "s2e3"}) {
 		t.Errorf("episodes by season = %v", got)
+	}
+}
+
+func TestEJShowCounts(t *testing.T) {
+	var fields string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fields = r.URL.Query().Get("Fields")
+		_, _ = w.Write([]byte(`{"TotalRecordCount":1,"Items":[{"Id":"400","Name":"Show","Type":"Series","ProviderIds":{"Tmdb":"1399"},"ChildCount":2,"RecursiveItemCount":20}]}`))
+	}))
+	t.Cleanup(server.Close)
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.MainMediaServer = "main"
+	e := &EJ{Config: config.Config_MediaServer{ID: "other", Type: "Jellyfin", URL: server.URL, UserID: "user"}}
+
+	// The counts are asked for with the library listing
+	section := models.LibrarySection{LibrarySectionBase: models.LibrarySectionBase{ID: "2", Title: "TV Shows", Type: "show"}}
+	items, _, _, Err := e.GetLibrarySectionItems(testContext(), section, "0", "")
+	if Err.Message != "" || len(items) != 1 || items[0].SeasonCount != 2 || items[0].EpisodeCount != 20 {
+		t.Fatalf("items = %+v, %s", items, Err.Message)
+	}
+	if !strings.Contains(fields, "ChildCount") || !strings.Contains(fields, "RecursiveItemCount") {
+		t.Errorf("Fields = %q", fields)
 	}
 }

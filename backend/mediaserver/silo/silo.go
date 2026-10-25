@@ -76,6 +76,8 @@ type SiloCatalogItemDetailResponse struct {
 	TVDB_ID       string   `json:"tvdb_id"`
 	ReleaseDate   string   `json:"release_date"`
 	FirstAirDate  string   `json:"first_air_date"`
+	SeasonCount   int      `json:"season_count"`
+	EpisodeCount  int      `json:"episode_count"`
 	PosterURL     string   `json:"poster_url"`
 	BackdropURL   string   `json:"backdrop_url"`
 	FolderPaths   []string `json:"folder_paths"`

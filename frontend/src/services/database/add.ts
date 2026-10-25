@@ -14,6 +14,14 @@ export interface AddNewItemToDB_Request {
   poster_set: DBPosterSetDetail;
   add_to_db_only: boolean;
   auto_add_new_collection_items: boolean;
+  downloaded_image_ids?: string[]; // The images that were downloaded, for the statistics
+  failed_images?: number; // How many images couldn't be downloaded
+}
+
+// The images the download window downloaded for the set
+export interface DownloadResult {
+  downloadedImageIds: string[];
+  failedImages: number;
 }
 
 export interface AddNewItemToDB_Response {
@@ -24,7 +32,8 @@ export const AddNewItemToDB = async (
   mediaItem: MediaItem,
   posterSet: DBPosterSetDetail,
   addToDBOnly = false,
-  auto_add_new_collection_items = false
+  auto_add_new_collection_items = false,
+  downloadResult?: DownloadResult
 ): Promise<APIResponse<AddNewItemToDB_Response>> => {
   let complete = true;
   const media_data_size = JSON.stringify(mediaItem).length / 1024 / 1024;
@@ -58,6 +67,8 @@ export const AddNewItemToDB = async (
       complete: complete,
       add_to_db_only: addToDBOnly,
       auto_add_new_collection_items: auto_add_new_collection_items,
+      downloaded_image_ids: downloadResult?.downloadedImageIds,
+      failed_images: downloadResult?.failedImages,
     };
     const response = await apiClient.post<APIResponse<AddNewItemToDB_Response>>(`/db`, req);
     if (response.data.status === "error") {

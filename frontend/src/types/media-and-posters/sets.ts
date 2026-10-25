@@ -34,6 +34,9 @@ export interface BaseSetInfo {
   popularity_global: number;
 }
 
+// The set images are from, sent with collection images for the statistics
+export type SetSummary = Pick<BaseSetInfo, "id" | "title" | "type" | "user_created">;
+
 export interface ImageFile {
   id: string;
   type: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS;

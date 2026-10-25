@@ -196,7 +196,7 @@ type Config_SaveImagesLocally struct {
 }
 
 // PageViewPages are the pages whose sort and filter options are saved in the User Preferences
-var PageViewPages = []string{"home", "saved_sets", "collections", "logs", "media_item", "download_queue"}
+var PageViewPages = []string{"home", "saved_sets", "collections", "logs", "media_item", "download_queue", "statistics"}
 
 // maxPageViewSize is the most a page's saved options can take, as JSON
 const maxPageViewSize = 16 << 10

@@ -116,6 +116,9 @@ func (s *Silo) getLibrarySectionItems(ctx context.Context, section models.Librar
 			item.Guids = append(item.Guids, models.MediaItemGuid{Provider: "tmdb", ID: itemInfo.TMDB_ID})
 			item.TMDB_ID = itemInfo.TMDB_ID
 		}
+		if item.Type == "show" {
+			item.SeasonCount, item.EpisodeCount = itemInfo.SeasonCount, itemInfo.EpisodeCount
+		}
 		if itemInfo.IMDB_ID != "" {
 			item.Guids = append(item.Guids, models.MediaItemGuid{Provider: "imdb", ID: itemInfo.IMDB_ID})
 		}

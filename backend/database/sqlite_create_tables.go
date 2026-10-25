@@ -27,6 +27,8 @@ func (s *SQliteDB) CreateTables(ctx context.Context) (Err logging.LogErrorInfo) 
 		v7_CreateDownloadHistoryTable,
 		v8_CreateSiloItemIDsTable,
 		v14_CreateCollectionsTables,
+		v15_CreateStatisticsTables,
+		v16_AddSiloItemCountColumns,
 	}
 
 	for _, step := range steps {

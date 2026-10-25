@@ -1190,6 +1190,33 @@ definitions:
         description: Item type (movie, show)
         type: string
     type: object
+  models.BaseSetInfo:
+    properties:
+      date_created:
+        description: Creation date
+        type: string
+      date_updated:
+        description: Last updated date
+        type: string
+      id:
+        description: Set ID
+        type: string
+      popularity:
+        description: Popularity score of the set
+        type: integer
+      popularity_global:
+        description: Global popularity score of the set
+        type: integer
+      title:
+        description: Set Title
+        type: string
+      type:
+        description: Set Type (movie, show, collection, boxset)
+        type: string
+      user_created:
+        description: User who created the set
+        type: string
+    type: object
   models.CollectionItem:
     properties:
       child_count:
@@ -1390,6 +1417,9 @@ definitions:
       edition:
         description: Edition of the media item (e.g., "Director's Cut")
         type: string
+      episode_count:
+        description: Number of episodes of a show
+        type: integer
       guids:
         description: Used in MediaItem Details Page - For ratings
         items:
@@ -1424,6 +1454,10 @@ definitions:
         type: string
       released_at:
         description: Release date timestamp
+        type: integer
+      season_count:
+        description: Used in the Statistics Page - Series is only loaded with the
+          details, so the library listing fills these in
         type: integer
       series:
         allOf:
@@ -1548,6 +1582,10 @@ definitions:
         items:
           $ref: '#/definitions/models.ImageFile'
         type: array
+      set:
+        allOf:
+        - $ref: '#/definitions/models.BaseSetInfo'
+        description: The set the images are from, for the statistics
     type: object
   models.SelectedTypes:
     properties:
@@ -1808,6 +1846,14 @@ definitions:
         type: boolean
       complete:
         type: boolean
+      downloaded_image_ids:
+        description: Images the download window downloaded, for the statistics
+        items:
+          type: string
+        type: array
+      failed_images:
+        description: Images the download window couldn't download
+        type: integer
       media_item:
         $ref: '#/definitions/models.MediaItem'
       poster_set:
@@ -1928,6 +1974,10 @@ definitions:
         $ref: '#/definitions/models.CollectionItem'
       image_file:
         $ref: '#/definitions/models.ImageFile'
+      set:
+        allOf:
+        - $ref: '#/definitions/models.BaseSetInfo'
+        description: The set the image is from, for the statistics
     type: object
   routes_download.DownloadCollectionImage_Response:
     properties:
@@ -2352,6 +2402,331 @@ definitions:
       set_title:
         type: string
       set_type:
+        type: string
+    type: object
+  statistics.CollectionStats:
+    properties:
+      collection_images:
+        description: Their images applied, all time
+        type: integer
+      collections:
+        type: integer
+      saved_collection_sets:
+        description: Collection sets saved for movies
+        type: integer
+      with_images:
+        description: Collections aura applied their own images to
+        type: integer
+    type: object
+  statistics.CreatorStats:
+    properties:
+      favorite_count:
+        description: How many favorite creators there are
+        type: integer
+      favorite_sets:
+        description: Sets from favorite creators
+        type: integer
+      other_sets:
+        type: integer
+      top:
+        items:
+          $ref: '#/definitions/statistics.GroupCount'
+        type: array
+    type: object
+  statistics.DataStats:
+    properties:
+      bytes_all_time:
+        type: integer
+      bytes_in_range:
+        type: integer
+      image_cache_bytes:
+        description: MediUX images cached on disk
+        type: integer
+      image_cache_files:
+        type: integer
+    type: object
+  statistics.DownloadPoint:
+    properties:
+      bytes:
+        type: integer
+      date:
+        type: string
+      images:
+        type: integer
+      images_failed:
+        type: integer
+      reapplies:
+        type: integer
+      sets:
+        type: integer
+      updates:
+        type: integer
+    type: object
+  statistics.DownloadStats:
+    properties:
+      all_time:
+        $ref: '#/definitions/statistics.DownloadTotals'
+      image_types:
+        description: Images downloaded of each type, in the range
+        items:
+          $ref: '#/definitions/statistics.GroupCount'
+        type: array
+      in_range:
+        $ref: '#/definitions/statistics.DownloadTotals'
+      timeline:
+        items:
+          $ref: '#/definitions/statistics.DownloadPoint'
+        type: array
+    type: object
+  statistics.DownloadTotals:
+    properties:
+      bytes:
+        type: integer
+      collection_images:
+        description: Collections' own images
+        type: integer
+      estimated_sets:
+        description: Sets counted from the saved sets, before downloads were recorded
+        type: integer
+      images:
+        description: Images downloaded, with updates and collection images
+        type: integer
+      images_failed:
+        type: integer
+      reapplies:
+        description: Saved images applied again
+        type: integer
+      redownloads:
+        description: Sets downloaded again for the same item
+        type: integer
+      saved_only:
+        description: Sets saved without downloading
+        type: integer
+      sets:
+        description: Sets downloaded
+        type: integer
+      updated_images:
+        description: Images Auto Download downloaded
+        type: integer
+      updates:
+        description: Sets Auto Download updated
+        type: integer
+    type: object
+  statistics.FailureStats:
+    properties:
+      failure_rate:
+        description: Images failed out of the images tried, in the range
+        type: number
+      images_failed:
+        description: In the range
+        type: integer
+      open_failures:
+        description: Download History entries
+        type: integer
+      top_reasons:
+        items:
+          $ref: '#/definitions/statistics.NameCount'
+        type: array
+    type: object
+  statistics.GroupCount:
+    properties:
+      favorite:
+        description: A favorite creator
+        type: boolean
+      images:
+        type: integer
+      name:
+        type: string
+      sets:
+        type: integer
+    type: object
+  statistics.GrowthPoint:
+    properties:
+      date:
+        type: string
+      movies:
+        type: integer
+      shows:
+        type: integer
+    type: object
+  statistics.ItemCounts:
+    properties:
+      episodes:
+        type: integer
+      items:
+        type: integer
+      movies:
+        type: integer
+      seasons:
+        type: integer
+      shows:
+        type: integer
+    type: object
+  statistics.ItemRef:
+    properties:
+      library:
+        type: string
+      title:
+        type: string
+      tmdb_id:
+        type: string
+      type:
+        type: string
+      year:
+        type: integer
+    type: object
+  statistics.LibraryCounts:
+    properties:
+      counts:
+        $ref: '#/definitions/statistics.ItemCounts'
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  statistics.LibraryCoverage:
+    properties:
+      items:
+        type: integer
+      items_with_sets:
+        type: integer
+      title:
+        type: string
+    type: object
+  statistics.LibraryStats:
+    properties:
+      growth:
+        description: Items in the libraries at the end of each point, by when they
+          were added
+        items:
+          $ref: '#/definitions/statistics.GrowthPoint'
+        type: array
+      libraries:
+        items:
+          $ref: '#/definitions/statistics.LibraryCounts'
+        type: array
+      totals:
+        $ref: '#/definitions/statistics.ItemCounts'
+    type: object
+  statistics.MediaServerStats:
+    properties:
+      counts:
+        $ref: '#/definitions/statistics.ItemCounts'
+      id:
+        type: string
+      main:
+        type: boolean
+      matched:
+        description: Items in both media servers
+        type: integer
+      name:
+        type: string
+      only_in_main:
+        description: The first of them, by title
+        items:
+          $ref: '#/definitions/statistics.ItemRef'
+        type: array
+      only_in_main_count:
+        description: Items in the main media server, not in this one
+        type: integer
+      only_in_server:
+        items:
+          $ref: '#/definitions/statistics.ItemRef'
+        type: array
+      only_in_server_count:
+        description: Items in this media server, not in the main one
+        type: integer
+      type:
+        type: string
+      unmapped_libraries:
+        description: Libraries that don't match a main media server library, so aren't
+          compared
+        items:
+          type: string
+        type: array
+    type: object
+  statistics.NameCount:
+    properties:
+      count:
+        type: integer
+      name:
+        type: string
+    type: object
+  statistics.SetsAppliedStats:
+    properties:
+      image_types:
+        items:
+          $ref: '#/definitions/statistics.TypeCoverage'
+        type: array
+      items:
+        description: Movies and shows
+        type: integer
+      items_with_sets:
+        description: Movies and shows with at least one saved set
+        type: integer
+      libraries:
+        items:
+          $ref: '#/definitions/statistics.LibraryCoverage'
+        type: array
+      saved_sets:
+        type: integer
+    type: object
+  statistics.Snapshot:
+    properties:
+      counts:
+        $ref: '#/definitions/statistics.ItemCounts'
+      date:
+        type: string
+      items_with_sets:
+        type: integer
+      saved_sets:
+        type: integer
+    type: object
+  statistics.Statistics:
+    properties:
+      collections:
+        $ref: '#/definitions/statistics.CollectionStats'
+      creators:
+        $ref: '#/definitions/statistics.CreatorStats'
+      data:
+        $ref: '#/definitions/statistics.DataStats'
+      days:
+        description: How many days back the graphs go
+        type: integer
+      downloads:
+        $ref: '#/definitions/statistics.DownloadStats'
+      failures:
+        $ref: '#/definitions/statistics.FailureStats'
+      generated_at:
+        type: string
+      history:
+        description: The daily numbers in the range
+        items:
+          $ref: '#/definitions/statistics.Snapshot'
+        type: array
+      library:
+        $ref: '#/definitions/statistics.LibraryStats'
+      media_servers:
+        items:
+          $ref: '#/definitions/statistics.MediaServerStats'
+        type: array
+      period:
+        description: 'What each point of the graphs is: day, week or month'
+        type: string
+      sets_applied:
+        $ref: '#/definitions/statistics.SetsAppliedStats'
+      sources:
+        items:
+          $ref: '#/definitions/statistics.GroupCount'
+        type: array
+    type: object
+  statistics.TypeCoverage:
+    properties:
+      items:
+        type: integer
+      total:
+        type: integer
+      type:
         type: string
     type: object
 info:
@@ -5209,6 +5584,41 @@ paths:
       summary: Sonarr/Radarr Webhook
       tags:
       - Sonarr/Radarr
+  /api/statistics:
+    get:
+      description: The media server libraries, how the media servers compare, the
+        sets applied, and the downloads over time, for the Statistics page.
+      parameters:
+      - description: How many days back the graphs go, 1 or more (default 30)
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/statistics.Statistics'
+              type: object
+        "401":
+          description: Unauthorized (only when Auth.Enabled=true)
+          schema:
+            $ref: '#/definitions/httpx.UnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.JSONResponse'
+      security:
+      - SessionCookie: []
+      - ApiKeyAuth: []
+      summary: Get Statistics
+      tags:
+      - Statistics
   /api/validate/mediaserver:
     post:
       consumes:

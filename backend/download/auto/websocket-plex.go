@@ -336,6 +336,7 @@ func reApplySavedImages(item PlexRefreshedItem) {
 			if !posterSet.AutoDownload {
 				continue
 			}
+			event := models.NewDownloadEvent(item.MediaItem, posterSet.PosterSet, models.SourcePlexRefresh, models.DownloadKindReapply)
 			for _, image := range posterSet.Images {
 				switch image.Type {
 				case "poster":
@@ -372,6 +373,7 @@ func reApplySavedImages(item PlexRefreshedItem) {
 
 				matchedImages = append(matchedImages, image)
 				applyErr := mediaserver.DownloadApplyImageToMainMediaServer(logCtx, &item.MediaItem, image)
+				event.AddImage(image, applyErr.Message == "")
 				if applyErr.Message != "" {
 					logging.LOGGER.Error().Timestamp().
 						Str("error", applyErr.Message).
@@ -389,6 +391,7 @@ func reApplySavedImages(item PlexRefreshedItem) {
 						Msg("Plex Event Listener: Successfully re-applied saved image to refreshed item")
 				}
 			}
+			database.RecordDownloadEvent(logCtx, event)
 		}
 	}
 

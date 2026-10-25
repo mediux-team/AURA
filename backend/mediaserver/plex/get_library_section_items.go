@@ -111,6 +111,9 @@ func (p *Plex) getLibrarySectionItems(ctx context.Context, section models.Librar
 		if metadata.Type == "movie" {
 			item.Movie = &models.MediaItemMovie{File: firstFile(metadata.Media)}
 		}
+		if metadata.Type == "show" {
+			item.SeasonCount, item.EpisodeCount = metadata.ChildCount, metadata.LeafCount
+		}
 
 		if len(metadata.Guid) > 0 {
 			for _, guid := range metadata.Guids {

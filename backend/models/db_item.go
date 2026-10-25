@@ -18,6 +18,7 @@ type DBSavedItem struct {
 type QueuedCollectionImages struct {
 	Collection CollectionItem `json:"collection"`
 	Images     []ImageFile    `json:"images"`
+	Set        *BaseSetInfo   `json:"set,omitempty"` // The set the images are from, for the statistics
 }
 
 // HasCollectionImages reports whether the item has collection images to apply

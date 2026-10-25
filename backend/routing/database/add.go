@@ -19,6 +19,8 @@ type addItemRequest struct {
 	PosterSet                 models.DBPosterSetDetail `json:"poster_set"`
 	AddToDBOnly               bool                     `json:"add_to_db_only"` // If true, the item will be added to the database but not have any labels or tags applied. This is for users who want to manage labels and tags manually.
 	AutoAddNewCollectionItems bool                     `json:"auto_add_new_collection_items"`
+	DownloadedImageIDs        []string                 `json:"downloaded_image_ids,omitempty"` // Images the download window downloaded, for the statistics
+	FailedImages              int                      `json:"failed_images,omitempty"`        // Images the download window couldn't download
 }
 
 type addItemResponse struct {
@@ -149,6 +151,7 @@ func AddNewItemToDB(w http.ResponseWriter, r *http.Request) {
 		cache.LibraryStore.UpdateMediaItem(saveItem.MediaItem.LibraryTitle, &saveItem.MediaItem)
 	}()
 	response.SavedItem = saveItem
+	database.RecordDownloadEvent(ctx, downloadWindowEvent(req, fullSet))
 
 	if req.AddToDBOnly {
 		httpx.SendResponse(w, ld, response)
@@ -168,4 +171,29 @@ func AddNewItemToDB(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	httpx.SendResponse(w, ld, response)
+}
+
+// downloadWindowEvent counts the images the download window downloaded for the set.
+// Without the downloaded images, the item's images of the selected types are counted.
+func downloadWindowEvent(req addItemRequest, set models.DBPosterSetDetail) models.DownloadEvent {
+	event := models.NewDownloadEvent(req.MediaItem, set.PosterSet, models.SourceDownloadWindow, models.DownloadKindDownload)
+	if req.AddToDBOnly {
+		event.Kind = models.DownloadKindSaved
+		return event
+	}
+	downloaded := map[string]bool{}
+	for _, id := range req.DownloadedImageIDs {
+		downloaded[id] = true
+	}
+	event.Estimated = req.DownloadedImageIDs == nil
+	for _, image := range set.Images {
+		if image.ItemTMDB_ID != "" && image.ItemTMDB_ID != req.MediaItem.TMDB_ID {
+			continue
+		}
+		if downloaded[image.ID] || (event.Estimated && models.ImageIsSelected(req.MediaItem, set.SelectedTypes, image)) {
+			event.AddImage(image, true)
+		}
+	}
+	event.ImagesFailed += req.FailedImages
+	return event
 }

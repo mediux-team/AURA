@@ -19,6 +19,7 @@ import (
 	routes_search "aura/routing/search"
 	routes_silo_plugin "aura/routing/siloplugin"
 	routes_sonarr_radarr "aura/routing/sonarr-radarr"
+	routes_statistics "aura/routing/statistics"
 	routes_validation "aura/routing/validation"
 	"aura/utils/httpx"
 	"net/http"
@@ -148,6 +149,9 @@ func AddRoutes(r *chi.Mux) {
 			r.Get("/", routes_jobs.GetAllJobs)
 			r.Post("/", routes_jobs.RunJob)
 		})
+
+		// Statistics Route
+		r.Get("/statistics", routes_statistics.GetStatistics)
 
 		// Labels & Tags Route
 		r.Post("/labels-tags", routes_labels_tags.ApplyLabelsAndTagsToItem)

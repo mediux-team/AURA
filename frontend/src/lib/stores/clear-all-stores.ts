@@ -13,6 +13,7 @@ import { useHomePageStore } from "@/lib/stores/page-store-home";
 import { useLogsPageStore } from "@/lib/stores/page-store-logs";
 import { useMediaPageStore } from "@/lib/stores/page-store-media";
 import { useSavedSetsPageStore } from "@/lib/stores/page-store-saved-sets";
+import { useStatisticsPageStore } from "@/lib/stores/page-store-statistics";
 import { useUserPageStore } from "@/lib/stores/page-store-user";
 import { withoutPageViewSync } from "@/lib/stores/page-view-sync";
 import { GlobalStore, PageStore } from "@/lib/stores/stores";
@@ -34,6 +35,7 @@ export const ClearAllStores = async (options?: { deep?: boolean }) => {
     useCollectionItemPageStore.getState().clear();
     useLogsPageStore.getState().clear();
     useDownloadQueuePageStore.getState().clear();
+    useStatisticsPageStore.getState().clear();
   });
 
   // Global stores

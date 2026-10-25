@@ -6,6 +6,7 @@ import {
   ArrowLeftCircle,
   ArrowRightCircle,
   Bookmark as BookmarkIcon,
+  ChartColumn,
   Clock,
   FileCog as FileCogIcon,
   LayoutGrid,
@@ -316,6 +317,13 @@ export function Navbar({ version = "dev" }: AppNavbarProps) {
                       <span>Download Queue</span>
                       {failedCount > 0 && <span className="text-xs text-red-500">{failedCount} Failed</span>}
                     </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer flex items-center active:scale-95 hover:brightness-120"
+                    onClick={() => router.push("/statistics")}
+                  >
+                    <ChartColumn className="w-6 h-6 mr-2" />
+                    Statistics
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

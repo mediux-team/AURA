@@ -181,3 +181,22 @@ func TestPlexEpisodesWithoutAFile(t *testing.T) {
 		t.Errorf("firstFile(nil) = %+v", file)
 	}
 }
+
+func TestPlexShowCounts(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"MediaContainer":{"title1":"TV Shows","totalSize":1,"Metadata":[
+			{"ratingKey":"200","type":"show","title":"Show","year":2020,"childCount":3,"leafCount":24,"guid":"plex://show/1","Guid":[{"id":"tmdb://1399"}]}]}}`))
+	}))
+	t.Cleanup(server.Close)
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.MainMediaServer = "main"
+	p := &Plex{Config: config.Config_MediaServer{ID: "other", Type: "Plex", URL: server.URL}}
+
+	// The library listing has each show's seasons and episodes
+	section := models.LibrarySection{LibrarySectionBase: models.LibrarySectionBase{ID: "2", Title: "TV Shows", Type: "show"}}
+	items, _, _, Err := p.GetLibrarySectionItems(testContext(), section, "0", "")
+	if Err.Message != "" || len(items) != 1 || items[0].SeasonCount != 3 || items[0].EpisodeCount != 24 || items[0].Series != nil {
+		t.Fatalf("items = %+v, %s", items, Err.Message)
+	}
+}

@@ -27,7 +27,8 @@ interface UserPreferences {
 }
 
 // The pages whose sort and filter options are saved, the same as PageViewPages in aura
-export type PageViewPage = "home" | "saved_sets" | "collections" | "logs" | "media_item" | "download_queue";
+export type PageViewPage =
+  "home" | "saved_sets" | "collections" | "logs" | "media_item" | "download_queue" | "statistics";
 
 export type UserPreferencesSaveStatus = "idle" | "saving" | "saved" | "error";
 

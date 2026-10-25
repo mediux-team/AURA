@@ -4,6 +4,7 @@ import (
 	"aura/config"
 	"aura/logging"
 	"aura/mediaserver"
+	"aura/statistics"
 	"context"
 )
 
@@ -16,7 +17,9 @@ func runRefreshMediaItemsAndCollectionsJobBody(ctx context.Context) {
 	ctx, ld := logging.CreateLoggingContext(ctx, "Cron Job")
 	action := ld.AddAction("Refresh Media Items and Collections", logging.LevelInfo)
 	ctx = logging.WithCurrentAction(ctx, action)
-	mediaserver.GetAllLibrarySectionsAndItems(ctx, true)
+	if mediaserver.GetAllLibrarySectionsAndItems(ctx, true) {
+		statistics.RecordLibrarySnapshot(ctx)
+	}
 	ld.Log()
 }
 

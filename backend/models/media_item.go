@@ -26,6 +26,10 @@ type MediaItem struct {
 	// Used in MediaItem Details Page - For ratings
 	Guids []MediaItemGuid `json:"guids"` // List of GUIDs from different providers
 
+	// Used in the Statistics Page - Series is only loaded with the details, so the library listing fills these in
+	SeasonCount  int `json:"season_count,omitempty"`  // Number of seasons of a show
+	EpisodeCount int `json:"episode_count,omitempty"` // Number of episodes of a show
+
 	// Used in MediaItem Details Page - For more information about the item
 	ContentRating string `json:"content_rating"` // Content rating (e.g., "PG-13")
 	Summary       string `json:"summary"`        // Summary or description of the media item

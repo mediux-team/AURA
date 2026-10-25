@@ -17,6 +17,8 @@ type siloItemInfo struct {
 	IMDB_ID      string
 	TVDB_ID      string
 	FirstAirDate string
+	SeasonCount  int
+	EpisodeCount int
 	UpdatedAt    time.Time
 }
 
@@ -55,6 +57,8 @@ func getItemInfo(ctx context.Context, msConfig config.Config_MediaServer, conten
 		IMDB_ID:      siloResp.IMDB_ID,
 		TVDB_ID:      siloResp.TVDB_ID,
 		FirstAirDate: siloResp.FirstAirDate,
+		SeasonCount:  siloResp.SeasonCount,
+		EpisodeCount: siloResp.EpisodeCount,
 		UpdatedAt:    time.Now(),
 	}
 	return itemInfo, logging.LogErrorInfo{}
@@ -83,6 +87,8 @@ func loadItemInfo(ctx context.Context) {
 			IMDB_ID:      savedItem.IMDB_ID,
 			TVDB_ID:      savedItem.TVDB_ID,
 			FirstAirDate: savedItem.FirstAirDate,
+			SeasonCount:  savedItem.SeasonCount,
+			EpisodeCount: savedItem.EpisodeCount,
 			UpdatedAt:    savedItem.UpdatedAt,
 		}
 	}
@@ -98,6 +104,8 @@ func saveItemInfo(ctx context.Context, siloResp SiloCatalogItemDetailResponse) {
 		IMDB_ID:      siloResp.IMDB_ID,
 		TVDB_ID:      siloResp.TVDB_ID,
 		FirstAirDate: siloResp.FirstAirDate,
+		SeasonCount:  siloResp.SeasonCount,
+		EpisodeCount: siloResp.EpisodeCount,
 		UpdatedAt:    time.Now(),
 	}
 
@@ -109,6 +117,8 @@ func saveItemInfo(ctx context.Context, siloResp SiloCatalogItemDetailResponse) {
 		existing.IMDB_ID == itemInfo.IMDB_ID &&
 		existing.TVDB_ID == itemInfo.TVDB_ID &&
 		existing.FirstAirDate == itemInfo.FirstAirDate &&
+		existing.SeasonCount == itemInfo.SeasonCount &&
+		existing.EpisodeCount == itemInfo.EpisodeCount &&
 		time.Since(existing.UpdatedAt) < itemInfoSaveAge
 	if unchanged {
 		itemInfoMu.Unlock()
@@ -125,6 +135,8 @@ func saveItemInfo(ctx context.Context, siloResp SiloCatalogItemDetailResponse) {
 		IMDB_ID:      itemInfo.IMDB_ID,
 		TVDB_ID:      itemInfo.TVDB_ID,
 		FirstAirDate: itemInfo.FirstAirDate,
+		SeasonCount:  itemInfo.SeasonCount,
+		EpisodeCount: itemInfo.EpisodeCount,
 		UpdatedAt:    itemInfo.UpdatedAt,
 	}})
 	if Err.Message != "" {

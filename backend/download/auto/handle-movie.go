@@ -226,6 +226,7 @@ func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.
 			Msgf("Image check results for set %s", dbSet.ID)
 
 		_, imageRedownloadsAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Downloading %d updated images for set %s (ID: %s)", len(imagesToRedownload), dbSet.Title, dbSet.ID), logging.LevelInfo)
+		event := models.NewDownloadEvent(mediaItem, dbSet.PosterSet, models.SourceAutoDownload, models.DownloadKindUpdate)
 		for idx, image := range imagesToRedownload {
 			// Redownload the image
 			imageRedownloadResult := make(map[string]any)
@@ -234,6 +235,7 @@ func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.
 			imageRedownloadResult["redownload_reason"] = image.Reason
 
 			Err := mediaserver.DownloadApplyImageToMediaItem(ctx, &mediaItem, image.ImageFile)
+			event.AddImage(image.ImageFile, Err.Message == "")
 			if Err.Message != "" {
 				imageRedownloadResult["redownload_result"] = "error"
 				imageRedownloadResult["redownload_error"] = Err.Message
@@ -253,6 +255,7 @@ func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.
 			}
 		}
 		imageRedownloadsAction.Complete()
+		database.RecordDownloadEvent(ctx, event)
 
 		// We remove the images that are for other items in the set and then update the set in the database with the new image info and download date so that it is up to date for the next check
 		mediuxSet.PosterSet.Images = possibleImages
@@ -363,8 +366,10 @@ func handleCollectionAutoAddNewItems(ctx context.Context, dbSet models.DBPosterS
 			continue
 		}
 
+		event := models.NewDownloadEvent(item, mediuxSet.PosterSet, models.SourceAutoDownload, models.DownloadKindDownload)
 		for _, image := range itemImages {
 			downloadErr := mediaserver.DownloadApplyImageToMediaItem(ctx, &item, image)
+			event.AddImage(image, downloadErr.Message == "")
 			if downloadErr.Message != "" {
 				action.AppendWarning("collection_auto_add_download_failed", map[string]any{
 					"tmdb_id":       item.TMDB_ID,
@@ -385,6 +390,7 @@ func handleCollectionAutoAddNewItems(ctx context.Context, dbSet models.DBPosterS
 				})
 			}(item, image)
 		}
+		database.RecordDownloadEvent(ctx, event)
 
 		newSavedItem := models.DBSavedItem{
 			MediaItem: item,

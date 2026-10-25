@@ -57,7 +57,7 @@ func (e *EJ) getLibrarySectionItems(ctx context.Context, section models.LibraryS
 		query.Add("SortOrder", "Ascending")
 	}
 	query.Add("IncludeItemTypes", "Movie,Series")
-	query.Add("Fields", "DateLastContentAdded,PremiereDate,DateCreated,ProviderIds,BasicSyncInfo,CanDelete,CanDownload,PrimaryImageAspectRatio,ProductionYear,Status,EndDate")
+	query.Add("Fields", "DateLastContentAdded,PremiereDate,DateCreated,ProviderIds,BasicSyncInfo,CanDelete,CanDownload,PrimaryImageAspectRatio,ProductionYear,Status,EndDate,ChildCount,RecursiveItemCount")
 	query.Add("ParentId", section.ID)
 	query.Add("StartIndex", sectionStartIndex)
 	query.Add("Limit", limit)
@@ -136,6 +136,9 @@ func (e *EJ) getLibrarySectionItems(ctx context.Context, section models.LibraryS
 		item.ReleasedAt = unixSeconds(ejItem.PremiereDate)
 		if item.Type == "show" && !ejItem.DateLastContentAdded.IsZero() {
 			item.LatestEpisodeAddedAt = unixSeconds(ejItem.DateLastContentAdded)
+		}
+		if item.Type == "show" {
+			item.SeasonCount, item.EpisodeCount = ejItem.ChildCount, ejItem.RecursiveItemCount
 		}
 
 		// If no TMDB ID found, get the value from MediUX using the GUID[tvdb]

@@ -110,6 +110,8 @@ type EmbyJellyLibraryItemsResponse struct {
 		DateCreated          time.Time `json:"DateCreated"`
 		PremiereDate         time.Time `json:"PremiereDate"`
 		DateLastContentAdded time.Time `json:"DateLastContentAdded"`
+		ChildCount           int       `json:"ChildCount"`         // For a show, the number of seasons
+		RecursiveItemCount   int       `json:"RecursiveItemCount"` // For a show, the number of episodes
 		IsFolder             bool      `json:"IsFolder"`
 		Path                 string    `json:"Path"`
 		ProviderIds          struct {

@@ -1,6 +1,7 @@
 package routes_download
 
 import (
+	"aura/database"
 	"aura/logging"
 	"aura/mediaserver"
 	"aura/models"
@@ -11,6 +12,7 @@ import (
 type DownloadCollectionImage_Request struct {
 	ImageFile      models.ImageFile      `json:"image_file"`
 	CollectionItem models.CollectionItem `json:"collection_item"`
+	Set            *models.BaseSetInfo   `json:"set,omitempty"` // The set the image is from, for the statistics
 }
 
 type DownloadCollectionImage_Response struct {
@@ -74,6 +76,9 @@ func DownloadImageFileForCollectionItem(w http.ResponseWriter, r *http.Request) 
 
 	// Make the download and apply the image
 	Err = mediaserver.ApplyCollectionImage(ctx, &req.CollectionItem, req.ImageFile)
+	event := models.NewCollectionDownloadEvent(req.CollectionItem, req.Set, models.SourceDownloadWindow)
+	event.AddImage(req.ImageFile, Err.Message == "")
+	database.RecordDownloadEvent(ctx, event)
 	if Err.Message != "" {
 		httpx.SendResponse(w, ld, response)
 		return

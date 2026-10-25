@@ -4557,6 +4557,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/statistics": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "The media server libraries, how the media servers compare, the sets applied, and the downloads over time, for the Statistics page.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statistics"
+                ],
+                "summary": "Get Statistics",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "How many days back the graphs go, 1 or more (default 30)",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/statistics.Statistics"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized (only when Auth.Enabled=true)",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.UnauthorizedResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/validate/mediaserver": {
             "post": {
                 "security": [
@@ -6646,6 +6706,43 @@ const docTemplate = `{
                 }
             }
         },
+        "models.BaseSetInfo": {
+            "type": "object",
+            "properties": {
+                "date_created": {
+                    "description": "Creation date",
+                    "type": "string"
+                },
+                "date_updated": {
+                    "description": "Last updated date",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Set ID",
+                    "type": "string"
+                },
+                "popularity": {
+                    "description": "Popularity score of the set",
+                    "type": "integer"
+                },
+                "popularity_global": {
+                    "description": "Global popularity score of the set",
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "Set Title",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Set Type (movie, show, collection, boxset)",
+                    "type": "string"
+                },
+                "user_created": {
+                    "description": "User who created the set",
+                    "type": "string"
+                }
+            }
+        },
         "models.CollectionItem": {
             "type": "object",
             "properties": {
@@ -6934,6 +7031,10 @@ const docTemplate = `{
                     "description": "Edition of the media item (e.g., \"Director's Cut\")",
                     "type": "string"
                 },
+                "episode_count": {
+                    "description": "Number of episodes of a show",
+                    "type": "integer"
+                },
                 "guids": {
                     "description": "Used in MediaItem Details Page - For ratings",
                     "type": "array",
@@ -6981,6 +7082,10 @@ const docTemplate = `{
                 },
                 "released_at": {
                     "description": "Release date timestamp",
+                    "type": "integer"
+                },
+                "season_count": {
+                    "description": "Used in the Statistics Page - Series is only loaded with the details, so the library listing fills these in",
                     "type": "integer"
                 },
                 "series": {
@@ -7169,6 +7274,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.ImageFile"
                     }
+                },
+                "set": {
+                    "description": "The set the images are from, for the statistics",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.BaseSetInfo"
+                        }
+                    ]
                 }
             }
         },
@@ -7555,6 +7668,17 @@ const docTemplate = `{
                 "complete": {
                     "type": "boolean"
                 },
+                "downloaded_image_ids": {
+                    "description": "Images the download window downloaded, for the statistics",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "failed_images": {
+                    "description": "Images the download window couldn't download",
+                    "type": "integer"
+                },
                 "media_item": {
                     "$ref": "#/definitions/models.MediaItem"
                 },
@@ -7735,6 +7859,14 @@ const docTemplate = `{
                 },
                 "image_file": {
                     "$ref": "#/definitions/models.ImageFile"
+                },
+                "set": {
+                    "description": "The set the image is from, for the statistics",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.BaseSetInfo"
+                        }
+                    ]
                 }
             }
         },
@@ -8395,6 +8527,485 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "set_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "statistics.CollectionStats": {
+            "type": "object",
+            "properties": {
+                "collection_images": {
+                    "description": "Their images applied, all time",
+                    "type": "integer"
+                },
+                "collections": {
+                    "type": "integer"
+                },
+                "saved_collection_sets": {
+                    "description": "Collection sets saved for movies",
+                    "type": "integer"
+                },
+                "with_images": {
+                    "description": "Collections aura applied their own images to",
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.CreatorStats": {
+            "type": "object",
+            "properties": {
+                "favorite_count": {
+                    "description": "How many favorite creators there are",
+                    "type": "integer"
+                },
+                "favorite_sets": {
+                    "description": "Sets from favorite creators",
+                    "type": "integer"
+                },
+                "other_sets": {
+                    "type": "integer"
+                },
+                "top": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.GroupCount"
+                    }
+                }
+            }
+        },
+        "statistics.DataStats": {
+            "type": "object",
+            "properties": {
+                "bytes_all_time": {
+                    "type": "integer"
+                },
+                "bytes_in_range": {
+                    "type": "integer"
+                },
+                "image_cache_bytes": {
+                    "description": "MediUX images cached on disk",
+                    "type": "integer"
+                },
+                "image_cache_files": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.DownloadPoint": {
+            "type": "object",
+            "properties": {
+                "bytes": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "images": {
+                    "type": "integer"
+                },
+                "images_failed": {
+                    "type": "integer"
+                },
+                "reapplies": {
+                    "type": "integer"
+                },
+                "sets": {
+                    "type": "integer"
+                },
+                "updates": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.DownloadStats": {
+            "type": "object",
+            "properties": {
+                "all_time": {
+                    "$ref": "#/definitions/statistics.DownloadTotals"
+                },
+                "image_types": {
+                    "description": "Images downloaded of each type, in the range",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.GroupCount"
+                    }
+                },
+                "in_range": {
+                    "$ref": "#/definitions/statistics.DownloadTotals"
+                },
+                "timeline": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.DownloadPoint"
+                    }
+                }
+            }
+        },
+        "statistics.DownloadTotals": {
+            "type": "object",
+            "properties": {
+                "bytes": {
+                    "type": "integer"
+                },
+                "collection_images": {
+                    "description": "Collections' own images",
+                    "type": "integer"
+                },
+                "estimated_sets": {
+                    "description": "Sets counted from the saved sets, before downloads were recorded",
+                    "type": "integer"
+                },
+                "images": {
+                    "description": "Images downloaded, with updates and collection images",
+                    "type": "integer"
+                },
+                "images_failed": {
+                    "type": "integer"
+                },
+                "reapplies": {
+                    "description": "Saved images applied again",
+                    "type": "integer"
+                },
+                "redownloads": {
+                    "description": "Sets downloaded again for the same item",
+                    "type": "integer"
+                },
+                "saved_only": {
+                    "description": "Sets saved without downloading",
+                    "type": "integer"
+                },
+                "sets": {
+                    "description": "Sets downloaded",
+                    "type": "integer"
+                },
+                "updated_images": {
+                    "description": "Images Auto Download downloaded",
+                    "type": "integer"
+                },
+                "updates": {
+                    "description": "Sets Auto Download updated",
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.FailureStats": {
+            "type": "object",
+            "properties": {
+                "failure_rate": {
+                    "description": "Images failed out of the images tried, in the range",
+                    "type": "number"
+                },
+                "images_failed": {
+                    "description": "In the range",
+                    "type": "integer"
+                },
+                "open_failures": {
+                    "description": "Download History entries",
+                    "type": "integer"
+                },
+                "top_reasons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.NameCount"
+                    }
+                }
+            }
+        },
+        "statistics.GroupCount": {
+            "type": "object",
+            "properties": {
+                "favorite": {
+                    "description": "A favorite creator",
+                    "type": "boolean"
+                },
+                "images": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sets": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.GrowthPoint": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "movies": {
+                    "type": "integer"
+                },
+                "shows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.ItemCounts": {
+            "type": "object",
+            "properties": {
+                "episodes": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "integer"
+                },
+                "movies": {
+                    "type": "integer"
+                },
+                "seasons": {
+                    "type": "integer"
+                },
+                "shows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.ItemRef": {
+            "type": "object",
+            "properties": {
+                "library": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "year": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.LibraryCounts": {
+            "type": "object",
+            "properties": {
+                "counts": {
+                    "$ref": "#/definitions/statistics.ItemCounts"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "statistics.LibraryCoverage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "integer"
+                },
+                "items_with_sets": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "statistics.LibraryStats": {
+            "type": "object",
+            "properties": {
+                "growth": {
+                    "description": "Items in the libraries at the end of each point, by when they were added",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.GrowthPoint"
+                    }
+                },
+                "libraries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.LibraryCounts"
+                    }
+                },
+                "totals": {
+                    "$ref": "#/definitions/statistics.ItemCounts"
+                }
+            }
+        },
+        "statistics.MediaServerStats": {
+            "type": "object",
+            "properties": {
+                "counts": {
+                    "$ref": "#/definitions/statistics.ItemCounts"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "main": {
+                    "type": "boolean"
+                },
+                "matched": {
+                    "description": "Items in both media servers",
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "only_in_main": {
+                    "description": "The first of them, by title",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.ItemRef"
+                    }
+                },
+                "only_in_main_count": {
+                    "description": "Items in the main media server, not in this one",
+                    "type": "integer"
+                },
+                "only_in_server": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.ItemRef"
+                    }
+                },
+                "only_in_server_count": {
+                    "description": "Items in this media server, not in the main one",
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "unmapped_libraries": {
+                    "description": "Libraries that don't match a main media server library, so aren't compared",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "statistics.NameCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "statistics.SetsAppliedStats": {
+            "type": "object",
+            "properties": {
+                "image_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.TypeCoverage"
+                    }
+                },
+                "items": {
+                    "description": "Movies and shows",
+                    "type": "integer"
+                },
+                "items_with_sets": {
+                    "description": "Movies and shows with at least one saved set",
+                    "type": "integer"
+                },
+                "libraries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.LibraryCoverage"
+                    }
+                },
+                "saved_sets": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.Snapshot": {
+            "type": "object",
+            "properties": {
+                "counts": {
+                    "$ref": "#/definitions/statistics.ItemCounts"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "items_with_sets": {
+                    "type": "integer"
+                },
+                "saved_sets": {
+                    "type": "integer"
+                }
+            }
+        },
+        "statistics.Statistics": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "$ref": "#/definitions/statistics.CollectionStats"
+                },
+                "creators": {
+                    "$ref": "#/definitions/statistics.CreatorStats"
+                },
+                "data": {
+                    "$ref": "#/definitions/statistics.DataStats"
+                },
+                "days": {
+                    "description": "How many days back the graphs go",
+                    "type": "integer"
+                },
+                "downloads": {
+                    "$ref": "#/definitions/statistics.DownloadStats"
+                },
+                "failures": {
+                    "$ref": "#/definitions/statistics.FailureStats"
+                },
+                "generated_at": {
+                    "type": "string"
+                },
+                "history": {
+                    "description": "The daily numbers in the range",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.Snapshot"
+                    }
+                },
+                "library": {
+                    "$ref": "#/definitions/statistics.LibraryStats"
+                },
+                "media_servers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.MediaServerStats"
+                    }
+                },
+                "period": {
+                    "description": "What each point of the graphs is: day, week or month",
+                    "type": "string"
+                },
+                "sets_applied": {
+                    "$ref": "#/definitions/statistics.SetsAppliedStats"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/statistics.GroupCount"
+                    }
+                }
+            }
+        },
+        "statistics.TypeCoverage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "type": {
                     "type": "string"
                 }
             }
