@@ -11,6 +11,10 @@
 - Fixed issue where clearing the Download Queue would not stop the in-progess downloads.
 - Fixed issue where Logs Page didn't properly show some routes.
 
+### Updated
+
+- Updated frontend dependencies to latest versions for better security and performance.
+
 ---
 
 ## [0.9.117] - 2026-10-24
