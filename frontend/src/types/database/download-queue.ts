@@ -20,7 +20,14 @@ export interface DownloadQueueJob {
 }
 
 export type DownloadQueueEventType =
-  "snapshot" | "job_added" | "job_started" | "job_progress" | "job_finished" | "job_removed" | "queue_cleared";
+  | "snapshot"
+  | "job_added"
+  | "job_started"
+  | "job_progress"
+  | "job_finished"
+  | "job_removed"
+  | "queue_cleared"
+  | "queue_reordered";
 
 export interface DownloadQueueProgress {
   job_id: number;

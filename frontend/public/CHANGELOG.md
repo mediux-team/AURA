@@ -1,3 +1,12 @@
+## [0.9.118] - 2026-10-24
+
+### Added
+
+- Added option to move Download Queue item to the top of the queue.
+- Added new "..." Menu for Download Queue items and Failed Queue items for better UI/UX.
+
+---
+
 ## [0.9.117] - 2026-10-24
 
 ### Added

@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 import { cn } from "@/lib/cn";
@@ -32,38 +31,72 @@ interface ConfirmDestructiveDialogActionProps {
 export function ConfirmDestructiveDialogActionButton({
   children,
   onConfirm,
-  title = "Are you sure?",
-  description = "This action cannot be undone. Are you sure you want to continue?",
-  confirmText = "Yes, Continue",
-  cancelText = "Cancel",
+  title,
+  description,
+  confirmText,
+  cancelText,
   variant = "ghost",
   disabled,
   hidden,
   className,
 }: ConfirmDestructiveDialogActionProps) {
   const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        variant={variant}
+        disabled={disabled}
+        hidden={hidden}
+        onClick={() => setOpen(true)}
+        className={className || "cursor-pointer hover:text-primary active:scale-95 hover:brightness-120"}
+      >
+        {children}
+      </Button>
+      <ConfirmDestructiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        onConfirm={onConfirm}
+        title={title}
+        description={description}
+        confirmText={confirmText}
+        cancelText={cancelText}
+      />
+    </>
+  );
+}
+
+interface ConfirmDestructiveDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void | Promise<void>;
+  title?: string;
+  description?: string;
+  confirmText?: string;
+  cancelText?: string;
+}
+
+// ConfirmDestructiveDialog asks before a destructive action, opened by the caller, like from a menu
+export function ConfirmDestructiveDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  title = "Are you sure?",
+  description = "This action cannot be undone. Are you sure you want to continue?",
+  confirmText = "Yes, Continue",
+  cancelText = "Cancel",
+}: ConfirmDestructiveDialogProps) {
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
     setLoading(true);
     await onConfirm();
     setLoading(false);
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant={variant}
-          disabled={disabled}
-          hidden={hidden}
-          onClick={() => setOpen(true)}
-          className={className || "cursor-pointer hover:text-primary active:scale-95 hover:brightness-120"}
-        >
-          {children}
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn("z-50", "max-h-[80vh] overflow-y-auto", "sm:max-w-[700px]", "border border-red-500")}
       >

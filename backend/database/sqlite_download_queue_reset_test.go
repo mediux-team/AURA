@@ -1,6 +1,9 @@
 package database
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestResetInterruptedDownloadQueueJobs(t *testing.T) {
 	db := openTestMediaDB(t)
@@ -46,5 +49,40 @@ func TestClaimNextDownloadQueueJob(t *testing.T) {
 	}
 	if job.ID != 1 || job.Status != "processing" || job.StartedAt == nil {
 		t.Errorf("claimed job = %d %q %v, want job 1 processing with a start time", job.ID, job.Status, job.StartedAt)
+	}
+}
+
+func TestMoveDownloadQueueJobToTop(t *testing.T) {
+	db := openTestMediaDB(t)
+	exec(t, db.conn, `INSERT INTO DownloadQueueJobs (id, tmdb_id, library_title, media_item_title, payload, status, created_at) VALUES
+		(1, '1', 'Movies', 'Running', '{}', 'processing', '2026-01-01 00:00:00'),
+		(2, '2', 'Movies', 'First', '{}', 'pending', '2026-01-01 00:00:01'),
+		(3, '3', 'Movies', 'Second', '{}', 'pending', '2026-01-01 00:00:01'),
+		(4, '4', 'Movies', 'Last', '{}', 'pending', '2026-01-01 00:00:05')`)
+
+	moved, Err := db.MoveDownloadQueueJobToTop(testContext(), 4)
+	if Err.Message != "" || !moved {
+		t.Fatalf("MoveDownloadQueueJobToTop = %v %s", moved, Err.Message)
+	}
+	jobs, Err := db.GetAllDownloadQueueJobs(testContext())
+	if Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	order := []int64{}
+	for _, job := range jobs {
+		order = append(order, job.ID)
+	}
+	if want := []int64{1, 4, 2, 3}; !slices.Equal(order, want) {
+		t.Errorf("order = %v, want %v", order, want)
+	}
+
+	job, found, _ := db.ClaimNextDownloadQueueJob(testContext(), "worker")
+	if !found || job.ID != 4 {
+		t.Errorf("claimed job %d, want the moved job 4", job.ID)
+	}
+
+	// A job that isn't waiting can't be moved
+	if moved, _ := db.MoveDownloadQueueJobToTop(testContext(), 1); moved {
+		t.Error("a running job shouldn't move")
 	}
 }

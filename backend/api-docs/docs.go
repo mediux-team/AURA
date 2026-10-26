@@ -1862,7 +1862,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Remove all items from the download queue (jobs currently processing are left untouched to avoid orphaning in-flight work).",
+                "description": "Remove all items from the download queue. Jobs currently processing are stopped: the images already downloading finish, and the rest aren't downloaded.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2034,7 +2034,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Remove a specific Job from the download queue by ID. This can be used to cancel pending download tasks or clean up items that are no longer needed in the queue.",
+                "description": "Remove a specific Job from the download queue by ID. A job that is processing is stopped: the images already downloading finish, and the rest aren't downloaded.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2069,6 +2069,72 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/routes_download.RemoveItemFromDownloadQueue_Response"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized (only when Auth.Enabled=true)",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.UnauthorizedResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/download/queue/item/top": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Make a waiting Job the next one to run.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Download"
+                ],
+                "summary": "Download Queue - Move Item to the Top",
+                "parameters": [
+                    {
+                        "description": "Queue Move Item to the Top Request",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/routes_download.MoveDownloadQueueItemToTop_Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/routes_download.MoveDownloadQueueItemToTop_Response"
                                         }
                                     }
                                 }
@@ -5523,6 +5589,10 @@ const docTemplate = `{
                 "download_quality": {
                     "description": "Quality of the media to download from MediUX (Options: \"original\", \"optimized\") Defaults to \"optimized\".",
                     "type": "string"
+                },
+                "simultaneous_downloads": {
+                    "description": "How many images each download gets at once, and how many Download Queue jobs run at once. The settings page offers 1 to 5. Defaults to 3.",
+                    "type": "integer"
                 }
             }
         },
@@ -7949,6 +8019,22 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "routes_download.MoveDownloadQueueItemToTop_Request": {
+            "type": "object",
+            "properties": {
+                "job_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "routes_download.MoveDownloadQueueItemToTop_Response": {
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "string"
                 }
             }
         },

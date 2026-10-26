@@ -15,6 +15,11 @@ The Download Queue runs downloads in the background, one set at a time, starting
 
 The sets waiting to download, and the one downloading now, with its progress. A collection's own poster and backdrop, queued from a [collection set](/AURA/how-to-use/downloading-sets/#collection-images), have their own entry, shown with the collection's name and poster. **Clear Queue** removes everything that's waiting. A download that has already started finishes.
 
+Each entry's **⋯** menu has:
+
+- **Move to Top** makes a waiting set the next one to download.
+- **Remove** takes a set out of the queue.
+
 ## Failed
 
 ![The Failed tab](../../../assets/screenshots/download_queue_failed.png)
@@ -23,9 +28,12 @@ Sets that couldn't be downloaded, with the reason. When downloads have failed, t
 
 aura retries a failed download by itself, up to 3 times, waiting longer each time: 5 minutes, then 30 minutes, then 2 hours. Each entry shows when the next retry is, or that there are no more retries.
 
+Each entry's **⋯** menu has:
+
 - **Retry** adds the set to the queue again straight away.
 - **Delete** removes the entry.
-- **Clear Failed** removes every failed entry.
+
+**Clear Failed** removes every failed entry.
 
 <Aside>
   If a download keeps failing, look for it on the [Logs](/AURA/how-to-use/logs/) page, or attach a [Debug

@@ -42,3 +42,25 @@ func RemoveAllFromQueue(ctx context.Context) (Err logging.LogErrorInfo) {
 
 	return Err
 }
+
+// MoveToTopOfQueue makes a waiting job the next one to run
+func MoveToTopOfQueue(ctx context.Context, jobID int64) (Err logging.LogErrorInfo) {
+	ctx, logAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Move Download Queue Job %d to the Top", jobID), logging.LevelDebug)
+	defer logAction.Complete()
+
+	moved, Err := database.MoveDownloadQueueJobToTop(ctx, jobID)
+	if Err.Message != "" {
+		return Err
+	}
+	if !moved {
+		logAction.SetError("This job isn't waiting in the Download Queue", "It may have started or finished already, refresh the page", map[string]any{"job_id": jobID})
+		return *logAction.Error
+	}
+
+	jobs, Err := database.GetAllDownloadQueueJobs(ctx)
+	if Err.Message != "" {
+		return Err
+	}
+	QueueBroadcaster.Publish(QueueEvent{Type: "queue_reordered", Jobs: jobs})
+	return logging.LogErrorInfo{}
+}

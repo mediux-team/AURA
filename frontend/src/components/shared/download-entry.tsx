@@ -3,8 +3,9 @@
 import { formatImageTypeLabel } from "@/helper/format-image-type";
 import { RemoveDownloadHistoryEntry } from "@/services/downloads/history-remove";
 import { RetryDownloadHistoryEntry } from "@/services/downloads/history-retry";
+import { MoveQueueItemToTop } from "@/services/downloads/queue-move";
 import { RemoveItemFromQueue } from "@/services/downloads/queue-remove";
-import { RefreshCcw, RefreshCwOff, RotateCw, Trash2 } from "lucide-react";
+import { ArrowUpToLine, MoreHorizontal, RefreshCcw, RefreshCwOff, RotateCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import React from "react";
@@ -13,12 +14,18 @@ import Link from "next/link";
 
 import { AssetImage } from "@/components/shared/asset-image";
 import { CreatorAvatar } from "@/components/shared/creator-avatar";
-import { ConfirmDestructiveDialogActionButton } from "@/components/shared/dialog-destructive-action";
+import { ConfirmDestructiveDialog } from "@/components/shared/dialog-destructive-action";
 import { renderTypeBadges } from "@/components/shared/saved-sets-shared";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { H4 } from "@/components/ui/typography";
@@ -41,6 +48,7 @@ type DownloadEntryCardProps =
       mode: "queue";
       job: DownloadQueueJob;
       fetchQueueEntries?: () => Promise<void>;
+      canMoveToTop?: boolean; // A waiting job that isn't next
     }
   | {
       mode: "history";
@@ -118,6 +126,8 @@ const hasSelectedTypes = (selected: DBPosterSetDetail["selected_types"] | undefi
 const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
   const { setMediaItem } = useMediaStore();
   const [retrying, setRetrying] = React.useState(false);
+  const [moving, setMoving] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const isQueue = props.mode === "queue";
 
@@ -182,6 +192,17 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
     }
   };
 
+  // onMoveToTop makes the job the next one to download
+  const onMoveToTop = async () => {
+    if (!isQueue) return;
+    setMoving(true);
+    const response = await MoveQueueItemToTop(props.job.id);
+    if (response.status === "error") {
+      toast.error(`Error moving to the top: ${response.error?.message || "Unknown error occurred."}`);
+    }
+    setMoving(false);
+  };
+
   // onRetry adds the failed set back to the Download Queue
   const onRetry = async () => {
     if (isQueue) return;
@@ -235,37 +256,56 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
           )}
         </div>
 
-        {/* Top Right: Retry and Delete */}
-        <div className="absolute top-2 right-2 flex items-center gap-1">
-          {/* Retry, only a failure with a set can be retried */}
-          {!isQueue && props.entry.set_id && (
-            <Button
-              variant="ghost"
-              className="p-1 h-auto shadow-none hover:bg-muted/50 hover:text-primary cursor-pointer"
-              disabled={retrying}
-              onClick={onRetry}
-              title="Retry"
-              aria-label="Retry"
-            >
-              <RotateCw className={cn("w-5 h-5", retrying && "animate-spin")} />
-            </Button>
-          )}
+        {/* Top Right: Menu */}
+        <div className="absolute top-2 right-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="cursor-pointer p-1 hover:bg-muted/50 focus:bg-muted/50"
+                size="icon"
+                aria-label="Actions"
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {/* Retry, only a failure with a set can be retried */}
+              {!isQueue && props.entry.set_id && (
+                <DropdownMenuItem className="cursor-pointer" disabled={retrying} onClick={onRetry}>
+                  <RotateCw className={cn("ml-2", retrying && "animate-spin")} />
+                  Retry
+                </DropdownMenuItem>
+              )}
 
-          <ConfirmDestructiveDialogActionButton
-            variant="ghost"
-            className="text-destructive p-1 shadow-none hover:bg-muted/50 hover:text-red-500 cursor-pointer"
-            confirmText={isQueue ? "Remove" : "Delete Entry"}
-            title={isQueue ? "Remove from the Download Queue?" : "Delete History Entry?"}
-            description={
-              isQueue
-                ? "Are you sure you want to remove this item from the download queue? This action cannot be undone."
-                : "Are you sure you want to delete this download history entry? This action cannot be undone."
-            }
-            onConfirm={onDeleteConfirm}
-          >
-            <Trash2 className="w-5 h-5" />
-          </ConfirmDestructiveDialogActionButton>
+              {/* Move to Top, for a waiting job */}
+              {isQueue && props.canMoveToTop && (
+                <DropdownMenuItem className="cursor-pointer" disabled={moving} onClick={onMoveToTop}>
+                  <ArrowUpToLine className="ml-2" />
+                  Move to Top
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuItem className="text-destructive cursor-pointer" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="ml-2" />
+                {isQueue ? "Remove" : "Delete"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+
+        <ConfirmDestructiveDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          confirmText={isQueue ? "Remove" : "Delete Entry"}
+          title={isQueue ? "Remove from the Download Queue?" : "Delete History Entry?"}
+          description={
+            isQueue
+              ? "Are you sure you want to remove this item from the download queue? This action cannot be undone."
+              : "Are you sure you want to delete this download history entry? This action cannot be undone."
+          }
+          onConfirm={onDeleteConfirm}
+        />
       </CardHeader>
 
       {/* Middle: Image, the collection poster for collection images */}

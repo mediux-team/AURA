@@ -161,6 +161,9 @@ const DownloadQueuePage: React.FC = () => {
         setJobs([]);
         setProgress(null);
       },
+      onQueueReordered: (reorderedJobs) => {
+        setJobs(reorderedJobs ?? []);
+      },
     });
 
     return unsubscribe;
@@ -191,6 +194,7 @@ const DownloadQueuePage: React.FC = () => {
     .sort((a, b) => (a.status === b.status ? 0 : a.status === "processing" ? -1 : 1));
 
   const processingJob = activeJobs.find((j) => j.status === "processing");
+  const firstWaitingJob = activeJobs.find((j) => j.status === "pending");
 
   const queuePageItems = pageOf(activeJobs, queuePage, queuePerPage);
   const historyPageItems = pageOf(historyEntries, historyPage, historyPerPage);
@@ -261,7 +265,13 @@ const DownloadQueuePage: React.FC = () => {
                 <>
                   <ResponsiveGrid size="larger">
                     {queuePageItems.items.map((job) => (
-                      <DownloadEntryCard key={job.id} mode="queue" job={job} fetchQueueEntries={fetchQueueEntries} />
+                      <DownloadEntryCard
+                        key={job.id}
+                        mode="queue"
+                        job={job}
+                        fetchQueueEntries={fetchQueueEntries}
+                        canMoveToTop={job.status === "pending" && job.id !== firstWaitingJob?.id}
+                      />
                     ))}
                   </ResponsiveGrid>
                   <CustomPagination

@@ -155,6 +155,9 @@ type DB interface {
 	// Delete all Download Queue Jobs (except those currently processing)
 	DeleteAllDownloadQueueJobs(ctx context.Context) (Err logging.LogErrorInfo)
 
+	// Make a waiting Download Queue Job the next one to run
+	MoveDownloadQueueJobToTop(ctx context.Context, jobID int64) (moved bool, Err logging.LogErrorInfo)
+
 	// Insert a Download History entry, or update the one for the same item and set
 	InsertDownloadHistoryEntry(ctx context.Context, entry DownloadHistoryEntry) (Err logging.LogErrorInfo)
 
@@ -597,6 +600,13 @@ func DeleteAllDownloadQueueJobs(ctx context.Context) (Err logging.LogErrorInfo) 
 		return logging.Error_DBClientNotInitialized()
 	}
 	return Client.DeleteAllDownloadQueueJobs(ctx)
+}
+
+func MoveDownloadQueueJobToTop(ctx context.Context, jobID int64) (moved bool, Err logging.LogErrorInfo) {
+	if Client == nil {
+		return false, logging.Error_DBClientNotInitialized()
+	}
+	return Client.MoveDownloadQueueJobToTop(ctx, jobID)
 }
 
 func InsertDownloadHistoryEntry(ctx context.Context, entry DownloadHistoryEntry) (Err logging.LogErrorInfo) {

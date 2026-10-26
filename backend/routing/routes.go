@@ -124,6 +124,7 @@ func AddRoutes(r *chi.Mux) {
 				r.Get("/item", routes_download.GetAllDownloadQueueItems)
 				r.Post("/item", routes_download.AddItemToDownloadQueue)
 				r.Delete("/item", routes_download.RemoveItemFromDownloadQueue)
+				r.Post("/item/top", routes_download.MoveDownloadQueueItemToTop)
 			})
 
 			// Download History Routes

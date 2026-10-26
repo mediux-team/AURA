@@ -386,6 +386,10 @@ definitions:
         description: 'Quality of the media to download from MediUX (Options: "original",
           "optimized") Defaults to "optimized".'
         type: string
+      simultaneous_downloads:
+        description: How many images each download gets at once, and how many Download
+          Queue jobs run at once. The settings page offers 1 to 5. Defaults to 3.
+        type: integer
     type: object
   config.Config_Notification_Discord:
     properties:
@@ -2031,6 +2035,16 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  routes_download.MoveDownloadQueueItemToTop_Request:
+    properties:
+      job_id:
+        type: integer
+    type: object
+  routes_download.MoveDownloadQueueItemToTop_Response:
+    properties:
+      result:
+        type: string
     type: object
   routes_download.RemoveAllDownloadHistory_Response:
     properties:
@@ -3834,8 +3848,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Remove all items from the download queue (jobs currently processing
-        are left untouched to avoid orphaning in-flight work).
+      description: 'Remove all items from the download queue. Jobs currently processing
+        are stopped: the images already downloading finish, and the rest aren''t downloaded.'
       produces:
       - application/json
       responses:
@@ -3899,9 +3913,9 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Remove a specific Job from the download queue by ID. This can be
-        used to cancel pending download tasks or clean up items that are no longer
-        needed in the queue.
+      description: 'Remove a specific Job from the download queue by ID. A job that
+        is processing is stopped: the images already downloading finish, and the rest
+        aren''t downloaded.'
       parameters:
       - description: Queue Remove Item Request
         in: body
@@ -4005,6 +4019,44 @@ paths:
       - SessionCookie: []
       - ApiKeyAuth: []
       summary: Download Queue - Add Item
+      tags:
+      - Download
+  /api/download/queue/item/top:
+    post:
+      consumes:
+      - application/json
+      description: Make a waiting Job the next one to run.
+      parameters:
+      - description: Queue Move Item to the Top Request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/routes_download.MoveDownloadQueueItemToTop_Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/routes_download.MoveDownloadQueueItemToTop_Response'
+              type: object
+        "401":
+          description: Unauthorized (only when Auth.Enabled=true)
+          schema:
+            $ref: '#/definitions/httpx.UnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpx.JSONResponse'
+      security:
+      - SessionCookie: []
+      - ApiKeyAuth: []
+      summary: Download Queue - Move Item to the Top
       tags:
       - Download
   /api/download/queue/stream:

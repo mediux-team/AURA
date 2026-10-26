@@ -10,6 +10,7 @@ export interface DownloadQueueStreamHandlers {
   onJobFinished: (job: NonNullable<DownloadQueueEvent["job"]>) => void;
   onJobRemoved: (job: NonNullable<DownloadQueueEvent["job"]>) => void;
   onQueueCleared: () => void;
+  onQueueReordered: (jobs: DownloadQueueEvent["jobs"]) => void;
 }
 
 // Subscribes to live download queue updates over Server-Sent Events.
@@ -40,6 +41,9 @@ export const subscribeToDownloadQueue = (handlers: Partial<DownloadQueueStreamHa
           break;
         case "queue_cleared":
           handlers.onQueueCleared?.();
+          break;
+        case "queue_reordered":
+          handlers.onQueueReordered?.(evt.jobs ?? []);
           break;
       }
     } catch (error) {

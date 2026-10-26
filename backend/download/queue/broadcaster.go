@@ -8,7 +8,7 @@ import (
 // QueueEvent is broadcast to all subscribed SSE clients whenever the
 // download queue changes.
 type QueueEvent struct {
-	Type     string                      `json:"type"` // "snapshot" | "job_added" | "job_started" | "job_progress" | "job_finished"
+	Type     string                      `json:"type"` // "snapshot" | "job_added" | "job_started" | "job_progress" | "job_finished" | "job_removed" | "queue_cleared" | "queue_reordered"
 	Job      *database.DownloadQueueJob  `json:"job,omitempty"`
 	Jobs     []database.DownloadQueueJob `json:"jobs,omitempty"`
 	Progress *QueueProgress              `json:"progress,omitempty"`
