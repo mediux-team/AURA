@@ -7,6 +7,7 @@ import (
 	"fmt"
 )
 
+// RemoveFromQueue removes a job. A running job is stopped, and removes itself once its images downloading finish.
 func RemoveFromQueue(ctx context.Context, jobID int64) (Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx,
 		fmt.Sprintf("Remove Download Queue Job %d", jobID),
@@ -15,10 +16,14 @@ func RemoveFromQueue(ctx context.Context, jobID int64) (Err logging.LogErrorInfo
 
 	Err = logging.LogErrorInfo{}
 
-	deleteErr := database.DeleteDownloadQueueJob(ctx, jobID)
-	if deleteErr.Message != "" {
-		logAction.SetErrorFromInfo(deleteErr)
-		return *logAction.Error
+	if stopJob(jobID) {
+		logAction.AppendResult("stopped", "the job was running")
+	} else {
+		deleteErr := database.DeleteDownloadQueueJob(ctx, jobID)
+		if deleteErr.Message != "" {
+			logAction.SetErrorFromInfo(deleteErr)
+			return *logAction.Error
+		}
 	}
 
 	QueueBroadcaster.Publish(QueueEvent{Type: "job_removed", Job: &database.DownloadQueueJob{ID: jobID}})
@@ -26,6 +31,7 @@ func RemoveFromQueue(ctx context.Context, jobID int64) (Err logging.LogErrorInfo
 	return Err
 }
 
+// RemoveAllFromQueue removes the waiting jobs, and stops the running ones
 func RemoveAllFromQueue(ctx context.Context) (Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx, "Remove All Download Queue Jobs", logging.LevelDebug)
 	defer logAction.Complete()
@@ -37,6 +43,7 @@ func RemoveAllFromQueue(ctx context.Context) (Err logging.LogErrorInfo) {
 		logAction.SetErrorFromInfo(deleteErr)
 		return *logAction.Error
 	}
+	stopAllJobs()
 
 	QueueBroadcaster.Publish(QueueEvent{Type: "queue_cleared"})
 

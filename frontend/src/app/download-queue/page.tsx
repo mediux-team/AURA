@@ -155,6 +155,7 @@ const DownloadQueuePage: React.FC = () => {
         fetchHistory(true);
       },
       onJobRemoved: (job) => {
+        setProgress((prev) => (prev?.job_id === job.id ? null : prev));
         setJobs((prev) => prev.filter((j) => j.id !== job.id));
       },
       onQueueCleared: () => {
@@ -241,7 +242,7 @@ const DownloadQueuePage: React.FC = () => {
                   className="text-destructive border-1 shadow-none hover:text-red-500 cursor-pointer"
                   confirmText="Clear Queue"
                   title="Clear Download Queue?"
-                  description="Are you sure you want to remove all items from the download queue? Items currently downloading will not be interrupted. This action cannot be undone."
+                  description="Are you sure you want to remove all items from the download queue? The item downloading now stops once the image it's downloading finishes. This action cannot be undone."
                   onConfirm={onClearQueue}
                   disabled={jobs.length === 0}
                 >

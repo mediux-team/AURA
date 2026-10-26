@@ -17,7 +17,7 @@ type RemoveItemFromDownloadQueue_Response struct {
 
 // RemoveItemFromQueue godoc
 // @Summary      Download Queue - Remove Item
-// @Description  Remove a specific Job from the download queue by ID. This can be used to cancel pending download tasks or clean up items that are no longer needed in the queue.
+// @Description  Remove a specific Job from the download queue by ID. A job that is processing is stopped: the image already downloading finishes, and the rest aren't downloaded.
 // @Tags         Download
 // @Accept       json
 // @Produce      json
@@ -71,7 +71,7 @@ type RemoveAllFromDownloadQueue_Response struct {
 
 // RemoveAllFromDownloadQueue godoc
 // @Summary      Download Queue - Clear All
-// @Description  Remove all items from the download queue (jobs currently processing are left untouched to avoid orphaning in-flight work).
+// @Description  Remove all items from the download queue. The job currently processing is stopped: the image already downloading finishes, and the rest aren't downloaded.
 // @Tags         Download
 // @Accept       json
 // @Produce      json

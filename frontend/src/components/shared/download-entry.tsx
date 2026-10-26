@@ -301,7 +301,9 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
           title={isQueue ? "Remove from the Download Queue?" : "Delete History Entry?"}
           description={
             isQueue
-              ? "Are you sure you want to remove this item from the download queue? This action cannot be undone."
+              ? props.job.status === "processing"
+                ? "This item is downloading. It stops once the image it's downloading finishes, and the set isn't saved. This action cannot be undone."
+                : "Are you sure you want to remove this item from the download queue? This action cannot be undone."
               : "Are you sure you want to delete this download history entry? This action cannot be undone."
           }
           onConfirm={onDeleteConfirm}

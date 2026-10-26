@@ -24,24 +24,38 @@ func ProcessNextQueueJob(ctx context.Context) (processed bool) {
 	claimAction := ld.AddAction("Claim Next Download Queue Job", logging.LevelDebug)
 	ctx = logging.WithCurrentAction(ctx, claimAction)
 
+	// Claimed and added while locked, so clearing the queue stops a job that was just claimed
+	runningMu.Lock()
 	job, found, claimErr := database.ClaimNextDownloadQueueJob(ctx, workerID)
 	claimAction.Complete()
 	if claimErr.Message != "" {
+		runningMu.Unlock()
 		logging.LOGGER.Error().Timestamp().Str("error", claimErr.Message).Msg("Failed to claim next Download Queue Job")
 		ld.Log()
 		return false
 	}
 	if !found {
+		runningMu.Unlock()
 		return false
 	}
+	stopCtx, stop := context.WithCancel(ctx)
+	runningJobs[job.ID] = stop
+	runningMu.Unlock()
+	defer func() {
+		runningMu.Lock()
+		delete(runningJobs, job.ID)
+		runningMu.Unlock()
+		stop()
+	}()
 
 	QueueBroadcaster.Publish(QueueEvent{Type: "job_started", Job: &job})
 
-	processQueueJob(ctx, job)
+	processQueueJob(ctx, stopCtx, job)
 	return true
 }
 
-func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
+// processQueueJob downloads a job's images. When stop ends, the images that haven't started aren't downloaded and the job is removed.
+func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 	ctx, ld := logging.CreateLoggingContext(ctx, "Download Queue Processing")
 	subAction := ld.AddAction(fmt.Sprintf("Processing Job %d: %s", job.ID, job.MediaItemTitle), logging.LevelInfo)
 	ctx = logging.WithCurrentAction(ctx, subAction)
@@ -81,10 +95,24 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 		_ = database.DeleteDownloadQueueJob(ctx, job.ID)
 	}
 
+	// The job was removed or the queue was cleared. The images already applied stay applied, but the sets aren't saved.
+	stopped := func() {
+		_, _, _, title := queueItem.QueueEntry()
+		subAction.AppendResult("stopped", "The job was removed from the Download Queue")
+		logging.LOGGER.Info().Timestamp().Int64("job_id", job.ID).Str("title", title).Msg("Stopped a Download Queue Job")
+		_ = database.DeleteDownloadQueueJob(ctx, job.ID)
+		QueueBroadcaster.Publish(QueueEvent{Type: "job_removed", Job: &database.DownloadQueueJob{ID: job.ID}})
+	}
+
 	// Only collection images, applied to their media server collection
 	if queueItem.IsCollectionOnly() {
 		done, failed := 0, 0
-		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, queueItem.Source, &done, &failed, len(queueItem.CollectionImages.Images))...)
+		errors, wasStopped := applyCollectionImages(ctx, stop, job.ID, queueItem.CollectionImages, queueItem.Source, &done, &failed, len(queueItem.CollectionImages.Images))
+		if wasStopped {
+			stopped()
+			return
+		}
+		fileErrors = append(fileErrors, errors...)
 		finalize()
 		return
 	}
@@ -123,6 +151,11 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 	done, failed := 0, 0
 
 	for _, posterSet := range queueItem.PosterSets {
+		if stop.Err() != nil {
+			stopped()
+			return
+		}
+
 		setErrors := []string{}
 		setWarnings := []string{}
 		imageResults := []models.ImageDownloadResult{}
@@ -162,6 +195,7 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 		}
 
 		event := models.NewDownloadEvent(queueItem.MediaItem, posterSet.PosterSet, queueItem.Source, models.DownloadKindDownload)
+		wasStopped := false
 		for idx, image := range models.SortImagesForApply(posterSet.Images) {
 			if !models.IsKnownImageType(image.Type) {
 				subAction.AppendWarning(fmt.Sprintf("job_%d_image_%d", job.ID, idx), fmt.Sprintf("Image has unrecognized type '%s'", image.Type))
@@ -171,6 +205,10 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 			// Only the selected types, for seasons and episodes the item has
 			if !models.ImageIsSelected(queueItem.MediaItem, posterSet.SelectedTypes, image) {
 				continue
+			}
+			if stop.Err() != nil {
+				wasStopped = true
+				break
 			}
 
 			QueueBroadcaster.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{
@@ -202,6 +240,10 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 			imageResults = append(imageResults, result)
 		}
 		database.RecordDownloadEvent(ctx, event)
+		if wasStopped {
+			stopped()
+			return
+		}
 
 		// Per-set notification (success/warning/error)
 		SendNotification(
@@ -221,7 +263,12 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 
 	// The collection's own poster and backdrop, applied to the media server collection. They aren't saved.
 	if queueItem.HasCollectionImages() {
-		fileErrors = append(fileErrors, applyCollectionImages(ctx, job.ID, queueItem.CollectionImages, queueItem.Source, &done, &failed, total)...)
+		errors, wasStopped := applyCollectionImages(ctx, stop, job.ID, queueItem.CollectionImages, queueItem.Source, &done, &failed, total)
+		if wasStopped {
+			stopped()
+			return
+		}
+		fileErrors = append(fileErrors, errors...)
 	}
 
 	// Only collection images, there are no sets to save
@@ -276,11 +323,14 @@ func processQueueJob(ctx context.Context, job database.DownloadQueueJob) {
 }
 
 // applyCollectionImages applies a collection's own images to the media server collection, and returns the errors
-func applyCollectionImages(ctx context.Context, jobID int64, images *models.QueuedCollectionImages, source string, done, failed *int, total int) (errors []string) {
+func applyCollectionImages(ctx, stop context.Context, jobID int64, images *models.QueuedCollectionImages, source string, done, failed *int, total int) (errors []string, stopped bool) {
 	collection := images.Collection
 	event := models.NewCollectionDownloadEvent(collection, images.Set, source)
 	defer func() { database.RecordDownloadEvent(ctx, event) }()
 	for _, image := range images.Images {
+		if stop.Err() != nil {
+			return errors, true
+		}
 		QueueBroadcaster.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{
 			JobID:          jobID,
 			MediaItemTitle: collection.Title,
@@ -297,7 +347,7 @@ func applyCollectionImages(ctx context.Context, jobID int64, images *models.Queu
 		event.AddImage(image, applyErr.Message == "")
 		*done++
 	}
-	return errors
+	return errors, false
 }
 
 // recordDownloadHistory keeps a set's failed download in the history. A set that downloaded without failures clears its earlier ones instead.

@@ -63,6 +63,10 @@ func (b *broadcaster) Publish(evt QueueEvent) {
 		b.progress = evt.Progress
 	case "job_started", "job_finished", "queue_cleared":
 		b.progress = nil
+	case "job_removed":
+		if evt.Job != nil && b.progress != nil && b.progress.JobID == evt.Job.ID {
+			b.progress = nil
+		}
 	}
 	for ch := range b.subs {
 		select {

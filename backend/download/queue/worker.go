@@ -21,6 +21,10 @@ var (
 	stopCh   = make(chan struct{})
 	stopOnce sync.Once
 	workerWG sync.WaitGroup
+
+	// Stops the running job, by job ID
+	runningMu   sync.Mutex
+	runningJobs = map[int64]context.CancelFunc{}
 )
 
 // SignalNewJob wakes the worker loop to check for new pending jobs. Safe to
@@ -106,6 +110,26 @@ func processNextJob(ctx context.Context) (processed bool) {
 	defer logging.RecoverPanic("Download Queue worker")
 
 	return ProcessNextQueueJob(ctx)
+}
+
+// stopJob stops a running job, and returns whether it was running
+func stopJob(jobID int64) bool {
+	runningMu.Lock()
+	defer runningMu.Unlock()
+	stop, ok := runningJobs[jobID]
+	if ok {
+		stop()
+	}
+	return ok
+}
+
+// stopAllJobs stops every running job
+func stopAllJobs() {
+	runningMu.Lock()
+	defer runningMu.Unlock()
+	for _, stop := range runningJobs {
+		stop()
+	}
 }
 
 func resetInterruptedJobs(ctx context.Context) {

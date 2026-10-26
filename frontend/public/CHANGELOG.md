@@ -5,6 +5,10 @@
 - Added option to move Download Queue item to the top of the queue.
 - Added new "..." Menu for Download Queue items and Failed Queue items for better UI/UX.
 
+### Fixed
+
+- Fixed issue where clearing the Download Queue would not stop the in-progess downloads.
+
 ---
 
 ## [0.9.117] - 2026-10-24
