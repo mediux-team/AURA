@@ -1134,7 +1134,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/db/force-recheck": {
+        "/api/db/force-check": {
             "post": {
                 "security": [
                     {
@@ -2609,7 +2609,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/labels-tags/apply": {
+        "/api/labels-tags": {
             "post": {
                 "security": [
                     {
@@ -6518,6 +6518,10 @@ const docTemplate = `{
         "logging.LogRouteInfo": {
             "type": "object",
             "properties": {
+                "action": {
+                    "description": "The route's key in the Logs page actions, set when the logs are read",
+                    "type": "string"
+                },
                 "ip": {
                     "description": "Client IP address (middleware can capture)",
                     "type": "string"

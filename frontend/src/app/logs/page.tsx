@@ -249,7 +249,7 @@ function LogList({
       {logEntries.map((log, idx) => {
         let mainLabel = "";
         if (log.route?.path) {
-          const key = routeActionKey(log.route.method, log.route.path);
+          const key = log.route.action || routeActionKey(log.route.method, log.route.path);
           const actionPath = possibleActionsPaths[key] || possibleActionsPaths[log.route.path]; // fallback
           mainLabel = actionPath?.label || key || log.route.path;
         } else if (log.actions && log.actions.length > 0) {

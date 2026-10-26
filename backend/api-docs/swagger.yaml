@@ -1010,6 +1010,10 @@ definitions:
     type: object
   logging.LogRouteInfo:
     properties:
+      action:
+        description: The route's key in the Logs page actions, set when the logs are
+          read
+        type: string
       ip:
         description: Client IP address (middleware can capture)
         type: string
@@ -3443,7 +3447,7 @@ paths:
       summary: Get Saved Set Creators
       tags:
       - Database
-  /api/db/force-recheck:
+  /api/db/force-check:
     post:
       consumes:
       - application/json
@@ -4354,7 +4358,7 @@ paths:
       summary: Run Job
       tags:
       - Jobs
-  /api/labels-tags/apply:
+  /api/labels-tags:
     post:
       consumes:
       - application/json

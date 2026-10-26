@@ -9,6 +9,7 @@
 ### Fixed
 
 - Fixed issue where clearing the Download Queue would not stop the in-progess downloads.
+- Fixed issue where Logs Page didn't properly show some routes.
 
 ---
 

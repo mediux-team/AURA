@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"strconv"
@@ -20,26 +21,17 @@ type structActionLabelSection struct {
 }
 
 var possibleActionsMutex sync.Mutex
+
+// The label and section of each route, by method and path. Routes with {params} match by pattern.
 var possible_actions_paths = map[string]structActionLabelSection{
-
 	// Base Routes
-	"GET:/": {
-		Label:   "Health Check",
+	"GET:/api": {
+		Label:   "Health Check (API Root)",
 		Section: "BASE",
 	},
-	"GET:/health": {
+	"GET:/api/health": {
 		Label:   "Health Check",
 		Section: "BASE",
-	},
-
-	// Public Routes
-	"GET:/api/search": {
-		Label:   "Handle Search",
-		Section: "SEARCH",
-	},
-	"GET:/api/sonarr/webhook": {
-		Label:   "Handle Sonarr Webhook",
-		Section: "SONARR/RADARR",
 	},
 
 	// Login & Auth
@@ -47,10 +39,56 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Label:   "User Login",
 		Section: "AUTH",
 	},
+	"POST:/api/logout": {
+		Label:   "User Logout",
+		Section: "AUTH",
+	},
+	"GET:/api/auth/oidc/login": {
+		Label:   "Start OIDC Login",
+		Section: "AUTH",
+	},
+	"GET:/api/auth/oidc/callback": {
+		Label:   "OIDC Login Callback",
+		Section: "AUTH",
+	},
+	"GET:/api/config/auth-methods": {
+		Label:   "Get Login Methods",
+		Section: "AUTH",
+	},
+	"POST:/api/config/auth/api-key": {
+		Label:   "Generate API Key",
+		Section: "AUTH",
+	},
+
+	// Setup Routes
+	"POST:/api/setup/verify": {
+		Label:   "Verify Setup Code",
+		Section: "SETUP",
+	},
+	"POST:/api/onboarding/finalize": {
+		Label:   "Finish Setup",
+		Section: "SETUP",
+	},
+
+	// Search
+	"GET:/api/search": {
+		Label:   "Handle Search",
+		Section: "SEARCH",
+	},
+
+	// Sonarr/Radarr Webhook
+	"POST:/api/sonarr/webhook": {
+		Label:   "Handle Sonarr Webhook",
+		Section: "SONARR/RADARR",
+	},
 
 	// Config Routes
 	"GET:/api/config": {
 		Label:   "Get Config",
+		Section: "CONFIG",
+	},
+	"GET:/api/config/stream": {
+		Label:   "Stream Config Status",
 		Section: "CONFIG",
 	},
 	"GET:/api/config/template-variables": {
@@ -61,15 +99,25 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Label:   "Update Config",
 		Section: "CONFIG",
 	},
-	"PATCH:/api/config": {
-		Label:   "Reload Config",
+	"PATCH:/api/config/{section}": {
+		Label:   "Update Config Section",
 		Section: "CONFIG",
 	},
-
-	// Jobs Routes
-	"GET:/api/jobs": {
-		Label:   "Get Jobs",
-		Section: "JOBS",
+	"GET:/api/config/export": {
+		Label:   "Export Config",
+		Section: "CONFIG",
+	},
+	"POST:/api/config/import": {
+		Label:   "Import Config",
+		Section: "CONFIG",
+	},
+	"POST:/api/config/main-media-server/preview": {
+		Label:   "Preview Main Media Server Switch",
+		Section: "CONFIG",
+	},
+	"POST:/api/config/main-media-server": {
+		Label:   "Switch Main Media Server",
+		Section: "CONFIG",
 	},
 
 	// Database Routes
@@ -101,6 +149,28 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Label:   "Force Check Saved Items",
 		Section: "DATABASE",
 	},
+	"GET:/api/db/creators": {
+		Label:   "Get Saved Set Creators",
+		Section: "DATABASE",
+	},
+	"GET:/api/db/backups": {
+		Label:   "Get Database Backups",
+		Section: "DATABASE",
+	},
+	"POST:/api/db/backups": {
+		Label:   "Create Database Backup",
+		Section: "DATABASE",
+	},
+
+	// Jobs Routes
+	"GET:/api/jobs": {
+		Label:   "Get Jobs",
+		Section: "JOBS",
+	},
+	"POST:/api/jobs": {
+		Label:   "Run Job",
+		Section: "JOBS",
+	},
 
 	// Download Routes
 	"POST:/api/download/image/item": {
@@ -111,10 +181,26 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Label:   "Download Collection Image",
 		Section: "DOWNLOAD",
 	},
+	"POST:/api/download/favorite-creators": {
+		Label:   "Download From Favorite Creators",
+		Section: "DOWNLOAD",
+	},
+	"POST:/api/download/upgrade-sets": {
+		Label:   "Upgrade Saved Sets",
+		Section: "DOWNLOAD",
+	},
 
 	// Download Queue Routes
 	"GET:/api/download/queue": {
 		Label:   "Get Download Queue Status",
+		Section: "DOWNLOAD",
+	},
+	"DELETE:/api/download/queue": {
+		Label:   "Clear Download Queue",
+		Section: "DOWNLOAD",
+	},
+	"GET:/api/download/queue/stream": {
+		Label:   "Stream Download Queue",
 		Section: "DOWNLOAD",
 	},
 	"GET:/api/download/queue/item": {
@@ -127,6 +213,28 @@ var possible_actions_paths = map[string]structActionLabelSection{
 	},
 	"DELETE:/api/download/queue/item": {
 		Label:   "Remove Item from Download Queue",
+		Section: "DOWNLOAD",
+	},
+	"POST:/api/download/queue/item/top": {
+		Label:   "Move Item to Top of Download Queue",
+		Section: "DOWNLOAD",
+	},
+
+	// Failed Download Routes
+	"GET:/api/download/history": {
+		Label:   "Get Failed Downloads",
+		Section: "DOWNLOAD",
+	},
+	"DELETE:/api/download/history": {
+		Label:   "Clear Failed Downloads",
+		Section: "DOWNLOAD",
+	},
+	"DELETE:/api/download/history/item": {
+		Label:   "Delete Failed Download",
+		Section: "DOWNLOAD",
+	},
+	"POST:/api/download/history/retry": {
+		Label:   "Retry Failed Download",
 		Section: "DOWNLOAD",
 	},
 
@@ -167,6 +275,16 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Label:   "Clear Logs",
 		Section: "LOGS",
 	},
+	"GET:/api/logs/debug-bundle": {
+		Label:   "Download Debug Bundle",
+		Section: "LOGS",
+	},
+
+	// Statistics Route
+	"GET:/api/statistics": {
+		Label:   "Get Statistics",
+		Section: "STATISTICS",
+	},
 
 	// Media Server Routes
 	"GET:/api/mediaserver/libraries": {
@@ -179,6 +297,18 @@ var possible_actions_paths = map[string]structActionLabelSection{
 	},
 	"GET:/api/mediaserver/library/items": {
 		Label:   "Get Media Server Library Items",
+		Section: "MEDIA SERVER",
+	},
+	"GET:/api/mediaserver/library/item/related": {
+		Label:   "Get Related Library Items",
+		Section: "MEDIA SERVER",
+	},
+	"POST:/api/mediaserver/library/refresh": {
+		Label:   "Refresh Library",
+		Section: "MEDIA SERVER",
+	},
+	"GET:/api/mediaserver/library/refresh/stream": {
+		Label:   "Stream Library Refresh",
 		Section: "MEDIA SERVER",
 	},
 	"GET:/api/mediaserver/item": {
@@ -201,6 +331,18 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Label:   "Refresh Media Item Metadata",
 		Section: "MEDIA SERVER",
 	},
+	"GET:/api/mediaserver/sync": {
+		Label:   "Get Media Server Sync Progress",
+		Section: "MEDIA SERVER",
+	},
+	"POST:/api/mediaserver/sync": {
+		Label:   "Sync Saved Sets to a Media Server",
+		Section: "MEDIA SERVER",
+	},
+	"DELETE:/api/mediaserver/sync": {
+		Label:   "Stop Media Server Sync",
+		Section: "MEDIA SERVER",
+	},
 
 	// Plex OAuth Routes
 	"GET:/api/oauth/plex": {
@@ -210,6 +352,20 @@ var possible_actions_paths = map[string]structActionLabelSection{
 	"POST:/api/oauth/plex": {
 		Label:   "Check Plex Pin",
 		Section: "MEDIA SERVER",
+	},
+
+	// Silo Plugin Routes
+	"GET:/api/plugin/silo/status": {
+		Label:   "Get Silo Plugin Status",
+		Section: "SILO PLUGIN",
+	},
+	"GET:/api/plugin/silo/images": {
+		Label:   "Get Images for the Silo Plugin",
+		Section: "SILO PLUGIN",
+	},
+	"GET:/api/plugin/silo/download/{token}": {
+		Label:   "Download Image for the Silo Plugin",
+		Section: "SILO PLUGIN",
 	},
 
 	// MediUX Routes
@@ -240,26 +396,16 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Section: "VALIDATION",
 	},
 	"POST:/api/validate/sonarr": {
-		Label:   "Validate Sonarr/Radarr Info",
+		Label:   "Validate Sonarr Info",
 		Section: "VALIDATION",
 	},
 	"POST:/api/validate/radarr": {
-		Label:   "Validate Sonarr/Radarr Info",
+		Label:   "Validate Radarr Info",
 		Section: "VALIDATION",
 	},
 	"POST:/api/validate/notifications": {
 		Label:   "Send Test Notification",
 		Section: "VALIDATION",
-	},
-
-	// SWAGGER DOCS
-	"GET:/swagger/doc.json": {
-		Label:   "Get Swagger Documentation",
-		Section: "SWAGGER",
-	},
-	"GET:/swagger/index.html": {
-		Label:   "Get Swagger UI",
-		Section: "SWAGGER",
 	},
 }
 
@@ -369,7 +515,8 @@ func GetLogContents(w http.ResponseWriter, r *http.Request) {
 			// Auto-register seen route paths so filters stay in sync with router changes
 			if entry.Route != nil && entry.Route.Path != "" {
 				path := entry.Route.Path
-				key := routeActionKey(entry.Route.Method, path)
+				key := actionKeyForRoute(entry.Route.Method, path)
+				entry.Route.Action = key
 
 				label := key
 				if len(entry.Actions) > 0 && entry.Actions[0] != nil && strings.TrimSpace(entry.Actions[0].Name) != "" {
@@ -470,7 +617,7 @@ func GetLogContents(w http.ResponseWriter, r *http.Request) {
 			entryMatches := false
 
 			if entry.Route != nil && entry.Route.Path != "" {
-				key := routeActionKey(entry.Route.Method, entry.Route.Path)
+				key := entry.Route.Action
 				for _, actionFilter := range filteredActions {
 					f := strings.TrimSpace(actionFilter)
 					if strings.EqualFold(key, f) || strings.EqualFold(entry.Route.Path, f) {
@@ -530,7 +677,9 @@ func GetLogContents(w http.ResponseWriter, r *http.Request) {
 	logAction.AppendResult("log_entries_filtered", totalNumberOfLogEntries-len(logEntries))
 
 	response.LogEntries = logEntries
-	response.PossibleActionsPaths = possible_actions_paths
+	possibleActionsMutex.Lock()
+	response.PossibleActionsPaths = maps.Clone(possible_actions_paths)
+	possibleActionsMutex.Unlock()
 	response.TotalLogEntries = totalNumberOfLogEntries
 	httpx.SendResponse(w, ld, response)
 }
@@ -601,10 +750,53 @@ func filterLogActionByStatuses(action *logging.LogAction, filteredStatuses []str
 	return nil
 }
 
+// actionKeyForRoute is the route's key in possible_actions_paths, matching routes with {params} by pattern
+func actionKeyForRoute(method, path string) string {
+	key := routeActionKey(method, path)
+	possibleActionsMutex.Lock()
+	defer possibleActionsMutex.Unlock()
+	if _, ok := possible_actions_paths[key]; ok {
+		return key
+	}
+	for pattern := range possible_actions_paths {
+		if strings.Contains(pattern, "{") && routeMatchesPattern(key, pattern) {
+			return pattern
+		}
+	}
+	return key
+}
+
+// routeMatchesPattern reports whether a route key matches a key with {params}, like PATCH:/api/config/{section}
+func routeMatchesPattern(key, pattern string) bool {
+	keyParts, patternParts := strings.Split(key, "/"), strings.Split(pattern, "/")
+	if len(keyParts) != len(patternParts) {
+		return false
+	}
+	for i, part := range patternParts {
+		if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") && keyParts[i] != "" {
+			continue
+		}
+		if part != keyParts[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// HasActionLabel reports whether a registered route has a label on the Logs page
+func HasActionLabel(method, route string) bool {
+	possibleActionsMutex.Lock()
+	defer possibleActionsMutex.Unlock()
+	_, ok := possible_actions_paths[routeActionKey(method, route)]
+	return ok
+}
+
 func inferRouteSection(path string) string {
 	switch {
-	case strings.HasPrefix(path, "/api/config"), strings.HasPrefix(path, "/api/validate"):
+	case strings.HasPrefix(path, "/api/config"):
 		return "CONFIG"
+	case strings.HasPrefix(path, "/api/validate"):
+		return "VALIDATION"
 	case strings.HasPrefix(path, "/api/logs"):
 		return "LOGS"
 	case strings.HasPrefix(path, "/api/mediaserver"), strings.HasPrefix(path, "/api/oauth/plex"):
@@ -620,13 +812,21 @@ func inferRouteSection(path string) string {
 	case strings.HasPrefix(path, "/api/labels-tags"):
 		return "LABELS/TAGS"
 	case strings.HasPrefix(path, "/api/sonarr"):
-		return "SONARR"
+		return "SONARR/RADARR"
 	case strings.HasPrefix(path, "/api/jobs"):
 		return "JOBS"
 	case strings.HasPrefix(path, "/api/search"):
 		return "SEARCH"
-	case strings.HasPrefix(path, "/api/login"):
+	case strings.HasPrefix(path, "/api/login"), strings.HasPrefix(path, "/api/logout"), strings.HasPrefix(path, "/api/auth"):
 		return "AUTH"
+	case strings.HasPrefix(path, "/api/setup"), strings.HasPrefix(path, "/api/onboarding"):
+		return "SETUP"
+	case strings.HasPrefix(path, "/api/statistics"):
+		return "STATISTICS"
+	case strings.HasPrefix(path, "/api/plugin/silo"):
+		return "SILO PLUGIN"
+	case path == "/api" || path == "/api/" || strings.HasPrefix(path, "/api/health"):
+		return "BASE"
 	default:
 		return "OTHER"
 	}
@@ -634,7 +834,11 @@ func inferRouteSection(path string) string {
 
 func routeActionKey(method, path string) string {
 	m := strings.ToUpper(strings.TrimSpace(method))
+	// /api/db/ and /api/db are the same route
 	p := strings.TrimSpace(path)
+	if len(p) > 1 {
+		p = strings.TrimSuffix(p, "/")
+	}
 	if m == "" || p == "" {
 		return p
 	}

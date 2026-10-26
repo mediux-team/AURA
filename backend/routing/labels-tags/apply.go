@@ -30,7 +30,7 @@ type applyLabelsTagsResponse struct {
 // @Failure      401  {object}  httpx.UnauthorizedResponse "Unauthorized (only when Auth.Enabled=true)"
 // @Success      200           {object}  httpx.JSONResponse{data=applyLabelsTagsResponse}
 // @Failure      500           {object}  httpx.JSONResponse "Internal Server Error"
-// @Router       /api/labels-tags/apply [post]
+// @Router       /api/labels-tags [post]
 func ApplyLabelsAndTagsToItem(w http.ResponseWriter, r *http.Request) {
 	ctx, ld := logging.CreateLoggingContext(r.Context(), r.URL.Path)
 	logAction := ld.AddAction("Apply Labels/Tags", logging.LevelInfo)

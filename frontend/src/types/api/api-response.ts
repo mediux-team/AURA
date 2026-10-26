@@ -23,6 +23,7 @@ export interface LogRouteInfo {
   params: Record<string, string>;
   ip: string;
   response_bytes: number;
+  action?: string; // The route's key in the Logs page actions, which matches routes with {params} too
 }
 
 export interface LogAction {

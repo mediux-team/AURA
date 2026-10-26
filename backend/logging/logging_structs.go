@@ -37,6 +37,7 @@ type LogRouteInfo struct {
 	Params        map[string][]string `json:"params,omitempty"` // Query/path/route params: map[string][]string to preserve multiple values
 	IP            string              `json:"ip,omitempty"`     // Client IP address (middleware can capture)
 	ResponseBytes int64               `json:"response_bytes"`   // Number of bytes written in the response (middleware can capture)
+	Action        string              `json:"action,omitempty"` // The route's key in the Logs page actions, set when the logs are read
 }
 
 // LogAction is a single step inside an operation.

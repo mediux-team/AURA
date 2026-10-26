@@ -31,7 +31,7 @@ type autodownloadForceCheckResponse struct {
 // @Failure      401  {object}  httpx.UnauthorizedResponse "Unauthorized (only when Auth.Enabled=true)"
 // @Success      200           {object}  httpx.JSONResponse{data=autodownloadForceCheckResponse}
 // @Failure      500           {object}  httpx.JSONResponse "Internal Server Error"
-// @Router       /api/db/force-recheck [post]
+// @Router       /api/db/force-check [post]
 func AutoDownloadForceCheck(w http.ResponseWriter, r *http.Request) {
 	ctx, ld := logging.CreateLoggingContext(r.Context(), r.URL.Path)
 	logAction := ld.AddAction("Auto Download - Force Check", logging.LevelInfo)
