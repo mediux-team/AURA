@@ -7,13 +7,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 )
 
 var MediuxApiURL string = "https://images.mediux.io"
 var MediuxPublicURL string = "https://api.mediux.pro"
+
+// How long to wait before each retry, when MediUX gets too many requests
+var tooManyRequestsWaits = []time.Duration{2 * time.Second, 5 * time.Second}
+
+const maxTooManyRequestsWait = 15 * time.Second
 
 var mediuxRestyClient = resty.New().
 	SetHeader("Content-Type", "application/json").
@@ -25,12 +32,25 @@ func makeRequest(ctx context.Context, url string, method string, body []byte, to
 	headers := make(map[string]string)
 	headers = AddMediuxAuthHeader(url, token, isImageRequest, headers)
 
-	// Make the HTTP request to MediUX
-	resp, respBody, Err = httpx.MakeHTTPRequest(ctx, url, method, headers, 60, body, "MediUX")
-	if Err.Message != "" {
-		return nil, nil, Err
+	// Make the HTTP request to MediUX, waiting and trying again when MediUX gets too many requests
+	for attempt := 0; ; attempt++ {
+		resp, respBody, Err = httpx.MakeHTTPRequest(ctx, url, method, headers, 60, body, "MediUX")
+		if Err.Message != "" {
+			return nil, nil, Err
+		}
+		if resp.StatusCode != http.StatusTooManyRequests || attempt == len(tooManyRequestsWaits) {
+			break
+		}
+		wait := tooManyRequestsWaits[attempt]
+		if seconds, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && seconds > 0 {
+			wait = min(time.Duration(seconds)*time.Second, maxTooManyRequestsWait)
+		}
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return nil, nil, logging.LogErrorInfo{Message: "Stopped waiting for MediUX"}
+		}
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, nil, logging.LogErrorInfo{

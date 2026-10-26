@@ -69,6 +69,7 @@ RETURNING id;
 	return jobID, logging.LogErrorInfo{}
 }
 
+// ClaimNextDownloadQueueJob claims the first waiting job, skipping items that already have a job running
 func (s *SQliteDB) ClaimNextDownloadQueueJob(ctx context.Context, workerID string) (job DownloadQueueJob, found bool, Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx, "Claim Next Download Queue Job", logging.LevelDebug)
 	defer logAction.Complete()
@@ -82,7 +83,16 @@ func (s *SQliteDB) ClaimNextDownloadQueueJob(ctx context.Context, workerID strin
 UPDATE DownloadQueueJobs
 SET status = 'processing', started_at = CURRENT_TIMESTAMP, worker_id = ?
 WHERE id = (
-    SELECT id FROM DownloadQueueJobs WHERE status = 'pending' ORDER BY created_at ASC, id ASC LIMIT 1
+    SELECT id FROM DownloadQueueJobs AS waiting
+    WHERE status = 'pending'
+      AND NOT EXISTS (
+          SELECT 1 FROM DownloadQueueJobs AS running
+          WHERE running.status = 'processing'
+            AND running.tmdb_id = waiting.tmdb_id
+            AND running.library_title = waiting.library_title
+            AND running.edition = waiting.edition
+      )
+    ORDER BY created_at ASC, id ASC LIMIT 1
 )
 RETURNING id, tmdb_id, library_title, edition, media_item_title, payload, status, created_at, started_at;
 `

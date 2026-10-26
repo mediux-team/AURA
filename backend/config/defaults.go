@@ -70,7 +70,8 @@ func DefaultConfig() Config {
 			KeepFiles: 7,
 		},
 		Mediux: Config_Mediux{
-			DownloadQuality: "optimized",
+			DownloadQuality:       "optimized",
+			SimultaneousDownloads: DefaultSimultaneousDownloads,
 		},
 		Jobs: DefaultJobsConfig(),
 		Backups: Config_Backups{

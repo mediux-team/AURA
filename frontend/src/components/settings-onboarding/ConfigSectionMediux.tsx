@@ -32,6 +32,7 @@ interface ConfigSectionMediuxProps {
 }
 
 const QUALITY_OPTIONS = ["optimized", "original"] as const;
+const SIMULTANEOUS_DOWNLOAD_OPTIONS = [1, 2, 3, 4, 5];
 
 export const ConfigSectionMediux: React.FC<ConfigSectionMediuxProps> = ({
   value,
@@ -231,6 +232,42 @@ export const ConfigSectionMediux: React.FC<ConfigSectionMediuxProps> = ({
           </SelectContent>
         </Select>
         {errors.download_quality && <p className="text-xs text-red-500">{errors.download_quality}</p>}
+      </div>
+
+      {/* Simultaneous Downloads */}
+      <div className="space-y-1 border rounded-md p-3 transition">
+        <div className="flex items-center justify-between">
+          <Label>Simultaneous Downloads</Label>
+          {editing && (
+            <PopoverHelp ariaLabel="help-mediux-simultaneous-downloads">
+              <p>
+                How many images each download gets at once, for the Download Queue, the Download Modal, Auto Download
+                and every other download. The Download Queue also downloads this many sets at once. More is faster, as
+                MediUX can take a few seconds for each image, but puts more load on MediUX.
+              </p>
+            </PopoverHelp>
+          )}
+        </div>
+        <Select
+          disabled={!editing}
+          value={String(value.simultaneous_downloads || 3)}
+          onValueChange={(v) => onChange("simultaneous_downloads", Number(v))}
+        >
+          <SelectTrigger
+            id="mediux-simultaneous-downloads-trigger"
+            className={cn("w-full", dirtyFields.simultaneous_downloads && "border-amber-500")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {/* A value set in the config file is shown too */}
+            {[...new Set([...SIMULTANEOUS_DOWNLOAD_OPTIONS, value.simultaneous_downloads || 3])].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </Card>
   );

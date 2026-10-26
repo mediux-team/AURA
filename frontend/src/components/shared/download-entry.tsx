@@ -302,7 +302,7 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
           description={
             isQueue
               ? props.job.status === "processing"
-                ? "This item is downloading. It stops once the image it's downloading finishes, and the set isn't saved. This action cannot be undone."
+                ? "This item is downloading. It stops once the images already downloading finish, and the set isn't saved. This action cannot be undone."
                 : "Are you sure you want to remove this item from the download queue? This action cannot be undone."
               : "Are you sure you want to delete this download history entry? This action cannot be undone."
           }

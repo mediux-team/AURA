@@ -32,10 +32,19 @@ The quality of the images aura downloads and applies to your media server.
 | **Optimized** | Compressed images, smaller and faster to download. This is the default.     |
 | **Original**  | The full-quality file the creator uploaded. Larger, and slower to download. |
 
+## Simultaneous Downloads
+
+How many images each download gets at once. The settings page offers 1 to 5, and the default is 3. It's used for every download: the [Download Queue](/AURA/how-to-use/download-queue/), the download window, Auto Download and the rest.
+
+The Download Queue also downloads this many sets at once, each with this many images at once. With 3, that's up to 9 images at a time.
+
+MediUX can take a few seconds to send an image it hasn't sent in a while, so downloading several at once is faster. More at once puts more load on MediUX. If MediUX says aura is sending too many requests, aura waits and tries again.
+
 ## In the Config File
 
 ```yaml
 Mediux:
   ApiToken: YOUR_MEDIUX_API_TOKEN
   DownloadQuality: optimized # optimized or original
+  SimultaneousDownloads: 3
 ```

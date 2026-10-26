@@ -632,6 +632,16 @@ func checkConfigDifferences_Mediux(ctx context.Context, oldMediux config.Config_
 				Msg("Mediux.DownloadQuality changed")
 			changed = true
 		}
+
+		if oldMediux.SimultaneousDownloads != newMediux.SimultaneousDownloads {
+			logAction.AppendResult("Mediux.SimultaneousDownloads changed", fmt.Sprintf("from '%v' to '%v'", oldMediux.SimultaneousDownloads, newMediux.SimultaneousDownloads))
+			logging.LOGGER.Info().
+				Timestamp().
+				Int("old_simultaneous_downloads", oldMediux.SimultaneousDownloads).
+				Int("new_simultaneous_downloads", newMediux.SimultaneousDownloads).
+				Msg("Mediux.SimultaneousDownloads changed")
+			changed = true
+		}
 	}
 	newValid = config.ValidateMediux(ctx, newMediux)
 	// If the MediUX config doesn't pass validation, return early

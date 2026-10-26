@@ -134,8 +134,20 @@ type Config_MediaServer struct {
 }
 
 type Config_Mediux struct {
-	ApiToken        string `json:"api_token" yaml:"ApiToken"`               // Authentication token for accessing MediUX services.
-	DownloadQuality string `json:"download_quality" yaml:"DownloadQuality"` // Quality of the media to download from MediUX (Options: "original", "optimized") Defaults to "optimized".
+	ApiToken              string `json:"api_token" yaml:"ApiToken"`                           // Authentication token for accessing MediUX services.
+	DownloadQuality       string `json:"download_quality" yaml:"DownloadQuality"`             // Quality of the media to download from MediUX (Options: "original", "optimized") Defaults to "optimized".
+	SimultaneousDownloads int    `json:"simultaneous_downloads" yaml:"SimultaneousDownloads"` // How many images each download gets at once, and how many Download Queue jobs run at once. The settings page offers 1 to 5. Defaults to 3.
+}
+
+const DefaultSimultaneousDownloads = 3
+
+// SimultaneousDownloads is how many images each download gets at once, and how many Download Queue jobs run at once
+func SimultaneousDownloads() int {
+	n := Current.Mediux.SimultaneousDownloads
+	if n < 1 {
+		return DefaultSimultaneousDownloads
+	}
+	return n
 }
 
 type Config_Jobs struct {

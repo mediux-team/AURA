@@ -37,6 +37,7 @@ export const defaultAppConfig = (): AppConfig =>
     mediux: {
       api_token: "",
       download_quality: "",
+      simultaneous_downloads: 3,
     },
     jobs: {
       auto_download: { enabled: false, cron: "0 0 * * *" },

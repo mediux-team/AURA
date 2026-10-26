@@ -4,6 +4,7 @@
 
 - Added option to move Download Queue item to the top of the queue.
 - Added new "..." Menu for Download Queue items and Failed Queue items for better UI/UX.
+- Downloads are faster now, added new preference in MediUX settings for number of simultaneous downloads.
 
 ### Fixed
 

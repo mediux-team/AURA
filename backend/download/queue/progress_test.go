@@ -1,6 +1,8 @@
 package downloadqueue
 
 import (
+	"aura/database"
+	"aura/mediaserver"
 	"aura/models"
 	"testing"
 )
@@ -41,23 +43,49 @@ func TestCountJobImages(t *testing.T) {
 	}
 }
 
-func TestBroadcasterKeepsTheLatestProgress(t *testing.T) {
+func TestBroadcasterKeepsEachJobsProgress(t *testing.T) {
 	b := &broadcaster{subs: map[chan QueueEvent]struct{}{}}
-	if b.LatestProgress() != nil {
+	if len(b.AllProgress()) != 0 {
 		t.Fatal("there should be no progress before a job starts")
 	}
 
+	b.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{JobID: 2, Done: 1, Total: 3}})
 	b.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{JobID: 1, Done: 1, Total: 3}})
 	b.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{JobID: 1, Done: 2, Total: 3}})
-	if p := b.LatestProgress(); p == nil || p.Done != 2 {
-		t.Errorf("LatestProgress = %+v, want done 2", p)
+	all := b.AllProgress()
+	if len(all) != 2 || all[0].JobID != 1 || all[0].Done != 2 || all[1].JobID != 2 {
+		t.Errorf("AllProgress = %+v, want job 1 at 2 then job 2", all)
 	}
 
-	for _, eventType := range []string{"job_finished", "job_started", "queue_cleared"} {
+	// A finished job's progress is removed, the other job's stays
+	for _, eventType := range []string{"job_finished", "job_started", "job_removed"} {
 		b.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{JobID: 1}})
-		b.Publish(QueueEvent{Type: eventType})
-		if b.LatestProgress() != nil {
-			t.Errorf("the progress should be cleared by %s", eventType)
+		b.Publish(QueueEvent{Type: eventType, Job: &database.DownloadQueueJob{ID: 1}})
+		if all := b.AllProgress(); len(all) != 1 || all[0].JobID != 2 {
+			t.Errorf("after %s AllProgress = %+v, want only job 2", eventType, all)
 		}
+	}
+
+	b.Publish(QueueEvent{Type: "queue_cleared"})
+	if len(b.AllProgress()) != 0 {
+		t.Error("clearing the queue should clear the progress")
+	}
+}
+
+func TestJobProgressCountsTheImagesDownloading(t *testing.T) {
+	season := func(n int) *int { return &n }
+	p := newJobProgress(1, "Severance", 3)
+	poster := models.ImageFile{ID: "a", Type: "poster"}
+	seasonPoster := models.ImageFile{ID: "b", Type: "season_poster", SeasonNumber: season(1)}
+
+	p.update(mediaserver.ImageUpdate{Image: poster})
+	p.update(mediaserver.ImageUpdate{Image: seasonPoster})
+	if len(p.progress.Active) != 2 {
+		t.Fatalf("Active = %+v, want 2 images", p.progress.Active)
+	}
+
+	p.update(mediaserver.ImageUpdate{Image: poster, Finished: true, Failed: true})
+	if len(p.progress.Active) != 1 || p.progress.Active[0].ID != "b" || p.progress.Done != 1 || p.progress.Failed != 1 {
+		t.Errorf("progress = %+v, want the season poster downloading, 1 done and 1 failed", p.progress)
 	}
 }

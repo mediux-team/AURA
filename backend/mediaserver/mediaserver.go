@@ -234,7 +234,14 @@ func supportsRating(server config.Config_MediaServer) bool {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// DownloadApplyImageToMediaItem applies an image on every media server, once a download slot is free
 func DownloadApplyImageToMediaItem(ctx context.Context, item *models.MediaItem, imageFile models.ImageFile) (Err logging.LogErrorInfo) {
+	return withDownloadSlot(ctx, func() logging.LogErrorInfo {
+		return downloadApplyImageToMediaItem(ctx, item, imageFile)
+	})
+}
+
+func downloadApplyImageToMediaItem(ctx context.Context, item *models.MediaItem, imageFile models.ImageFile) (Err logging.LogErrorInfo) {
 	Err = DownloadApplyImageToMainMediaServer(ctx, item, imageFile)
 	if Err.Message != "" {
 		return Err
@@ -255,10 +262,13 @@ func DownloadApplyImageToMainMediaServer(ctx context.Context, item *models.Media
 	return msClient.DownloadApplyImageToMediaItem(ctx, item, imageFile)
 }
 
+// ApplyCollectionImage applies a collection image on the main media server, once a download slot is free
 func ApplyCollectionImage(ctx context.Context, collectionItem *models.CollectionItem, imageFile models.ImageFile) (Err logging.LogErrorInfo) {
-	msClient, Err := NewMediaServerClient(&config.Current.MediaServer)
-	if Err.Message != "" {
-		return Err
-	}
-	return msClient.ApplyCollectionImage(ctx, collectionItem, imageFile)
+	return withDownloadSlot(ctx, func() logging.LogErrorInfo {
+		msClient, Err := NewMediaServerClient(&config.Current.MediaServer)
+		if Err.Message != "" {
+			return Err
+		}
+		return msClient.ApplyCollectionImage(ctx, collectionItem, imageFile)
+	})
 }

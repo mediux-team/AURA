@@ -29,12 +29,18 @@ export type DownloadQueueEventType =
   | "queue_cleared"
   | "queue_reordered";
 
-export interface DownloadQueueProgress {
-  job_id: number;
-  media_item_title: string;
+// An image being downloaded
+export interface DownloadQueueProgressImage {
+  id: string;
   image_type: string;
   season_number?: number;
   episode_number?: number;
+}
+
+export interface DownloadQueueProgress {
+  job_id: number;
+  media_item_title: string;
+  active: DownloadQueueProgressImage[]; // Images being downloaded
   done: number; // Images of the job already downloaded
   failed: number; // Images of the job that couldn't be downloaded
   total: number; // Images the job downloads

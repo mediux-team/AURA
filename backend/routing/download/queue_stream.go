@@ -33,9 +33,9 @@ func StreamDownloadQueueEvents(w http.ResponseWriter, r *http.Request) {
 		jobs = []database.DownloadQueueJob{}
 	}
 	stream.Send(downloadqueue.QueueEvent{Type: "snapshot", Jobs: jobs})
-	// So the progress shows straight away while a job is downloading
-	if progress := downloadqueue.QueueBroadcaster.LatestProgress(); progress != nil {
-		stream.Send(downloadqueue.QueueEvent{Type: "job_progress", Progress: progress})
+	// So the progress shows straight away while jobs are downloading
+	for _, progress := range downloadqueue.QueueBroadcaster.AllProgress() {
+		stream.Send(downloadqueue.QueueEvent{Type: "job_progress", Progress: &progress})
 	}
 
 	httpx.StreamEvents(ctx, stream, ch, func(event downloadqueue.QueueEvent) { stream.Send(event) })

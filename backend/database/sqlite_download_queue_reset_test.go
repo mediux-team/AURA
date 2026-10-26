@@ -52,6 +52,22 @@ func TestClaimNextDownloadQueueJob(t *testing.T) {
 	}
 }
 
+func TestClaimNextDownloadQueueJobSkipsItemsAlreadyRunning(t *testing.T) {
+	db := openTestMediaDB(t)
+	exec(t, db.conn, `INSERT INTO DownloadQueueJobs (id, tmdb_id, library_title, media_item_title, payload, status, created_at) VALUES
+		(1, '1', 'Movies', 'Running', '{}', 'processing', '2026-01-01 00:00:00'),
+		(2, '1', 'Movies', 'Same Item', '{}', 'pending', '2026-01-01 00:00:01'),
+		(3, '1', '4K Movies', 'Other Library', '{}', 'pending', '2026-01-01 00:00:02')`)
+
+	job, found, Err := db.ClaimNextDownloadQueueJob(testContext(), "worker")
+	if Err.Message != "" || !found || job.ID != 3 {
+		t.Fatalf("claimed job %d (found %v, %s), want job 3", job.ID, found, Err.Message)
+	}
+	if _, found, _ := db.ClaimNextDownloadQueueJob(testContext(), "worker"); found {
+		t.Error("the item's other job should wait for the running one")
+	}
+}
+
 func TestMoveDownloadQueueJobToTop(t *testing.T) {
 	db := openTestMediaDB(t)
 	exec(t, db.conn, `INSERT INTO DownloadQueueJobs (id, tmdb_id, library_title, media_item_title, payload, status, created_at) VALUES

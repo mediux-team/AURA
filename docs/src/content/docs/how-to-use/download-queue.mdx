@@ -9,18 +9,22 @@ import { Aside } from "@astrojs/starlight/components";
 
 ![The Download Queue](../../../assets/screenshots/download_queue_page.png)
 
-The Download Queue runs downloads in the background, one set at a time, starting as soon as a set is added. Sets end up here when you use **Add to Queue** in the [download window](/AURA/how-to-use/downloading-sets/), and when aura downloads sets by itself, from your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) or the Silo plugin.
+The Download Queue runs downloads in the background, starting as soon as a set is added. Several sets download at once, and each of them downloads several images at once, both set by [Simultaneous Downloads](/AURA/settings/mediux/#simultaneous-downloads). Sets end up here when you use **Add to Queue** in the [download window](/AURA/how-to-use/downloading-sets/), and when aura downloads sets by itself, from your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) or the Silo plugin.
 
 ## Queue
 
-The sets waiting to download, and the one downloading now, with its progress. A collection's own poster and backdrop, queued from a [collection set](/AURA/how-to-use/downloading-sets/#collection-images), have their own entry, shown with the collection's name and poster. Each entry's **⋯** menu has:
+The sets waiting to download, and the ones downloading now. Each set downloading has its own progress, with a line for each image downloading. A collection's own poster and backdrop, queued from a [collection set](/AURA/how-to-use/downloading-sets/#collection-images), have their own entry, shown with the collection's name and poster.
+
+Each entry's **⋯** menu has:
 
 - **Move to Top** makes a waiting set the next one to download.
 - **Remove** takes a set out of the queue. A set that's downloading stops.
 
-**Clear Queue** removes everything that's waiting, and stops the set downloading.
+**Clear Queue** removes everything that's waiting, and stops the sets downloading.
 
-When a set stops, the image already downloading finishes, and the rest aren't downloaded. The set isn't saved, so download it again to finish it.
+When a set stops, the images already downloading finish, and the rest aren't downloaded. The set isn't saved, so download it again to finish it.
+
+Two sets for the same item never download at the same time. The second one waits until the first finishes.
 
 ## Failed
 

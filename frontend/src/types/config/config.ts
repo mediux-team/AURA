@@ -68,6 +68,7 @@ export interface AppConfigMediaServerLibrary {
 export interface AppConfigMediux {
   api_token: string; // Authentication token for accessing MediUX services
   download_quality: string; // Preferred download quality (e.g., "original", "optimized")
+  simultaneous_downloads?: number; // How many images are downloaded at once, from 1 to 5
 }
 
 export interface AppConfigJobs {

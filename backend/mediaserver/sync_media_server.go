@@ -234,25 +234,31 @@ func applySavedItem(ctx, logCtx context.Context, server config.Config_MediaServe
 		return 0, nil, false
 	}
 
+	images := []models.ImageFile{}
 	for _, posterSet := range saved.PosterSets {
 		for _, image := range models.SortImagesForApply(posterSet.Images) {
-			if !models.IsKnownImageType(image.Type) || !models.ImageIsSelected(item, posterSet.SelectedTypes, image) {
-				continue
+			if models.IsKnownImageType(image.Type) && models.ImageIsSelected(item, posterSet.SelectedTypes, image) {
+				images = append(images, image)
 			}
-			if ctx.Err() != nil {
-				return applied, failures, true
-			}
-			imageCtx, logAction := logging.AddSubActionToContext(logCtx, fmt.Sprintf("Applying the %s image", image.Type), logging.LevelDebug)
-			Err := msClient.DownloadApplyImageToMediaItem(imageCtx, &item, image)
-			logAction.Complete()
-			if Err.Message != "" {
-				failures = append(failures, fmt.Sprintf("%s image: %s", image.Type, Err.Message))
-				logging.LOGGER.Warn().Timestamp().Str("media_server", server.Name).Str("item", utils.MediaItemInfo(saved.MediaItem)).
-					Str("image_type", image.Type).Str("error", Err.Message).Msg("Could not apply a saved image to the media server")
-				continue
-			}
-			applied++
 		}
+	}
+
+	results, _ := applyImages(logCtx, ctx, item, images, func(ctx context.Context, item *models.MediaItem, image models.ImageFile) logging.LogErrorInfo {
+		imageCtx, logAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Applying the %s image", image.Type), logging.LevelDebug)
+		defer logAction.Complete()
+		return msClient.DownloadApplyImageToMediaItem(imageCtx, item, image)
+	}, nil)
+	for _, result := range results {
+		if result.Stopped {
+			continue
+		}
+		if result.Err.Message != "" {
+			failures = append(failures, fmt.Sprintf("%s image: %s", result.Image.Type, result.Err.Message))
+			logging.LOGGER.Warn().Timestamp().Str("media_server", server.Name).Str("item", utils.MediaItemInfo(saved.MediaItem)).
+				Str("image_type", result.Image.Type).Str("error", result.Err.Message).Msg("Could not apply a saved image to the media server")
+			continue
+		}
+		applied++
 	}
 	return applied, failures, true
 }

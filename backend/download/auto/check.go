@@ -35,6 +35,17 @@ type ImageFileWithReason struct {
 	Reason      string
 }
 
+// applyRedownloads downloads the images in parallel, and returns a result for each in the same order
+func applyRedownloads(ctx context.Context, mediaItem *models.MediaItem, images []ImageFileWithReason) []mediaserver.ImageResult {
+	files := make([]models.ImageFile, len(images))
+	for i, image := range images {
+		files[i] = image.ImageFile
+	}
+	results, updated := mediaserver.ApplyImages(ctx, ctx, *mediaItem, files, nil)
+	*mediaItem = updated
+	return results
+}
+
 func CheckAllItems(ctx context.Context) (Err logging.LogErrorInfo) {
 	ctx, getAllItemAction := logging.AddSubActionToContext(ctx, " Getting all saved sets for AutoDownload Check", logging.LevelInfo)
 	out, Err := database.GetAllSavedSets(ctx, models.DBFilter{ItemsPerPage: -1})

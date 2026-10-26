@@ -227,14 +227,15 @@ func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.
 
 		_, imageRedownloadsAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Downloading %d updated images for set %s (ID: %s)", len(imagesToRedownload), dbSet.Title, dbSet.ID), logging.LevelInfo)
 		event := models.NewDownloadEvent(mediaItem, dbSet.PosterSet, models.SourceAutoDownload, models.DownloadKindUpdate)
+		results := applyRedownloads(ctx, &mediaItem, imagesToRedownload)
 		for idx, image := range imagesToRedownload {
-			// Redownload the image
+			// The redownloaded image
 			imageRedownloadResult := make(map[string]any)
 			imageRedownloadResult["image"] = utils.GetFileDownloadName(mediaItem.Title, image.ImageFile)
 			imageRedownloadResult["image_type"] = image.Type
 			imageRedownloadResult["redownload_reason"] = image.Reason
 
-			Err := mediaserver.DownloadApplyImageToMediaItem(ctx, &mediaItem, image.ImageFile)
+			Err := results[idx].Err
 			event.AddImage(image.ImageFile, Err.Message == "")
 			if Err.Message != "" {
 				imageRedownloadResult["redownload_result"] = "error"
@@ -367,8 +368,10 @@ func handleCollectionAutoAddNewItems(ctx context.Context, dbSet models.DBPosterS
 		}
 
 		event := models.NewDownloadEvent(item, mediuxSet.PosterSet, models.SourceAutoDownload, models.DownloadKindDownload)
-		for _, image := range itemImages {
-			downloadErr := mediaserver.DownloadApplyImageToMediaItem(ctx, &item, image)
+		results, updatedItem := mediaserver.ApplyImages(ctx, ctx, item, itemImages, nil)
+		item = updatedItem
+		for i, image := range itemImages {
+			downloadErr := results[i].Err
 			event.AddImage(image, downloadErr.Message == "")
 			if downloadErr.Message != "" {
 				action.AppendWarning("collection_auto_add_download_failed", map[string]any{

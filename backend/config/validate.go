@@ -273,6 +273,14 @@ func ValidateMediux(ctx context.Context, Mediux *Config_Mediux) bool {
 		logAction.AppendWarning("message", "Mediux.DownloadQuality invalid, defaulting to 'optimized'")
 	}
 
+	// Older configs don't have it
+	if Mediux.SimultaneousDownloads < 1 {
+		if Mediux.SimultaneousDownloads != 0 {
+			logAction.AppendWarning("message", fmt.Sprintf("Mediux.SimultaneousDownloads must be 1 or more, defaulting to %d", DefaultSimultaneousDownloads))
+		}
+		Mediux.SimultaneousDownloads = DefaultSimultaneousDownloads
+	}
+
 	return isValid
 }
 

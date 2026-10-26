@@ -65,6 +65,7 @@ MediaServers[].Type: string
 MediaServers[].URL: string
 Mediux.ApiToken: string
 Mediux.DownloadQuality: string
+Mediux.SimultaneousDownloads: int
 Notifications.Enabled: bool
 Notifications.NotificationTemplate.AppStartup.Enabled: bool
 Notifications.NotificationTemplate.AppStartup.IncludeImage: bool

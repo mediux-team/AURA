@@ -29,6 +29,14 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     keywords: ["original", "optimized", "resolution"],
     configPath: "download_quality",
   },
+  {
+    sectionId: "mediux",
+    sectionLabel: "MediUX",
+    label: "Simultaneous Downloads",
+    description: "How many images are downloaded at once",
+    keywords: ["parallel", "concurrent", "at once", "speed", "faster", "queue"],
+    configPath: "simultaneous_downloads",
+  },
 
   // Media Server
   {

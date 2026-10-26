@@ -381,9 +381,11 @@ func processSonarrDownloadEvent(ctx context.Context, payload SonarrWebHookOnUpgr
 
 		dbUpdateRequired := false
 		event := models.NewDownloadEvent(*mediaItem, dbSet.PosterSet, models.SourceSonarrWebhook, models.DownloadKindReapply)
-		for _, image := range imagesToDownload {
+		results, updatedItem := mediaserver.ApplyImages(ctx, ctx, *mediaItem, imagesToDownload, nil)
+		*mediaItem = updatedItem
+		for i, image := range imagesToDownload {
 			result := ""
-			Err := mediaserver.DownloadApplyImageToMediaItem(ctx, mediaItem, image)
+			Err := results[i].Err
 			event.AddImage(image, Err.Message == "")
 			if Err.Message != "" {
 				logging.LOGGER.Error().Timestamp().Msgf("Error downloading/applying image from set ID %s to media item %s: %s", dbSet.ID, utils.MediaItemInfo(*mediaItem), Err.Message)
