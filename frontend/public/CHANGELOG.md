@@ -14,6 +14,7 @@
 ### Updated
 
 - Updated frontend dependencies to latest versions for better security and performance.
+- Updated backend dependencies to latest versions for better security and performance.
 
 ---
 
