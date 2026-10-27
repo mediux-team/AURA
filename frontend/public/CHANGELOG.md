@@ -3,6 +3,7 @@
 ### Fixed
 
 - Fixed issue where Auto Download would redownload images for Silo items in more than one library, because the item was saved with another library's file.
+- Fixed issue where some database cleanup didn't run when items were removed.
 
 ---
 
