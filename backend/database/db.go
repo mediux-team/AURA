@@ -327,6 +327,9 @@ func Backup(ctx context.Context, currentVersion, newVersion int) (Err logging.Lo
 	return Client.Backup(ctx, currentVersion, newVersion)
 }
 
+// GetMediaItemDetails gets an item's details from the main media server, for the item's library. Set at startup.
+var GetMediaItemDetails func(ctx context.Context, item *models.MediaItem) (found bool)
+
 func UpsertSavedItem(ctx context.Context, newItem models.DBSavedItem) (Err logging.LogErrorInfo) {
 	if Client == nil {
 		return logging.Error_DBClientNotInitialized()
@@ -343,15 +346,20 @@ func UpsertSavedItem(ctx context.Context, newItem models.DBSavedItem) (Err loggi
 			if otherItem.LibraryTitle == newItem.MediaItem.LibraryTitle {
 				continue
 			}
+			// The item's file in the other library, as the file in this library would show as changed there
+			otherMediaItem := otherItem.Clone()
+			if GetMediaItemDetails == nil || !GetMediaItemDetails(ctx, &otherMediaItem) {
+				otherMediaItem = otherItem.Clone()
+			}
+			if (newItem.MediaItem.Type == "movie" && otherMediaItem.Movie == nil) || (newItem.MediaItem.Type == "show" && otherMediaItem.Series == nil) {
+				logSharedLibraryError(logging.LogErrorInfo{Message: "The item's file in this library isn't known, so its sets weren't saved here"},
+					newItem.MediaItem.TMDB_ID, otherItem.LibraryTitle)
+				continue
+			}
 			sharedItem := newItem
 			sharedItem.MediaItem.LibraryTitle = otherItem.LibraryTitle
-			// Use the file info for the other library, if it is known
-			if otherItem.Movie != nil {
-				sharedItem.MediaItem.Movie = otherItem.Movie
-			}
-			if otherItem.Series != nil {
-				sharedItem.MediaItem.Series = otherItem.Series
-			}
+			sharedItem.MediaItem.Movie = otherMediaItem.Movie
+			sharedItem.MediaItem.Series = otherMediaItem.Series
 			Err = Client.UpsertSavedItem(ctx, sharedItem)
 			if Err.Message != "" {
 				return Err

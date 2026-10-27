@@ -1,3 +1,11 @@
+## [0.9.119] - 2026-10-27
+
+### Fixed
+
+- Fixed issue where Auto Download would redownload images for Silo items in more than one library, because the item was saved with another library's file.
+
+---
+
 ## [0.9.118] - 2026-10-25
 
 ### Added

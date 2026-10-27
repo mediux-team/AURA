@@ -183,6 +183,12 @@ func runWarmup() (success bool) {
 		_, _ = autodownload.DownloadFromFavoriteCreators(ctx, items, models.SourceFavoriteCreatorsNewItem)
 	}
 
+	// Sets saved for a Silo item in its other libraries use the item's file in each library
+	database.GetMediaItemDetails = func(ctx context.Context, item *models.MediaItem) bool {
+		found, Err := mediaserver.GetMediaItemDetails(ctx, item)
+		return found && Err.Message == ""
+	}
+
 	// Cache: Load the library saved by the last load
 	config.SetAppLoadingStep("Loading Media Server Data from the Database")
 	loadedFromDatabase := mediaserver.LoadLibraryCacheFromDatabase(ctx)
