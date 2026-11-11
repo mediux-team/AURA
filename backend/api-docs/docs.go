@@ -5869,10 +5869,6 @@ const docTemplate = `{
                     "description": "Whether \"Add to Database Only\" is checked by default in the Download Modal.",
                     "type": "boolean"
                 },
-                "default_add_to_queue": {
-                    "description": "Whether \"Add to Queue\" is checked by default in the Download Modal.",
-                    "type": "boolean"
-                },
                 "default_auto_add_new_collection_items": {
                     "description": "Whether \"Auto Add New Collection Items\" is checked by default in the Download Modal.",
                     "type": "boolean"
@@ -6884,6 +6880,13 @@ const docTemplate = `{
                     "description": "Keep this set, Automatically Upgrade Sets doesn't replace it",
                     "type": "boolean"
                 },
+                "only_images": {
+                    "description": "The images a Download Queue job downloads, when it updates only some of the set (Not used in DB)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.QueuedImage"
+                    }
+                },
                 "popularity": {
                     "description": "Popularity score of the set",
                     "type": "integer"
@@ -7356,6 +7359,23 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.BaseSetInfo"
                         }
                     ]
+                }
+            }
+        },
+        "models.QueuedImage": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "reason_title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -7920,6 +7940,9 @@ const docTemplate = `{
         "routes_download.AddItemToDownloadQueue_Response": {
             "type": "object",
             "properties": {
+                "job_id": {
+                    "type": "integer"
+                },
                 "result": {
                     "type": "string"
                 }

@@ -3,6 +3,7 @@ package downloadqueue
 import (
 	"aura/database"
 	"aura/logging"
+	"aura/mediux"
 	"aura/models"
 	"context"
 	"slices"
@@ -60,7 +61,11 @@ func setupRetryStubs(t *testing.T) (context.Context, *retryStubs) {
 		stubs.queued = append(stubs.queued, item)
 		return logging.LogErrorInfo{}
 	}
+	getLatestSet = func(_ context.Context, setID, _ string, _ models.MediaItem) (models.PosterSet, logging.LogErrorInfo) {
+		return models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: setID}, Images: []models.ImageFile{{ID: "latest-" + setID, Type: "poster"}}}, logging.LogErrorInfo{}
+	}
 	t.Cleanup(func() {
+		getLatestSet = mediux.GetLatestSet
 		getHistoryEntry, getDueRetries, markRetried, stopRetries = database.GetDownloadHistoryEntry, database.GetDueDownloadRetries, database.MarkDownloadHistoryRetried, database.StopDownloadRetries
 		getSavedSets, getQueueJobs, addToQueue = database.GetAllSavedSets, database.GetAllDownloadQueueJobs, AddToQueue
 	})
@@ -79,6 +84,10 @@ func TestRetryFailedDownload(t *testing.T) {
 	}
 	if !slices.Equal(stubs.retried, []int64{1}) {
 		t.Errorf("retried = %v, want entry 1 counted", stubs.retried)
+	}
+	// With the set's latest images, as images that failed before weren't saved
+	if images := stubs.queued[0].PosterSets[0].Images; len(images) != 1 || images[0].ID != "latest-a" {
+		t.Errorf("queued images = %+v, want the latest images", images)
 	}
 
 	// Nothing is queued without a set, for a set that isn't saved, for a missing entry, or while the item is in the queue

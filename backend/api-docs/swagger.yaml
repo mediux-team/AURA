@@ -565,10 +565,6 @@ definitions:
         description: Whether "Add to Database Only" is checked by default in the Download
           Modal.
         type: boolean
-      default_add_to_queue:
-        description: Whether "Add to Queue" is checked by default in the Download
-          Modal.
-        type: boolean
       default_auto_add_new_collection_items:
         description: Whether "Auto Add New Collection Items" is checked by default
           in the Download Modal.
@@ -1271,6 +1267,12 @@ definitions:
       no_auto_upgrade:
         description: Keep this set, Automatically Upgrade Sets doesn't replace it
         type: boolean
+      only_images:
+        description: The images a Download Queue job downloads, when it updates only
+          some of the set (Not used in DB)
+        items:
+          $ref: '#/definitions/models.QueuedImage'
+        type: array
       popularity:
         description: Popularity score of the set
         type: integer
@@ -1594,6 +1596,17 @@ definitions:
         allOf:
         - $ref: '#/definitions/models.BaseSetInfo'
         description: The set the images are from, for the statistics
+    type: object
+  models.QueuedImage:
+    properties:
+      id:
+        type: string
+      reason:
+        type: string
+      reason_title:
+        type: string
+      type:
+        type: string
     type: object
   models.SelectedTypes:
     properties:
@@ -1973,6 +1986,8 @@ definitions:
     type: object
   routes_download.AddItemToDownloadQueue_Response:
     properties:
+      job_id:
+        type: integer
       result:
         type: string
     type: object

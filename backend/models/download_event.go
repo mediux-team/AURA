@@ -17,6 +17,7 @@ const (
 	SourceAutoDownload   = "auto_download"   // The Auto Download job
 	SourceSonarrWebhook  = "sonarr_webhook"  // Title cards applied again after Sonarr upgraded or renamed an episode
 	SourcePlexRefresh    = "plex_refresh"    // Saved images applied again after Plex refreshed an item
+	SourceRetry          = "retry"           // A failed download tried again, automatically or with Retry
 	SourceBackfill       = "backfill"        // Counted from the saved sets when the statistics were added
 )
 

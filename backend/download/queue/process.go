@@ -166,11 +166,14 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 		return
 	}
 
+	// What is saved now, so an image that fails keeps what was saved before
+	previousImages := savedImagesBySet(ctx, queueItem.MediaItem)
+
 	// Images the job downloads, for the progress
 	progress := newJobProgress(job.ID, queueItem.MediaItem.Title, countJobImages(queueItem))
 	progress.publish()
 
-	for _, posterSet := range queueItem.PosterSets {
+	for i, posterSet := range queueItem.PosterSets {
 		if stop.Err() != nil {
 			stopped()
 			return
@@ -228,7 +231,16 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 			images = append(images, image)
 		}
 
-		results, updatedItem := mediaserver.ApplyImages(ctx, stop, queueItem.MediaItem, images, progress.update)
+		// Each image is saved as it downloads, so a job that stops keeps the images it applied
+		onUpdate := func(update mediaserver.ImageUpdate) {
+			progress.update(update)
+			if update.Finished && !update.Failed {
+				if _, Err := saveDownloadedImage(ctx, queueItem.MediaItem, posterSet.ID, update.Image); Err.Message != "" {
+					subAction.AppendWarning(fmt.Sprintf("save_%s", update.Image.ID), Err.Message)
+				}
+			}
+		}
+		results, updatedItem := mediaserver.ApplyImages(ctx, stop, queueItem.MediaItem, images, onUpdate)
 		queueItem.MediaItem = updatedItem
 
 		event := models.NewDownloadEvent(queueItem.MediaItem, posterSet.PosterSet, queueItem.Source, models.DownloadKindDownload)
@@ -256,6 +268,9 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 			stopped()
 			return
 		}
+
+		// Only the images that downloaded are saved, so the ones that failed are tried again
+		queueItem.PosterSets[i].Images = imagesToSave(posterSet.Images, results, previousImages[posterSet.ID])
 
 		// Per-set notification (success/warning/error)
 		SendNotification(
@@ -420,4 +435,51 @@ func countJobImages(queueItem models.DBSavedItem) (total int) {
 		total += len(queueItem.CollectionImages.Images)
 	}
 	return total
+}
+
+// savedImagesBySet is the images saved for the item now, by set ID and image
+func savedImagesBySet(ctx context.Context, item models.MediaItem) map[string]map[string]models.ImageFile {
+	bySet := map[string]map[string]models.ImageFile{}
+	saved, Err := getSavedSets(ctx, models.DBFilter{ItemTMDB_ID: item.TMDB_ID, ItemLibraryTitle: item.LibraryTitle, ItemsPerPage: -1})
+	if Err.Message != "" {
+		return bySet
+	}
+	for _, savedItem := range saved.Items {
+		if savedItem.MediaItem.Edition != item.Edition {
+			continue
+		}
+		for _, set := range savedItem.PosterSets {
+			images := map[string]models.ImageFile{}
+			for _, image := range set.Images {
+				images[imageKey(image)] = image
+			}
+			bySet[set.ID] = images
+		}
+	}
+	return bySet
+}
+
+// imagesToSave is the set's images to save after downloading. A failed image keeps what was saved before, or isn't saved if it's new to the set.
+func imagesToSave(setImages []models.ImageFile, results []mediaserver.ImageResult, previous map[string]models.ImageFile) []models.ImageFile {
+	failed := map[string]bool{}
+	for _, result := range results {
+		if result.Err.Message != "" {
+			failed[imageKey(result.Image)] = true
+		}
+	}
+	images := make([]models.ImageFile, 0, len(setImages))
+	for _, image := range setImages {
+		if !failed[imageKey(image)] {
+			images = append(images, image)
+			continue
+		}
+		if old, ok := previous[imageKey(image)]; ok {
+			images = append(images, old)
+		}
+	}
+	return images
+}
+
+func imageKey(image models.ImageFile) string {
+	return image.Type + "|" + image.ID
 }

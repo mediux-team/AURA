@@ -38,6 +38,7 @@ const SOURCE_LABELS: Record<string, string> = {
   auto_download: "Auto Download",
   sonarr_webhook: "Sonarr webhook",
   plex_refresh: "Plex refresh",
+  retry: "Retry",
   backfill: "Saved sets, before tracking",
 };
 

@@ -3,6 +3,7 @@
 ### Fixed
 
 - Fixed issue where Auto Download would fail with "Media Item not found in cache" for Plex items that list more than one TMDB ID. #155
+- Fixed issue where images that failed to download were saved as downloaded, so they were never tried again.
 
 ### Updated
 

@@ -15,6 +15,8 @@ The Download Queue runs downloads in the background, starting as soon as a set i
 
 The sets waiting to download, and the ones downloading now. Each set downloading has its own progress, with a line for each image downloading. A collection's own poster and backdrop, queued from a [collection set](/AURA/how-to-use/downloading-sets/#collection-images), have their own entry, shown with the collection's name and poster.
 
+Each image is saved as soon as it downloads. An image that fails isn't saved, so the set keeps what it had before, and the next Auto Download check tries it again.
+
 Each entry's **⋯** menu has:
 
 - **Move to Top** makes a waiting set the next one to download.
@@ -22,7 +24,7 @@ Each entry's **⋯** menu has:
 
 **Clear Queue** removes everything that's waiting, and stops the sets downloading.
 
-When a set stops, the images already downloading finish, and the rest aren't downloaded. The set isn't saved, so download it again to finish it.
+When a set stops, the images already downloading finish, and the rest aren't downloaded. The images that finished are saved, the rest aren't.
 
 Two sets for the same item never download at the same time. The second one waits until the first finishes.
 
@@ -36,7 +38,7 @@ aura retries a failed download by itself, up to 3 times, waiting longer each tim
 
 Each entry's **⋯** menu has:
 
-- **Retry** adds the set to the queue again straight away.
+- **Retry** adds the set to the queue again straight away, with its latest images from MediUX.
 - **Delete** removes the entry.
 
 **Clear Failed** removes every failed entry.

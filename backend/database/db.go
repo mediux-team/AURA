@@ -67,6 +67,9 @@ type DB interface {
 	// Upsert Converted Saved Item
 	UpsertSavedItem(ctx context.Context, newItem models.DBSavedItem) (Err logging.LogErrorInfo)
 
+	// Save an image that downloaded to the item's saved set
+	SaveDownloadedImage(ctx context.Context, item models.MediaItem, setID string, image models.ImageFile) (saved bool, Err logging.LogErrorInfo)
+
 	// Check Media Item Exists
 	CheckIfMediaItemExists(ctx context.Context, TMDB_ID, libraryTitle, edition string) (ignored bool, ignoredMode string, sets []models.DBSavedSet, logErr logging.LogErrorInfo)
 
@@ -369,6 +372,13 @@ func UpsertSavedItem(ctx context.Context, newItem models.DBSavedItem) (Err loggi
 	}
 	syncLibraryCache(ctx, newItem.MediaItem.TMDB_ID, newItem.MediaItem.Edition, newItem.MediaItem.LibraryTitle)
 	return logging.LogErrorInfo{}
+}
+
+func SaveDownloadedImage(ctx context.Context, item models.MediaItem, setID string, image models.ImageFile) (saved bool, Err logging.LogErrorInfo) {
+	if Client == nil {
+		return false, logging.Error_DBClientNotInitialized()
+	}
+	return Client.SaveDownloadedImage(ctx, item, setID, image)
 }
 
 func CheckIfMediaItemExists(ctx context.Context, TMDB_ID, libraryTitle, edition string) (ignored bool, ignoreMode string, sets []models.DBSavedSet, logErr logging.LogErrorInfo) {

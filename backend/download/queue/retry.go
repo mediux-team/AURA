@@ -3,6 +3,7 @@ package downloadqueue
 import (
 	"aura/database"
 	"aura/logging"
+	"aura/mediux"
 	"aura/models"
 	"context"
 	"fmt"
@@ -17,6 +18,9 @@ var (
 	getSavedSets    = database.GetAllSavedSets
 	getQueueJobs    = database.GetAllDownloadQueueJobs
 	addToQueue      = AddToQueue
+	getLatestSet    = mediux.GetLatestSet
+
+	saveDownloadedImage = database.SaveDownloadedImage
 )
 
 // RetryFailedDownload adds a failed download's set back to the Download Queue, from the item's saved set
@@ -109,8 +113,14 @@ func retryEntry(ctx context.Context, entry database.DownloadHistoryEntry) (alrea
 			if set.ID != entry.SetID {
 				continue
 			}
+			// The set's latest images, as images that failed before weren't saved
+			if latest, latestErr := getLatestSet(ctx, set.ID, set.Type, item.MediaItem); latestErr.Message == "" && latest.ID == set.ID {
+				set.PosterSet = latest
+			} else {
+				logAction.AppendWarning("latest_set", "Couldn't get the set's latest images from MediUX, retrying with the saved images")
+			}
 			// Only the failed set, the item's other saved sets downloaded fine
-			Err = addToQueue(ctx, models.DBSavedItem{MediaItem: item.MediaItem, PosterSets: []models.DBPosterSetDetail{set}})
+			Err = addToQueue(ctx, models.DBSavedItem{MediaItem: item.MediaItem, PosterSets: []models.DBPosterSetDetail{set}, Source: models.SourceRetry})
 			if Err.Message != "" {
 				return false, Err
 			}
