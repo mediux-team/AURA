@@ -11,6 +11,7 @@ import (
 	"aura/mediaserver"
 	"aura/mediux"
 	"aura/models"
+	"aura/sandbox"
 	"aura/statistics"
 	"aura/utils"
 	"aura/utils/httpx"
@@ -181,6 +182,12 @@ func runWarmup() (success bool) {
 	// New items get a set from a favorite creator, if that is turned on
 	mediaserver.OnNewItems = func(ctx context.Context, items []models.MediaItem) {
 		_, _ = autodownload.DownloadFromFavoriteCreators(ctx, items, models.SourceFavoriteCreatorsNewItem)
+	}
+
+	// The test sandbox, only in dev builds
+	if sandbox.Enabled() {
+		mediaserver.BeforeApplyImage = sandbox.BeforeApplyImage
+		logging.LOGGER.Info().Timestamp().Msg("The test sandbox is on, as this is a dev build")
 	}
 
 	// Sets saved for a Silo item in its other libraries use the item's file in each library

@@ -1361,6 +1361,270 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/dev/sandbox": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "How the test sandbox is set up: the wait before each image downloads, and the downloads made to fail. Only in dev builds.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Sandbox - Get State",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sandbox.State"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/dev/sandbox/delay": {
+            "put": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Wait before each image downloads, 0 for no wait. Only in dev builds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Sandbox - Set Download Wait",
+                "parameters": [
+                    {
+                        "description": "The wait in seconds",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/routes_sandbox.SetDelay_Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sandbox.State"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/dev/sandbox/failures": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Make an item's image downloads fail. Only in dev builds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Sandbox - Make Downloads Fail",
+                "parameters": [
+                    {
+                        "description": "The item, image types and how many downloads fail",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sandbox.FailureRule"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sandbox.State"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Clear every download failure. Only in dev builds.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Sandbox - Stop Making Downloads Fail",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/sandbox.State"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/dev/sandbox/recheck": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Run the Auto Download check for an item now, with its saved sets as they are in the database. Only in dev builds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Sandbox - Run the Auto Download Check",
+                "parameters": [
+                    {
+                        "description": "The item",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/routes_sandbox.Recheck_Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/httpx.JSONResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/autodownload.AutoDownloadResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/dev/sandbox/simulate": {
+            "post": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "description": "Change an item's saved data as if something changed since the last download. Only in dev builds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sandbox"
+                ],
+                "summary": "Sandbox - Simulate a Change",
+                "parameters": [
+                    {
+                        "description": "The item and the change",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sandbox.Change"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/download/favorite-creators": {
             "post": {
                 "security": [
@@ -8446,6 +8710,28 @@ const docTemplate = `{
                 }
             }
         },
+        "routes_sandbox.Recheck_Request": {
+            "type": "object",
+            "properties": {
+                "edition": {
+                    "type": "string"
+                },
+                "library_title": {
+                    "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "routes_sandbox.SetDelay_Request": {
+            "type": "object",
+            "properties": {
+                "seconds": {
+                    "type": "number"
+                }
+            }
+        },
         "routes_search.HandleSearch_Response": {
             "type": "object",
             "properties": {
@@ -8585,6 +8871,84 @@ const docTemplate = `{
                 },
                 "valid": {
                     "type": "boolean"
+                }
+            }
+        },
+        "sandbox.Change": {
+            "type": "object",
+            "properties": {
+                "change": {
+                    "type": "string"
+                },
+                "edition": {
+                    "type": "string"
+                },
+                "episode_number": {
+                    "type": "integer"
+                },
+                "image_id": {
+                    "type": "string"
+                },
+                "image_type": {
+                    "type": "string"
+                },
+                "library_title": {
+                    "type": "string"
+                },
+                "season_number": {
+                    "type": "integer"
+                },
+                "tmdb_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sandbox.FailureRule": {
+            "type": "object",
+            "properties": {
+                "edition": {
+                    "type": "string"
+                },
+                "library_title": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "remaining": {
+                    "description": "How many more downloads fail, until it's cleared when 0",
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "tmdb_id": {
+                    "type": "string"
+                },
+                "types": {
+                    "description": "The image types that fail, every type when empty",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "sandbox.State": {
+            "type": "object",
+            "properties": {
+                "delay_seconds": {
+                    "description": "The wait before each image downloads",
+                    "type": "number"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "failures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/sandbox.FailureRule"
+                    }
                 }
             }
         },

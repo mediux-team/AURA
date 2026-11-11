@@ -9,6 +9,7 @@ import {
   ChartColumn,
   Clock,
   FileCog as FileCogIcon,
+  FlaskConical,
   LayoutGrid,
   ListOrdered,
   LogOutIcon,
@@ -32,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { IS_DEV_BUILD } from "@/lib/build-info";
 import { cn } from "@/lib/cn";
 import { DeepResetAllStores } from "@/lib/stores/clear-all-stores";
 import { useCollectionStore } from "@/lib/stores/global-store-collection-store";
@@ -325,6 +327,15 @@ export function Navbar({ version = "dev" }: AppNavbarProps) {
                     <ChartColumn className="w-6 h-6 mr-2" />
                     Statistics
                   </DropdownMenuItem>
+                  {IS_DEV_BUILD && (
+                    <DropdownMenuItem
+                      className="cursor-pointer flex items-center active:scale-95 hover:brightness-120"
+                      onClick={() => router.push("/sandbox")}
+                    >
+                      <FlaskConical className="w-6 h-6 mr-2" />
+                      Test Sandbox
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer flex items-center active:scale-95 hover:brightness-120"

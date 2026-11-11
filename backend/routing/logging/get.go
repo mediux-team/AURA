@@ -386,6 +386,32 @@ var possible_actions_paths = map[string]structActionLabelSection{
 		Section: "MEDIUX",
 	},
 
+	// Test Sandbox Routes, only in dev builds
+	"GET:/api/dev/sandbox": {
+		Label:   "Get Sandbox State",
+		Section: "SANDBOX",
+	},
+	"PUT:/api/dev/sandbox/delay": {
+		Label:   "Set Sandbox Download Wait",
+		Section: "SANDBOX",
+	},
+	"POST:/api/dev/sandbox/failures": {
+		Label:   "Make Sandbox Downloads Fail",
+		Section: "SANDBOX",
+	},
+	"DELETE:/api/dev/sandbox/failures": {
+		Label:   "Clear Sandbox Download Failures",
+		Section: "SANDBOX",
+	},
+	"POST:/api/dev/sandbox/simulate": {
+		Label:   "Simulate a Sandbox Change",
+		Section: "SANDBOX",
+	},
+	"POST:/api/dev/sandbox/recheck": {
+		Label:   "Run Sandbox Auto Download Check",
+		Section: "SANDBOX",
+	},
+
 	// Validation Routes
 	"POST:/api/validate/mediux": {
 		Label:   "Validate Mediux Info",

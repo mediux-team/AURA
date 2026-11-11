@@ -253,8 +253,16 @@ func downloadApplyImageToMediaItem(ctx context.Context, item *models.MediaItem, 
 	return logging.LogErrorInfo{}
 }
 
+// BeforeApplyImage runs before each image is applied, set by the test sandbox in dev builds
+var BeforeApplyImage func(ctx context.Context, item models.MediaItem, image models.ImageFile) logging.LogErrorInfo
+
 // DownloadApplyImageToMainMediaServer applies an image on the main media server only
 func DownloadApplyImageToMainMediaServer(ctx context.Context, item *models.MediaItem, imageFile models.ImageFile) (Err logging.LogErrorInfo) {
+	if BeforeApplyImage != nil {
+		if Err := BeforeApplyImage(ctx, *item, imageFile); Err.Message != "" {
+			return Err
+		}
+	}
 	msClient, Err := NewMediaServerClient(&config.Current.MediaServer)
 	if Err.Message != "" {
 		return Err

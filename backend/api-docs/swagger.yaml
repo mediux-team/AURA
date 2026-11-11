@@ -2305,6 +2305,20 @@ definitions:
       plex_pin:
         type: string
     type: object
+  routes_sandbox.Recheck_Request:
+    properties:
+      edition:
+        type: string
+      library_title:
+        type: string
+      tmdb_id:
+        type: string
+    type: object
+  routes_sandbox.SetDelay_Request:
+    properties:
+      seconds:
+        type: number
+    type: object
   routes_search.HandleSearch_Response:
     properties:
       collection_items:
@@ -2395,6 +2409,58 @@ definitions:
         type: string
       valid:
         type: boolean
+    type: object
+  sandbox.Change:
+    properties:
+      change:
+        type: string
+      edition:
+        type: string
+      episode_number:
+        type: integer
+      image_id:
+        type: string
+      image_type:
+        type: string
+      library_title:
+        type: string
+      season_number:
+        type: integer
+      tmdb_id:
+        type: string
+    type: object
+  sandbox.FailureRule:
+    properties:
+      edition:
+        type: string
+      library_title:
+        type: string
+      reason:
+        type: string
+      remaining:
+        description: How many more downloads fail, until it's cleared when 0
+        type: integer
+      title:
+        type: string
+      tmdb_id:
+        type: string
+      types:
+        description: The image types that fail, every type when empty
+        items:
+          type: string
+        type: array
+    type: object
+  sandbox.State:
+    properties:
+      delay_seconds:
+        description: The wait before each image downloads
+        type: number
+      enabled:
+        type: boolean
+      failures:
+        items:
+          $ref: '#/definitions/sandbox.FailureRule'
+        type: array
     type: object
   siloplugin.Image:
     properties:
@@ -3605,6 +3671,159 @@ paths:
       summary: Stop Ignoring Item In Database
       tags:
       - Database
+  /api/dev/sandbox:
+    get:
+      description: 'How the test sandbox is set up: the wait before each image downloads,
+        and the downloads made to fail. Only in dev builds.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sandbox.State'
+              type: object
+      security:
+      - SessionCookie: []
+      summary: Sandbox - Get State
+      tags:
+      - Sandbox
+  /api/dev/sandbox/delay:
+    put:
+      consumes:
+      - application/json
+      description: Wait before each image downloads, 0 for no wait. Only in dev builds.
+      parameters:
+      - description: The wait in seconds
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/routes_sandbox.SetDelay_Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sandbox.State'
+              type: object
+      security:
+      - SessionCookie: []
+      summary: Sandbox - Set Download Wait
+      tags:
+      - Sandbox
+  /api/dev/sandbox/failures:
+    delete:
+      description: Clear every download failure. Only in dev builds.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sandbox.State'
+              type: object
+      security:
+      - SessionCookie: []
+      summary: Sandbox - Stop Making Downloads Fail
+      tags:
+      - Sandbox
+    post:
+      consumes:
+      - application/json
+      description: Make an item's image downloads fail. Only in dev builds.
+      parameters:
+      - description: The item, image types and how many downloads fail
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/sandbox.FailureRule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/sandbox.State'
+              type: object
+      security:
+      - SessionCookie: []
+      summary: Sandbox - Make Downloads Fail
+      tags:
+      - Sandbox
+  /api/dev/sandbox/recheck:
+    post:
+      consumes:
+      - application/json
+      description: Run the Auto Download check for an item now, with its saved sets
+        as they are in the database. Only in dev builds.
+      parameters:
+      - description: The item
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/routes_sandbox.Recheck_Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/httpx.JSONResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/autodownload.AutoDownloadResult'
+              type: object
+      security:
+      - SessionCookie: []
+      summary: Sandbox - Run the Auto Download Check
+      tags:
+      - Sandbox
+  /api/dev/sandbox/simulate:
+    post:
+      consumes:
+      - application/json
+      description: Change an item's saved data as if something changed since the last
+        download. Only in dev builds.
+      parameters:
+      - description: The item and the change
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/sandbox.Change'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpx.JSONResponse'
+      security:
+      - SessionCookie: []
+      summary: Sandbox - Simulate a Change
+      tags:
+      - Sandbox
   /api/download/favorite-creators:
     post:
       description: For every item of the main media server without a saved set, adds

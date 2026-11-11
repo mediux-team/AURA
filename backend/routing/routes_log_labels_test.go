@@ -13,6 +13,10 @@ import (
 // Every route needs a label for the Logs page's actions, in routing/logging/get.go
 func TestEveryRouteHasALogsPageLabel(t *testing.T) {
 	setTestConfig(t, config.Config{}, true)
+	// The sandbox routes are only in dev builds
+	previousBuild := config.AppBuildNumber
+	config.AppBuildNumber = "dev"
+	t.Cleanup(func() { config.AppBuildNumber = previousBuild })
 	for name, addRoutes := range map[string]func(*chi.Mux){"full": AddRoutes, "setup": addOnboardingRoutes} {
 		r := chi.NewRouter()
 		addRoutes(r)
