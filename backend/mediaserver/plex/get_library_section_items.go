@@ -128,7 +128,8 @@ func (p *Plex) getLibrarySectionItems(ctx context.Context, section models.Librar
 							Provider: provider,
 							ID:       id,
 						})
-						if provider == "tmdb" {
+						// Keep the first TMDB ID, same as the item details
+						if provider == "tmdb" && item.TMDB_ID == "" {
 							item.TMDB_ID = id
 						}
 					}

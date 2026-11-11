@@ -200,3 +200,29 @@ func TestPlexShowCounts(t *testing.T) {
 		t.Fatalf("items = %+v, %s", items, Err.Message)
 	}
 }
+
+func TestPlexTwoTMDBIDs(t *testing.T) {
+	// The library listing and the item details use the same TMDB ID, the first one
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"MediaContainer":{"title1":"Movies","totalSize":1,"Metadata":[
+			{"ratingKey":"72804","type":"movie","title":"Reign of the Supermen","year":2019,"librarySectionTitle":"Movies","guid":"plex://movie/1",
+			 "Guid":[{"id":"imdb://tt7167686"},{"id":"tmdb://487672"},{"id":"tmdb://630656"},{"id":"tvdb://591"}],
+			 "Media":[{"Part":[{"file":"/data/movies/Movie.mkv","size":10}]}]}]}}`))
+	}))
+	t.Cleanup(server.Close)
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.MainMediaServer = "main"
+	p := &Plex{Config: config.Config_MediaServer{ID: "other", Type: "Plex", URL: server.URL}}
+
+	section := models.LibrarySection{LibrarySectionBase: models.LibrarySectionBase{ID: "1", Title: "Movies", Type: "movie"}}
+	items, _, _, Err := p.GetLibrarySectionItems(testContext(), section, "0", "")
+	if Err.Message != "" || len(items) != 1 || items[0].TMDB_ID != "487672" {
+		t.Fatalf("GetLibrarySectionItems = %+v, %s, want TMDB ID 487672", items, Err.Message)
+	}
+
+	item := models.MediaItem{RatingKey: "72804"}
+	if found, Err := p.GetMediaItemDetails(testContext(), &item); !found || Err.Message != "" || item.TMDB_ID != items[0].TMDB_ID {
+		t.Fatalf("GetMediaItemDetails = %v, TMDB ID %q, %s, want the same as the library listing", found, item.TMDB_ID, Err.Message)
+	}
+}

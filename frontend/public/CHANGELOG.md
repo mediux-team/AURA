@@ -1,3 +1,11 @@
+## [0.9.120] - 2026-11-11
+
+### Fixed
+
+- Fixed issue where Auto Download would fail with "Media Item not found in cache" for Plex items that list more than one TMDB ID. #155
+
+---
+
 ## [0.9.119] - 2026-10-27
 
 ### Fixed
