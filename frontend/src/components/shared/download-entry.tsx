@@ -1,5 +1,6 @@
 "use client";
 
+import { downloadSource, sourceLabel } from "@/helper/format-download-source";
 import { formatImageTypeLabel } from "@/helper/format-image-type";
 import { RemoveDownloadHistoryEntry } from "@/services/downloads/history-remove";
 import { RetryDownloadHistoryEntry } from "@/services/downloads/history-retry";
@@ -57,10 +58,11 @@ type DownloadEntryCardProps =
       fetchHistory?: () => Promise<void>;
     };
 
-// countSelectedImages is how many of the sets' images are of a selected type
+// countSelectedImages is how many of the sets' images are of a selected type, or the images a job updates when it lists them
 const countSelectedImages = (posterSets: DBPosterSetDetail[]) =>
   posterSets.reduce((total, set) => {
     const selected = set.selected_types;
+    if (set.only_images?.length) return total + set.only_images.length;
     return (
       total +
       (set.images ?? []).filter((image) => {
@@ -364,6 +366,13 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
             </span>
           )}
         </div>
+
+        {/* What added the job */}
+        {isQueue && (
+          <Badge variant="outline" className="mb-2 text-xs">
+            {sourceLabel(downloadSource(props.job.item.source))}
+          </Badge>
+        )}
 
         {/* Set */}
         {isQueue ? (
