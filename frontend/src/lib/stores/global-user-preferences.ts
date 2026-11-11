@@ -240,7 +240,7 @@ const syncFromServer = () => {
     pageViews: store.pageViews ?? {},
   };
 
-  let synced = false;
+  let synced: boolean;
   try {
     synced = localStorage.getItem(SYNCED_KEY) === "true";
     localStorage.setItem(SYNCED_KEY, "true");

@@ -195,7 +195,7 @@ export const RefreshMetadataModal = ({ mediaItem, isOpen, onClose }: MediaItemDe
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(message);
+      throw new Error(message, { cause: error });
     }
   };
 

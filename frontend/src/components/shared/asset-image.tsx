@@ -118,8 +118,6 @@ export function AssetImage({
     imageSrc = `/api/images/media/item?rating_key=${(image as MediaItem).rating_key}&image_type=${aspect}`;
   } else if (imageType === "collection") {
     imageSrc = `/api/images/media/collection?rating_key=${(image as CollectionItem).rating_key}&image_type=${aspect}&index=${(image as CollectionItem).index}`;
-  } else {
-    imageSrc = "";
   }
 
   const handleDoubleClick = () => {

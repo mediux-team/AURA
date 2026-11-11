@@ -39,7 +39,6 @@ export function SetFileCounts({ mediaItem, set, includedItems }: SetFileCountsPr
 
   // --- MOVIE LOGIC ---
   const getMovieFileCounts = () => {
-    let primary = "";
     let secondary = "";
 
     const posterCount = set.images?.filter((img) => img.type === "poster").length || 0;
@@ -48,7 +47,7 @@ export function SetFileCounts({ mediaItem, set, includedItems }: SetFileCountsPr
     const parts: string[] = [];
     if (posterCount > 0) parts.push(`${posterCount} ${makePlural(posterCount, "Poster")}`);
     if (backdropCount > 0) parts.push(`${backdropCount} ${makePlural(backdropCount, "Backdrop")}`);
-    primary = parts.join(" • ");
+    const primary = parts.join(" • ");
 
     // The collection's own images, when the set has them
     const collection = [

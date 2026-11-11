@@ -1,7 +1,7 @@
 // eslint.config.js
+import { fixupPluginRules } from "@eslint/compat";
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
-import importPlugin from "eslint-plugin-import";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -37,18 +37,13 @@ export default [
       },
     },
     plugins: {
-      react,
+      // These plugins don't support ESLint 10 yet
+      react: fixupPluginRules(react),
       "react-hooks": reactHooks,
-      "jsx-a11y": jsxA11y,
-      import: importPlugin,
+      "jsx-a11y": fixupPluginRules(jsxA11y),
     },
     settings: {
       react: { version: "detect" },
-      "import/resolver": {
-        typescript: {
-          project: "./tsconfig.eslint.json",
-        },
-      },
     },
     rules: {
       /* React */
