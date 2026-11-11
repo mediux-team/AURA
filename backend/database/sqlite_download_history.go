@@ -31,6 +31,7 @@ type DownloadHistoryEntry struct {
 	NextRetryAt     *time.Time                   `json:"next_retry_at"` // When it's retried automatically, nil when it isn't
 	CreatedAt       time.Time                    `json:"created_at"`
 	RatingKey       string                       `json:"rating_key,omitempty"`
+	Source          string                       `json:"source"` // What added the download that failed, empty for failures from before it was saved
 }
 
 // DownloadRetryDelays is how long a failed download waits before each automatic retry, it's retried this many times
@@ -108,11 +109,13 @@ WHERE tmdb_id = ? AND library_title = ? AND edition = ? AND set_id = ?;
 UPDATE DownloadHistory
 SET media_item_title = ?, media_item_year = ?, set_title = ?, set_creator = ?, selected_types = ?, warning_count = ?,
     images_succeeded = ?, images_failed = ?, status = ?, failed_images = ?, created_at = CURRENT_TIMESTAMP,
-    next_retry_at = CASE WHEN ? IS NULL THEN NULL ELSE datetime('now', ?) END
+    next_retry_at = CASE WHEN ? IS NULL THEN NULL ELSE datetime('now', ?) END,
+    -- A retry that fails again keeps where the download came from
+    source = CASE WHEN ? = 'retry' AND source != '' THEN source ELSE ? END
 WHERE id = ?;
 `,
 			entry.MediaItemTitle, entry.MediaItemYear, entry.SetTitle, entry.SetCreator, string(selectedTypesJSON), entry.WarningCount,
-			entry.ImagesSucceeded, entry.ImagesFailed, status, string(failedImagesJSON), nextRetry, nextRetry, existingID,
+			entry.ImagesSucceeded, entry.ImagesFailed, status, string(failedImagesJSON), nextRetry, nextRetry, entry.Source, entry.Source, existingID,
 		)
 		if err != nil {
 			logAction.SetError("DB: UPDATE DownloadHistory failed", err.Error(), map[string]any{"error": err.Error()})
@@ -123,13 +126,13 @@ WHERE id = ?;
 INSERT INTO DownloadHistory (
   tmdb_id, library_title, edition, media_item_title, media_item_year,
   set_id, set_title, set_creator, selected_types, warning_count,
-  images_succeeded, images_failed, status, failed_images, next_retry_at
+  images_succeeded, images_failed, status, failed_images, next_retry_at, source
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now', ?) END);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now', ?) END, ?);
 `,
 			entry.TMDB_ID, entry.LibraryTitle, entry.Edition, entry.MediaItemTitle, entry.MediaItemYear,
 			entry.SetID, entry.SetTitle, entry.SetCreator, string(selectedTypesJSON), entry.WarningCount,
-			entry.ImagesSucceeded, entry.ImagesFailed, status, string(failedImagesJSON), nextRetry, nextRetry,
+			entry.ImagesSucceeded, entry.ImagesFailed, status, string(failedImagesJSON), nextRetry, nextRetry, entry.Source,
 		)
 		if err != nil {
 			logAction.SetError("DB: INSERT DownloadHistory failed", err.Error(), map[string]any{"error": err.Error()})
@@ -214,7 +217,7 @@ func (s *SQliteDB) GetDownloadHistoryEntry(ctx context.Context, id int64) (entry
 
 const downloadHistoryColumns = `id, tmdb_id, library_title, edition, media_item_title, media_item_year,
        set_id, set_title, set_creator, selected_types, warning_count,
-       images_succeeded, images_failed, status, failed_images, retry_count, next_retry_at, created_at`
+       images_succeeded, images_failed, status, failed_images, retry_count, next_retry_at, created_at, source`
 
 // scanDownloadHistoryEntry reads one row of downloadHistoryColumns
 func scanDownloadHistoryEntry(row interface{ Scan(dest ...any) error }) (entry DownloadHistoryEntry, err error) {
@@ -223,7 +226,7 @@ func scanDownloadHistoryEntry(row interface{ Scan(dest ...any) error }) (entry D
 	if err := row.Scan(
 		&entry.ID, &entry.TMDB_ID, &entry.LibraryTitle, &entry.Edition, &entry.MediaItemTitle, &entry.MediaItemYear,
 		&entry.SetID, &entry.SetTitle, &entry.SetCreator, &selectedTypesJSON, &entry.WarningCount,
-		&entry.ImagesSucceeded, &entry.ImagesFailed, &entry.Status, &failedImagesJSON, &entry.RetryCount, &nextRetryAt, &entry.CreatedAt,
+		&entry.ImagesSucceeded, &entry.ImagesFailed, &entry.Status, &failedImagesJSON, &entry.RetryCount, &nextRetryAt, &entry.CreatedAt, &entry.Source,
 	); err != nil {
 		return entry, err
 	}

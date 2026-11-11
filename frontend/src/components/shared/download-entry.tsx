@@ -367,11 +367,17 @@ const DownloadEntryCard: React.FC<DownloadEntryCardProps> = (props) => {
           )}
         </div>
 
-        {/* What added the job */}
-        {isQueue && (
+        {/* What added the job, or the download that failed */}
+        {isQueue ? (
           <Badge variant="outline" className="mb-2 text-xs">
             {sourceLabel(downloadSource(props.job.item.source))}
           </Badge>
+        ) : (
+          props.entry.source && (
+            <Badge variant="outline" className="mb-2 text-xs">
+              {sourceLabel(props.entry.source)}
+            </Badge>
+          )
         )}
 
         {/* Set */}

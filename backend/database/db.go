@@ -10,7 +10,7 @@ import (
 	"errors"
 )
 
-const LATEST_DB_VERSION = 17
+const LATEST_DB_VERSION = 18
 
 var Client DB
 

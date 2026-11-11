@@ -124,3 +124,39 @@ func TestDownloadHistoryRetries(t *testing.T) {
 		t.Errorf("StopDownloadRetries didn't stop the retries: %s", Err.Message)
 	}
 }
+
+func TestDownloadHistoryKeepsTheSource(t *testing.T) {
+	db := openTestMediaDB(t)
+	ctx := testContext()
+	entry := DownloadHistoryEntry{TMDB_ID: "1", LibraryTitle: "Series", MediaItemTitle: "Show", SetID: "set", SetTitle: "Set",
+		ImagesFailed: 1, FailedImages: []models.ImageDownloadResult{{ImageType: "titlecard", FailureReason: "timed out"}}}
+
+	source := func() string {
+		entries, _, Err := db.GetDownloadHistory(ctx, 10, 0)
+		if Err.Message != "" || len(entries) != 1 {
+			t.Fatalf("history = %+v %s", entries, Err.Message)
+		}
+		return entries[0].Source
+	}
+
+	entry.Source = "auto_download"
+	if Err := db.InsertDownloadHistoryEntry(ctx, entry); Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	// A retry that fails again keeps where the download came from
+	entry.Source = "retry"
+	if Err := db.InsertDownloadHistoryEntry(ctx, entry); Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	if got := source(); got != "auto_download" {
+		t.Errorf("source after a failed retry = %q, want auto_download", got)
+	}
+	// Another download that fails replaces it
+	entry.Source = "download_window"
+	if Err := db.InsertDownloadHistoryEntry(ctx, entry); Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	if got := source(); got != "download_window" {
+		t.Errorf("source = %q, want download_window", got)
+	}
+}

@@ -86,4 +86,5 @@ export interface DownloadHistoryEntry {
   next_retry_at: string | null; // When it's retried automatically, null when it isn't
   created_at: string;
   rating_key?: string;
+  source?: string; // What added the download that failed, empty for failures from before it was saved
 }
