@@ -3,6 +3,7 @@
 ### Added
 
 - Added a badge to each Download Queue item showing what added it, and a filter by source.
+- Added a `{{Source}}` variable to the Download Queue notification, with what added the set, like Download window or Retry.
 
 ### Fixed
 

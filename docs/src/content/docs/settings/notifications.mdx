@@ -49,17 +49,17 @@ Each kind of notification has a template. Turn a notification off to stop sendin
 
 If you change a template and want the original back, click **Restore Default**.
 
-| Notification                            | Sent when                                                                                                                                         |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **App Startup**                         | aura starts.                                                                                                                                      |
-| **Test Notification**                   | You test a provider.                                                                                                                              |
-| **Auto Download**                       | The Auto Download job downloads the new and updated images of one of your saved sets, with the reason for each image.                             |
-| **Download Queue**                      | A set in the [Download Queue](/AURA/how-to-use/download-queue/) finishes downloading.                                                             |
-| **Auto Download New Item**              | A set from one of your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) is downloaded for a new item. |
-| **New Sets Available for Ignored Item** | An item you ignored until a set is available now has sets on MediUX.                                                                              |
-| **Check For Media Item Changes Job**    | A saved item has changed or can no longer be found on your media server.                                                                          |
-| **Sonarr Notification**                 | The [Sonarr webhook](/AURA/sonarr-webhook-integration/) downloads title cards and season posters for a new or upgraded episode.                   |
-| **Silo Plugin**                         | A set chosen in Silo with aura's Silo plugin is downloaded. Only shown when you have a Silo media server.                                         |
+| Notification                            | Sent when                                                                                                                                           |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **App Startup**                         | aura starts.                                                                                                                                        |
+| **Test Notification**                   | You test a provider.                                                                                                                                |
+| **Auto Download**                       | The Auto Download job downloads the new and updated images of one of your saved sets, with the reason for each image.                               |
+| **Download Queue**                      | A set in the [Download Queue](/AURA/how-to-use/download-queue/) finishes downloading. `{{Source}}` is what added it, like Download window or Retry. |
+| **Auto Download New Item**              | A set from one of your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) is downloaded for a new item.   |
+| **New Sets Available for Ignored Item** | An item you ignored until a set is available now has sets on MediUX.                                                                                |
+| **Check For Media Item Changes Job**    | A saved item has changed or can no longer be found on your media server.                                                                            |
+| **Sonarr Notification**                 | The [Sonarr webhook](/AURA/sonarr-webhook-integration/) downloads title cards and season posters for a new or upgraded episode.                     |
+| **Silo Plugin**                         | A set chosen in Silo with aura's Silo plugin is downloaded. Only shown when you have a Silo media server.                                           |
 
 ## In the Config File
 

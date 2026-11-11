@@ -86,6 +86,8 @@ func SendNotification(
 	case source == models.SourceSonarrWebhook:
 		vars = utils.TemplateVars_SonarrSet(mediaItem, posterSet, downloaded, fileIssues.Errors, fileIssues.Warnings)
 	}
+	// What added the set, for the Download Queue notification
+	vars["Source"] = models.SourceLabel(source)
 	title := utils.RenderTemplate(template.Title, vars)
 	message := utils.RenderTemplate(template.Message, vars)
 	imageURL := ""

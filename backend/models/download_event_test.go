@@ -30,3 +30,17 @@ func TestDownloadEventCountsImages(t *testing.T) {
 		t.Errorf("collection event = %+v", collection)
 	}
 }
+
+func TestSourceLabel(t *testing.T) {
+	for source, want := range map[string]string{
+		"":                   "Add to Queue",
+		SourceDownloadWindow: "Download window",
+		SourceRedownload:     "Redownload",
+		SourceRetry:          "Retry",
+		"something_new":      "something_new",
+	} {
+		if got := SourceLabel(source); got != want {
+			t.Errorf("SourceLabel(%q) = %q, want %q", source, got, want)
+		}
+	}
+}

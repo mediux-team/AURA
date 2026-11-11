@@ -21,7 +21,7 @@ func DefaultNotificationTemplates() Config_NotificationTemplate {
 		DownloadQueue: Config_CustomNotification{
 			Enabled:      true,
 			Title:        "Download Queue | {{ReasonTitle}}",
-			Message:      "{{MediaItemTitle}} ({{MediaItemLibraryTitle}}){{NewLine}}Set ID: {{SetID}}{{NewLine}}{{NewLine}}{{Reason}}",
+			Message:      "{{MediaItemTitle}} ({{MediaItemLibraryTitle}}){{NewLine}}Set ID: {{SetID}}{{NewLine}}From: {{Source}}{{NewLine}}{{NewLine}}{{Reason}}",
 			IncludeImage: true,
 		},
 		NewItemAutoDownload: Config_CustomNotification{

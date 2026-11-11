@@ -70,7 +70,17 @@ func AllowedTemplateVariables(templateType string) []string {
 			ImageVariables,
 			DownloadReasonVariables,
 		)
-	case TemplateTypeDownloadQueue, TemplateTypeNewItemAutoDownload, TemplateTypeSiloPlugin:
+	case TemplateTypeDownloadQueue:
+		return mergeTemplateVariableGroups(
+			BaseTemplateVariables,
+			MediaItemVariables,
+			SetItemVariables,
+			DownloadReasonVariables,
+			[]string{
+				"{{Source}}",
+			},
+		)
+	case TemplateTypeNewItemAutoDownload, TemplateTypeSiloPlugin:
 		return mergeTemplateVariableGroups(
 			BaseTemplateVariables,
 			MediaItemVariables,

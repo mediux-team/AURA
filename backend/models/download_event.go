@@ -44,6 +44,32 @@ type DownloadEvent struct {
 }
 
 // NewDownloadEvent starts an event for a set of an item
+// sourceLabels is the name of each source, the same as on the Download Queue page
+var sourceLabels = map[string]string{
+	SourceDownloadWindow:           "Download window",
+	SourceDownloadQueue:            "Add to Queue",
+	SourceFavoriteCreatorsNewItem:  "Favorite creators, new items",
+	SourceFavoriteCreatorsAllItems: "Favorite creators, all items",
+	SourceAutoUpgrade:              "Upgrades",
+	SourceSiloPlugin:               "Silo plugin",
+	SourceAutoDownload:             "Auto Download",
+	SourceSonarrWebhook:            "Sonarr webhook",
+	SourcePlexRefresh:              "Plex refresh",
+	SourceRetry:                    "Retry",
+	SourceRedownload:               "Redownload",
+}
+
+// SourceLabel is the name of what added a Download Queue job, Add to Queue when it doesn't say
+func SourceLabel(source string) string {
+	if source == "" {
+		source = SourceDownloadQueue
+	}
+	if label, ok := sourceLabels[source]; ok {
+		return label
+	}
+	return source
+}
+
 func NewDownloadEvent(item MediaItem, set PosterSet, source, kind string) DownloadEvent {
 	if source == "" {
 		source = SourceDownloadQueue
