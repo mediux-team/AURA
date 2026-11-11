@@ -14,6 +14,7 @@ type AddItemToDownloadQueue_Request struct {
 
 type AddItemToDownloadQueue_Response struct {
 	Result string `json:"result"`
+	JobID  int64  `json:"job_id"`
 }
 
 // AddItemToDownloadQueue godoc
@@ -100,11 +101,12 @@ func AddItemToDownloadQueue(w http.ResponseWriter, r *http.Request) {
 	validateAction.Complete()
 
 	// Add the item to the download queue
-	addErr := downloadqueue.AddToQueue(ctx, req.Item)
+	jobID, addErr := downloadqueue.AddToQueueJob(ctx, req.Item)
 	if addErr.Message != "" {
 		httpx.SendResponse(w, ld, response)
 		return
 	}
+	response.JobID = jobID
 
 	response.Result = "Item added to download queue"
 	httpx.SendResponse(w, ld, response)

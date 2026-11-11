@@ -169,6 +169,18 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 	// What is saved now, so an image that fails keeps what was saved before
 	previousImages := savedImagesBySet(ctx, queueItem.MediaItem)
 
+	// A redownload gets the sets' latest images, as images that failed before weren't saved
+	if queueItem.Source == models.SourceRedownload {
+		for i, posterSet := range queueItem.PosterSets {
+			latest, latestErr := getLatestSet(ctx, posterSet.ID, posterSet.Type, queueItem.MediaItem)
+			if latestErr.Message != "" || latest.ID != posterSet.ID {
+				fileWarnings = append(fileWarnings, fmt.Sprintf("Couldn't get the latest images of set %s from MediUX, downloading the saved images", posterSet.ID))
+				continue
+			}
+			queueItem.PosterSets[i].PosterSet = latest
+		}
+	}
+
 	// Images the job downloads, for the progress
 	progress := newJobProgress(job.ID, queueItem.MediaItem.Title, countJobImages(queueItem))
 	progress.publish()

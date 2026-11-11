@@ -316,7 +316,8 @@ const SavedSetsPage: React.FC = () => {
 
   const handleRedownloadItem = async (item: DBSavedItem): Promise<void> => {
     try {
-      const response = await AddItemToDownloadQueue(item);
+      // The queue gets the sets' latest images
+      const response = await AddItemToDownloadQueue({ ...item, source: "redownload" });
       if (response.status === "error") {
         toast.error(response.error?.message || "Failed to add item to download queue");
         return;

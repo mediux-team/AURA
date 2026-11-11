@@ -19,8 +19,6 @@ export function UserPreferencesCard() {
   const setShowOnlyDownloadDefaults = useUserPreferencesStore((state) => state.setShowOnlyDownloadDefaults);
   const showDateModified = useUserPreferencesStore((state) => state.showDateModified);
   const setShowDateModified = useUserPreferencesStore((state) => state.setShowDateModified);
-  const defaultAddToQueue = useUserPreferencesStore((state) => state.defaultAddToQueue);
-  const setDefaultAddToQueue = useUserPreferencesStore((state) => state.setDefaultAddToQueue);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const setDefaultAddToDBOnly = useUserPreferencesStore((state) => state.setDefaultAddToDBOnly);
   const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
@@ -142,18 +140,6 @@ export function UserPreferencesCard() {
               <p className="text-muted-foreground">
                 This is global setting that will be applied to all media items and user sets. You can always change this
                 setting here or in the Filters section of the Media Item Page. Section.
-              </p>
-            </PopoverHelp>
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <Label>Add to Queue by Default</Label>
-          <div className="flex items-center gap-2">
-            <Switch checked={defaultAddToQueue} onCheckedChange={() => setDefaultAddToQueue(!defaultAddToQueue)} />
-            <PopoverHelp ariaLabel="help-default-add-to-queue">
-              <p className="mb-2">If checked, 'Add to Queue' will be selected when opening the download modal.</p>
-              <p className="text-muted-foreground">
-                You can still uncheck it in the download modal to download straight away.
               </p>
             </PopoverHelp>
           </div>

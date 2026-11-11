@@ -12,6 +12,7 @@ export interface AddItemToDownloadQueue_Request {
 }
 export interface AddItemToDownloadQueue_Response {
   result: string;
+  job_id: number; // The new job, to follow it in the Download Queue
 }
 
 export const AddItemToDownloadQueue = async (

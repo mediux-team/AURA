@@ -16,7 +16,6 @@ interface UserPreferences {
   downloadDefaults: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[];
   showOnlyDownloadDefaults: boolean;
   showDateModified: boolean;
-  defaultAddToQueue: boolean;
   defaultAutoAddNewCollectionItems: boolean;
   defaultAutoUpgrade: boolean;
   defaultAddToDBOnly: boolean;
@@ -41,7 +40,6 @@ interface UserPreferencesStore extends UserPreferences {
   setDownloadDefaults: (downloadDefaults: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[]) => void;
   setShowOnlyDownloadDefaults: (showOnlyDownloadDefaults: boolean) => void;
   setShowDateModified: (showDateModified: boolean) => void;
-  setDefaultAddToQueue: (defaultAddToQueue: boolean) => void;
   setDefaultAutoAddNewCollectionItems: (defaultAutoAddNewCollectionItems: boolean) => void;
   setDefaultAutoUpgrade: (defaultAutoUpgrade: boolean) => void;
   setDefaultAddToDBOnly: (defaultAddToDBOnly: boolean) => void;
@@ -60,7 +58,6 @@ const defaultPreferences = (): UserPreferences => ({
   downloadDefaults: DOWNLOAD_DEFAULT_TYPE_OPTIONS.map((option) => option.value),
   showOnlyDownloadDefaults: false,
   showDateModified: false,
-  defaultAddToQueue: false,
   defaultAutoAddNewCollectionItems: false,
   defaultAutoUpgrade: true,
   defaultAddToDBOnly: false,
@@ -74,7 +71,6 @@ const toServerPreferences = (preferences: UserPreferences): AppConfigUserPrefere
   download_defaults: preferences.downloadDefaults,
   show_only_download_defaults: preferences.showOnlyDownloadDefaults,
   show_date_modified: preferences.showDateModified,
-  default_add_to_queue: preferences.defaultAddToQueue,
   default_auto_add_new_collection_items: preferences.defaultAutoAddNewCollectionItems,
   default_auto_upgrade: preferences.defaultAutoUpgrade,
   default_add_to_db_only: preferences.defaultAddToDBOnly,
@@ -88,7 +84,6 @@ const fromServerPreferences = (preferences: AppConfigUserPreferences): UserPrefe
   downloadDefaults: preferences.download_defaults ?? [],
   showOnlyDownloadDefaults: preferences.show_only_download_defaults ?? false,
   showDateModified: preferences.show_date_modified ?? false,
-  defaultAddToQueue: preferences.default_add_to_queue ?? false,
   defaultAutoAddNewCollectionItems: preferences.default_auto_add_new_collection_items ?? false,
   defaultAutoUpgrade: preferences.default_auto_upgrade ?? true,
   defaultAddToDBOnly: preferences.default_add_to_db_only ?? false,
@@ -159,10 +154,6 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
         set({ showDateModified });
         queueServerSave();
       },
-      setDefaultAddToQueue: (defaultAddToQueue: boolean) => {
-        set({ defaultAddToQueue });
-        queueServerSave();
-      },
       setDefaultAutoAddNewCollectionItems: (defaultAutoAddNewCollectionItems: boolean) => {
         set({ defaultAutoAddNewCollectionItems });
         queueServerSave();
@@ -207,7 +198,6 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
         downloadDefaults: state.downloadDefaults,
         showOnlyDownloadDefaults: state.showOnlyDownloadDefaults,
         showDateModified: state.showDateModified,
-        defaultAddToQueue: state.defaultAddToQueue,
         defaultAutoAddNewCollectionItems: state.defaultAutoAddNewCollectionItems,
         defaultAutoUpgrade: state.defaultAutoUpgrade,
         defaultAddToDBOnly: state.defaultAddToDBOnly,
@@ -241,7 +231,6 @@ const syncFromServer = () => {
     downloadDefaults: store.downloadDefaults,
     showOnlyDownloadDefaults: store.showOnlyDownloadDefaults,
     showDateModified: store.showDateModified,
-    defaultAddToQueue: store.defaultAddToQueue,
     defaultAutoAddNewCollectionItems: store.defaultAutoAddNewCollectionItems,
     defaultAutoUpgrade: store.defaultAutoUpgrade ?? true,
     defaultAddToDBOnly: store.defaultAddToDBOnly,

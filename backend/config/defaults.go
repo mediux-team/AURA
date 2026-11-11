@@ -103,7 +103,6 @@ func DefaultUserPreferences() Config_UserPreferences {
 		DownloadDefaults:                 append([]string{}, DownloadImageTypes...),
 		ShowOnlyDownloadDefaults:         false,
 		ShowDateModified:                 false,
-		DefaultAddToQueue:                false,
 		DefaultAutoAddNewCollectionItems: false,
 		DefaultAutoUpgrade:               true,
 		DefaultAddToDBOnly:               false,

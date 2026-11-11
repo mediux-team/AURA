@@ -126,7 +126,6 @@ TMDB.ApiToken: string
 UserPreferences.AutoDownloadNewItems: bool
 UserPreferences.AutoUpgradeSets: bool
 UserPreferences.DefaultAddToDBOnly: bool
-UserPreferences.DefaultAddToQueue: bool
 UserPreferences.DefaultAutoAddNewCollectionItems: bool
 UserPreferences.DefaultAutoUpgrade: bool
 UserPreferences.DownloadDefaults: []string

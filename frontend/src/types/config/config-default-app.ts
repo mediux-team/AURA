@@ -79,7 +79,6 @@ export const defaultAppConfig = (): AppConfig =>
       download_defaults: DOWNLOAD_DEFAULT_TYPE_OPTIONS.map((option) => option.value),
       show_only_download_defaults: false,
       show_date_modified: false,
-      default_add_to_queue: false,
       default_auto_add_new_collection_items: false,
       default_auto_upgrade: true,
       default_add_to_db_only: false,

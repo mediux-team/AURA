@@ -60,7 +60,7 @@ func testConfig() Config {
 		{Type: "sonarr", Library: "TV Shows", URL: "http://sonarr:8989", ApiToken: "abc"},
 	}
 	cfg.UserPreferences.DownloadDefaults = []string{"poster", "titlecard"}
-	cfg.UserPreferences.DefaultAddToQueue = true
+	cfg.UserPreferences.DefaultAddToDBOnly = true
 	return cfg
 }
 

@@ -332,7 +332,6 @@ type Config_UserPreferences struct {
 	DownloadDefaults                 []string                  `json:"download_defaults" yaml:"DownloadDefaults"`                                     // Image types selected by default in the Download Modal.
 	ShowOnlyDownloadDefaults         bool                      `json:"show_only_download_defaults" yaml:"ShowOnlyDownloadDefaults"`                   // Whether to only show the default image types in the Download Modal.
 	ShowDateModified                 bool                      `json:"show_date_modified" yaml:"ShowDateModified"`                                    // Whether to show the date modified on poster sets.
-	DefaultAddToQueue                bool                      `json:"default_add_to_queue" yaml:"DefaultAddToQueue"`                                 // Whether "Add to Queue" is checked by default in the Download Modal.
 	DefaultAddToDBOnly               bool                      `json:"default_add_to_db_only" yaml:"DefaultAddToDBOnly"`                              // Whether "Add to Database Only" is checked by default in the Download Modal.
 	DefaultAutoAddNewCollectionItems bool                      `json:"default_auto_add_new_collection_items" yaml:"DefaultAutoAddNewCollectionItems"` // Whether "Auto Add New Collection Items" is checked by default in the Download Modal.
 	DefaultAutoUpgrade               bool                      `json:"default_auto_upgrade" yaml:"DefaultAutoUpgrade"`                                // Whether "Auto Upgrade" is checked by default in the Download Modal.

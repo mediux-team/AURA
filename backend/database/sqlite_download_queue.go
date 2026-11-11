@@ -274,6 +274,36 @@ WHERE id = ? AND status = 'pending';
 	return count > 0, logging.LogErrorInfo{}
 }
 
+// MoveDownloadQueueJobAheadOfOthers puts a waiting job before the waiting jobs that weren't added from the download window
+func (s *SQliteDB) MoveDownloadQueueJobAheadOfOthers(ctx context.Context, jobID int64) (moved bool, Err logging.LogErrorInfo) {
+	ctx, logAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Move Download Queue Job %d ahead of the other jobs", jobID), logging.LevelDebug)
+	defer logAction.Complete()
+
+	if s == nil || s.conn == nil {
+		logAction.SetError("DB: connection is nil", "", map[string]any{})
+		return false, *logAction.Error
+	}
+
+	// A second before the first waiting job from anywhere else, so jobs from the download window keep their order
+	result, err := s.conn.ExecContext(ctx, `
+UPDATE DownloadQueueJobs
+SET created_at = datetime((
+    SELECT MIN(created_at) FROM DownloadQueueJobs
+    WHERE status = 'pending' AND id != ? AND COALESCE(json_extract(payload, '$.source'), '') != 'download_window'
+), '-1 second')
+WHERE id = ? AND status = 'pending' AND EXISTS (
+    SELECT 1 FROM DownloadQueueJobs
+    WHERE status = 'pending' AND id != ? AND COALESCE(json_extract(payload, '$.source'), '') != 'download_window'
+);
+`, jobID, jobID, jobID)
+	if err != nil {
+		logAction.SetError("DB: move DownloadQueueJobs ahead failed", err.Error(), map[string]any{"error": err.Error(), "job_id": jobID})
+		return false, *logAction.Error
+	}
+	count, _ := result.RowsAffected()
+	return count > 0, logging.LogErrorInfo{}
+}
+
 // ResetInterruptedDownloadQueueJobs puts jobs another worker was processing back in the queue.
 // They were stopped part way when aura restarted, so they run again from the start.
 func (s *SQliteDB) ResetInterruptedDownloadQueueJobs(ctx context.Context, workerID string) (count int64, Err logging.LogErrorInfo) {

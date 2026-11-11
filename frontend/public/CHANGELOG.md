@@ -13,10 +13,16 @@
 
 ### Updated
 
+- The download window now downloads through the Download Queue, before the downloads aura starts by itself. You can close the window and the downloads keep going.
+- Redownload on the Saved Sets page now downloads the set's latest images from MediUX.
 - Auto Download, the Sonarr webhook and Plex refreshes now download through the Download Queue, with only the images that changed, and one notification per set listing why each image was downloaded.
 - Retrying a failed download now gets the set's latest images from MediUX, and only downloads the images that failed.
 - Updated frontend dependencies to latest versions for better security and performance.
 - Updated backend dependencies to latest versions for better security and performance.
+
+### Removed
+
+- Removed the Add to Queue option and the Add to Queue by Default preference, as every download goes through the Download Queue now.
 
 ---
 

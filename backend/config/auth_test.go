@@ -93,7 +93,7 @@ Auth:
 
 func TestParseConfigYAMLDefaultAutoUpgrade(t *testing.T) {
 	// Older config files don't have it, so new sets keep Auto Upgrade on
-	cfg, err := ParseConfigYAML([]byte("UserPreferences:\n  DefaultAddToQueue: true\n"))
+	cfg, err := ParseConfigYAML([]byte("UserPreferences:\n  DefaultAddToDBOnly: true\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

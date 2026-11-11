@@ -57,8 +57,6 @@ function MediaItemFilterContent({
   const setShowOnlyDownloadDefaults = useUserPreferencesStore((state) => state.setShowOnlyDownloadDefaults);
   const showDateModified = useUserPreferencesStore((state) => state.showDateModified);
   const setShowDateModified = useUserPreferencesStore((state) => state.setShowDateModified);
-  const defaultAddToQueue = useUserPreferencesStore((state) => state.defaultAddToQueue);
-  const setDefaultAddToQueue = useUserPreferencesStore((state) => state.setDefaultAddToQueue);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const setDefaultAddToDBOnly = useUserPreferencesStore((state) => state.setDefaultAddToDBOnly);
   const defaultAutoAddNewCollectionItems = useUserPreferencesStore((state) => state.defaultAutoAddNewCollectionItems);
@@ -140,28 +138,6 @@ function MediaItemFilterContent({
             <p className="text-muted-foreground">
               This is a global setting that will be applied to all media items and user sets. You can always change this
               setting in this filter, or in the Settings Page{" "}
-              <Link href="/settings#preferences-section" className="underline">
-                User Preferences
-              </Link>{" "}
-              Section.
-            </p>
-          </PopoverHelp>
-        </div>
-        <div className="flex items-center space-x-2 justify-between mt-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              className="ml-0"
-              checked={defaultAddToQueue}
-              onCheckedChange={() => setDefaultAddToQueue(!defaultAddToQueue)}
-            />{" "}
-            <Label>Add to Queue by default</Label>
-          </div>
-
-          <PopoverHelp ariaLabel="help-default-add-to-queue">
-            <p className="mb-2">If checked, 'Add to Queue' will be selected when opening the download modal.</p>
-            <p className="text-muted-foreground">
-              This is global setting that will be applied to all downloads. You can always change this setting in this
-              filter, or in the Settings Page{" "}
               <Link href="/settings#preferences-section" className="underline">
                 User Preferences
               </Link>{" "}

@@ -102,3 +102,36 @@ func TestMoveDownloadQueueJobToTop(t *testing.T) {
 		t.Error("a running job shouldn't move")
 	}
 }
+
+func TestMoveDownloadQueueJobAheadOfOthers(t *testing.T) {
+	db := openTestMediaDB(t)
+	exec(t, db.conn, `INSERT INTO DownloadQueueJobs (id, tmdb_id, library_title, media_item_title, payload, status, created_at) VALUES
+		(1, '1', 'Movies', 'Auto', '{"source":"auto_download"}', 'pending', '2026-01-01 00:00:05'),
+		(2, '2', 'Movies', 'Upgrade', '{"source":"auto_upgrade"}', 'pending', '2026-01-01 00:00:06'),
+		(3, '3', 'Movies', 'First Window', '{"source":"download_window"}', 'pending', '2026-01-01 00:00:07'),
+		(4, '4', 'Movies', 'Second Window', '{"source":"download_window"}', 'pending', '2026-01-01 00:00:08')`)
+
+	for _, id := range []int64{3, 4} {
+		if moved, Err := db.MoveDownloadQueueJobAheadOfOthers(testContext(), id); Err.Message != "" || !moved {
+			t.Fatalf("move %d = %v %s", id, moved, Err.Message)
+		}
+	}
+	jobs, Err := db.GetAllDownloadQueueJobs(testContext())
+	if Err.Message != "" {
+		t.Fatal(Err.Message)
+	}
+	order := []int64{}
+	for _, job := range jobs {
+		order = append(order, job.ID)
+	}
+	// The download window's jobs first, in the order they were added
+	if want := []int64{3, 4, 1, 2}; !slices.Equal(order, want) {
+		t.Errorf("order = %v, want %v", order, want)
+	}
+
+	// Without other waiting jobs, a window job stays where it is
+	exec(t, db.conn, `DELETE FROM DownloadQueueJobs WHERE id IN (1, 2)`)
+	if moved, _ := db.MoveDownloadQueueJobAheadOfOthers(testContext(), 4); moved {
+		t.Error("a job with only window jobs waiting shouldn't move")
+	}
+}

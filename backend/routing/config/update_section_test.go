@@ -93,14 +93,14 @@ func TestUpdateConfigSectionSavesOnlyTheChangedField(t *testing.T) {
 	store := setupConfigSectionTest(t)
 	before := config.Current.Clone()
 
-	code, response, errorMessage := patchConfigSection(t, "user_preferences", `{"default_add_to_queue": true}`)
+	code, response, errorMessage := patchConfigSection(t, "user_preferences", `{"default_add_to_db_only": true}`)
 	if code != http.StatusOK || errorMessage != "" {
 		t.Fatalf("status %d, error %q", code, errorMessage)
 	}
 	if !response.Changed {
 		t.Error("response.Changed = false, want true")
 	}
-	if !response.Status.CurrentSetup.UserPreferences.DefaultAddToQueue {
+	if !response.Status.CurrentSetup.UserPreferences.DefaultAddToDBOnly {
 		t.Error("response should include the updated config")
 	}
 	// The frontend stores this status, so it must be complete
@@ -108,16 +108,16 @@ func TestUpdateConfigSectionSavesOnlyTheChangedField(t *testing.T) {
 		t.Error("response status should include app_fully_loaded")
 	}
 
-	if !config.Current.UserPreferences.DefaultAddToQueue {
+	if !config.Current.UserPreferences.DefaultAddToDBOnly {
 		t.Error("config.Current not updated")
 	}
-	if store.values["UserPreferences.DefaultAddToQueue"] != "true" {
-		t.Errorf("stored value = %s, want true", store.values["UserPreferences.DefaultAddToQueue"])
+	if store.values["UserPreferences.DefaultAddToDBOnly"] != "true" {
+		t.Errorf("stored value = %s, want true", store.values["UserPreferences.DefaultAddToDBOnly"])
 	}
 
 	// Everything else is unchanged, including fields hidden from the frontend
 	after := config.Current.Clone()
-	after.UserPreferences.DefaultAddToQueue = false
+	after.UserPreferences.DefaultAddToDBOnly = false
 	if !configEqual(before, after) {
 		t.Error("other settings changed")
 	}

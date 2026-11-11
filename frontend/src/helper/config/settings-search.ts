@@ -339,14 +339,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   {
     sectionId: "user-preferences",
     sectionLabel: "User Preferences",
-    label: "Add to Queue by Default",
-    description: 'Check "Add to Queue" when downloading',
-    keywords: ["queue", "download"],
-    configPath: "default_add_to_queue",
-  },
-  {
-    sectionId: "user-preferences",
-    sectionLabel: "User Preferences",
     label: "Add to Database Only by Default",
     description: 'Check "Add to Database Only" when downloading',
     keywords: ["database", "save", "download"],

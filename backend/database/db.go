@@ -161,6 +161,9 @@ type DB interface {
 	// Make a waiting Download Queue Job the next one to run
 	MoveDownloadQueueJobToTop(ctx context.Context, jobID int64) (moved bool, Err logging.LogErrorInfo)
 
+	// Put a waiting Download Queue Job before the waiting jobs that weren't added from the download window
+	MoveDownloadQueueJobAheadOfOthers(ctx context.Context, jobID int64) (moved bool, Err logging.LogErrorInfo)
+
 	// Insert a Download History entry, or update the one for the same item and set
 	InsertDownloadHistoryEntry(ctx context.Context, entry DownloadHistoryEntry) (Err logging.LogErrorInfo)
 
@@ -625,6 +628,13 @@ func MoveDownloadQueueJobToTop(ctx context.Context, jobID int64) (moved bool, Er
 		return false, logging.Error_DBClientNotInitialized()
 	}
 	return Client.MoveDownloadQueueJobToTop(ctx, jobID)
+}
+
+func MoveDownloadQueueJobAheadOfOthers(ctx context.Context, jobID int64) (moved bool, Err logging.LogErrorInfo) {
+	if Client == nil {
+		return false, logging.Error_DBClientNotInitialized()
+	}
+	return Client.MoveDownloadQueueJobAheadOfOthers(ctx, jobID)
 }
 
 func InsertDownloadHistoryEntry(ctx context.Context, entry DownloadHistoryEntry) (Err logging.LogErrorInfo) {

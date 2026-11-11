@@ -11,18 +11,22 @@ import (
 )
 
 func AddToQueue(ctx context.Context, saveItem models.DBSavedItem) (Err logging.LogErrorInfo) {
+	_, Err = AddToQueueJob(ctx, saveItem)
+	return Err
+}
+
+// AddToQueueJob adds the item to the Download Queue and returns its job ID. Jobs from the download window go before the others.
+func AddToQueueJob(ctx context.Context, saveItem models.DBSavedItem) (jobID int64, Err logging.LogErrorInfo) {
 	ctx, logAction := logging.AddSubActionToContext(ctx,
 		fmt.Sprintf("Add Entry for %s",
 			utils.MediaItemInfo(saveItem.MediaItem)),
 		logging.LevelDebug)
 	defer logAction.Complete()
 
-	Err = logging.LogErrorInfo{}
-
 	jobID, addErr := database.EnqueueDownloadQueueJob(ctx, saveItem)
 	if addErr.Message != "" {
 		logAction.SetErrorFromInfo(addErr)
-		return *logAction.Error
+		return 0, *logAction.Error
 	}
 
 	logAction.AppendResult("job_id", jobID)
@@ -42,7 +46,19 @@ func AddToQueue(ctx context.Context, saveItem models.DBSavedItem) (Err logging.L
 		},
 	})
 
+	// The download window's jobs go before the jobs that run in the background
+	if saveItem.Source == models.SourceDownloadWindow {
+		moved, moveErr := database.MoveDownloadQueueJobAheadOfOthers(ctx, jobID)
+		if moveErr.Message != "" {
+			logAction.AppendWarning("move_ahead", moveErr.Message)
+		} else if moved {
+			if jobs, jobsErr := database.GetAllDownloadQueueJobs(ctx); jobsErr.Message == "" {
+				QueueBroadcaster.Publish(QueueEvent{Type: "queue_reordered", Jobs: jobs})
+			}
+		}
+	}
+
 	SignalNewJob()
 
-	return Err
+	return jobID, logging.LogErrorInfo{}
 }

@@ -1,18 +1,13 @@
 "use client";
 
 import type { CollectionItem } from "@/app/collections/page";
-import {
-  compareSeasonImages,
-  formatDownloadProgressShortText,
-  formatDownloadProgressText,
-} from "@/helper/format-download-progress";
+import { formatDownloadProgressShortText, formatDownloadProgressText } from "@/helper/format-download-progress";
 import { formatDownloadSize } from "@/helper/format-download-size";
 import { upsertSavedSets } from "@/helper/media-item-update-saved-sets";
 import { AddNewItemToDB } from "@/services/database/add";
 import type { DownloadResult } from "@/services/database/add";
-import { DownloadImageFileForCollectionItem } from "@/services/downloads/download-collection-image";
-import { downloadImageFileForMediaItem } from "@/services/downloads/download-image";
 import { AddItemToDownloadQueue } from "@/services/downloads/queue-add";
+import { subscribeToDownloadQueue } from "@/services/downloads/queue-stream";
 import { GetMediaItemDetails } from "@/services/mediaserver/get-media-item-details";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -21,7 +16,6 @@ import {
   Database,
   DatabaseZap,
   Download,
-  ListEnd,
   Loader,
   OctagonMinus,
   RefreshCcw,
@@ -70,6 +64,7 @@ import { useSearchQueryStore } from "@/lib/stores/global-store-search-query";
 import { useUserPreferencesStore } from "@/lib/stores/global-user-preferences";
 
 import type { DBPosterSetDetail, DBSavedItem, PosterSet } from "@/types/database/db-poster-set";
+import type { DownloadQueueJob, DownloadQueueProgress } from "@/types/database/download-queue";
 import type { MediaItem, SelectedTypes } from "@/types/media-and-posters/media-item-and-library";
 import type { BaseSetInfo, CollectionItemImageFile, ImageFile, SetSummary } from "@/types/media-and-posters/sets";
 import {
@@ -96,15 +91,6 @@ interface AssetTypeFormValues {
 
 type TaskStatus = "pending" | "in-progress" | "completed" | "failed" | "skipped";
 
-type DownloadTaskPayload = {
-  kind: "download";
-  itemKey: string;
-  itemTitle: string;
-  imageFile: ImageFile;
-  fileName: string;
-  mediaItem: MediaItem;
-};
-
 type AddToDBTaskPayload = {
   kind: "addToDB";
   itemKey: string;
@@ -115,20 +101,15 @@ type AddToDBTaskPayload = {
   downloadResult?: DownloadResult; // The images downloaded for the set, for the statistics
 };
 
+// Downloads the item's images, or the collection's own images, in the Download Queue
 type AddToQueueTaskPayload = {
   kind: "addToQueue";
   itemKey: string;
   itemTitle: string;
   dbItem: DBSavedItem;
-};
-
-// Applies a collection's own poster or backdrop to the media server collection
-type CollectionImageTaskPayload = {
-  kind: "collectionImage";
-  itemKey: string;
-  itemTitle: string;
-  collectionItem: CollectionItem;
-  imageFile: CollectionItemImageFile;
+  imageCount: number; // The images the job downloads, until the queue says
+  formItem?: FormItemDisplay; // Marked as saved on the page when the job finishes
+  jobId?: number; // The job in the Download Queue, once it's added
 };
 
 // Non-Retryable “record only” task (e.g. fetch latest media item failed)
@@ -138,8 +119,7 @@ type NoteTaskPayload = {
   itemTitle: string;
 };
 
-type TaskPayload =
-  DownloadTaskPayload | AddToDBTaskPayload | AddToQueueTaskPayload | CollectionImageTaskPayload | NoteTaskPayload;
+type TaskPayload = AddToDBTaskPayload | AddToQueueTaskPayload | NoteTaskPayload;
 
 type Task = {
   id: string;
@@ -166,39 +146,36 @@ type DownloadProgress = {
 // helper for stable ids
 const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-// derive progress counts from tasks (uses totalPlanned so total doesn't grow as tasks are added)
-const getOverallCounts = (state: DownloadProgress) => {
-  const allTasks = Object.values(state.items).flatMap((i) => i.tasks || []);
-
-  // Notes shouldn't affect progress totals
-  const relevant = allTasks.filter((t) => t.payload.kind !== "note");
-
-  const skipped = relevant.filter((t) => t.status === "skipped").length;
-  const done = relevant.filter((t) => t.status === "completed" || t.status === "failed").length;
-
-  // Remove skipped tasks from the effective total so progress doesn't jump early.
-  const planned = state.totalPlanned || relevant.length || 0;
-  const total = Math.max(0, planned - skipped);
-
-  // If every relevant task is skipped, treat the run as fully resolved.
-  if (total === 0 && relevant.length > 0) {
-    return { done: 1, total: 1 };
+// derive progress counts from tasks, with the images of the Download Queue jobs (uses totalPlanned so total doesn't grow as tasks are added)
+const getOverallCounts = (state: DownloadProgress, jobProgress: Record<number, DownloadQueueProgress>) => {
+  let done = 0;
+  let total = 0;
+  for (const task of Object.values(state.items).flatMap((i) => i.tasks || [])) {
+    // Notes and skipped tasks shouldn't affect progress totals
+    if (task.payload.kind === "note" || task.status === "skipped") continue;
+    const finished = task.status === "completed" || task.status === "failed";
+    if (task.payload.kind === "addToQueue") {
+      const job = task.payload.jobId ? jobProgress[task.payload.jobId] : undefined;
+      const images = job?.total || task.payload.imageCount || 1;
+      total += images;
+      done += finished ? images : (job?.done ?? 0);
+    } else {
+      total += 1;
+      if (finished) done += 1;
+    }
   }
 
-  if (total === 0) {
-    return { done: 0, total: 1 };
-  }
-
-  return { done, total };
+  total = Math.max(total, state.totalPlanned);
+  if (total === 0) return { done: 0, total: 1 };
+  return { done: Math.min(done, total), total };
 };
 
 // derive progress (0..100) from tasks
-const getOverallProgress = (state: DownloadProgress) => {
-  const { done, total } = getOverallCounts(state);
+const getOverallProgress = (state: DownloadProgress, jobProgress: Record<number, DownloadQueueProgress>) => {
+  const { done, total } = getOverallCounts(state, jobProgress);
   return Math.round((done / total) * 100);
 };
 
-// derive “errors per item” for the accordion
 const getErrorsByItem = (state: DownloadProgress) =>
   Object.values(state.items)
     .map((i) => ({
@@ -208,7 +185,33 @@ const getErrorsByItem = (state: DownloadProgress) =>
     }))
     .filter((x) => x.errors.length > 0);
 
-const DOWNLOAD_BATCH_SIZE = 5;
+// queuedImageCount is how many of the set's images a Download Queue job downloads for the item, like the queue counts them
+const queuedImageCount = (images: ImageFile[], types: string[], mediaItem: MediaItem) =>
+  images.filter((img) => {
+    const seasons = mediaItem.series?.seasons ?? [];
+    switch (img.type) {
+      case "poster":
+        return types.includes("poster");
+      case "backdrop":
+        return types.includes("backdrop");
+      case "season_poster":
+        return (
+          types.includes(img.season_number === 0 ? "special_season_poster" : "season_poster") &&
+          seasons.some((season) => season.season_number === img.season_number)
+        );
+      case "titlecard":
+        return (
+          types.includes("titlecard") &&
+          seasons.some(
+            (season) =>
+              season.season_number === img.season_number &&
+              season.episodes.some((ep) => ep.episode_number === img.episode_number)
+          )
+        );
+      default:
+        return false;
+    }
+  }).length;
 
 // Unique key for a media item in the form
 // Some media servers (e.g. Silo) use the same rating key for an item in every library it is in,
@@ -253,6 +256,9 @@ export interface DownloadModalProps {
 
 // The key of the collection images in the download progress
 const COLLECTION_PROGRESS_KEY = "collection";
+
+// The error of a job that was removed from the Download Queue before it finished
+const STOPPED_ERROR = "Removed from the Download Queue before it finished";
 
 interface DuplicateMap {
   [mediaItemKey: string]: {
@@ -342,9 +348,12 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     user_created: baseSetInfo.user_created,
   };
 
-  // State - Add to Queue Only (defaults to the user preference)
-  const defaultAddToQueue = useUserPreferencesStore((state) => state.defaultAddToQueue);
-  const [addToQueueOnly, setAddToQueueOnly] = useState(defaultAddToQueue);
+  // The window's jobs in the Download Queue, their progress, and the task each job is for
+  const [jobProgress, setJobProgress] = useState<Record<number, DownloadQueueProgress>>({});
+  const queueJobsRef = useRef<Record<number, AddToQueueTaskPayload & { taskId: string }>>({});
+  const [waitingJobs, setWaitingJobs] = useState(0);
+  const [followingQueue, setFollowingQueue] = useState(false);
+  const [queuingDone, setQueuingDone] = useState(false);
   const defaultAddToDBOnly = useUserPreferencesStore((state) => state.defaultAddToDBOnly);
   const autoUpgradeSets = useUserPreferencesStore((state) => state.autoUpgradeSets);
   const defaultAutoUpgrade = useUserPreferencesStore((state) => state.defaultAutoUpgrade);
@@ -385,6 +394,12 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     cancelRef.current = true;
     setIsMounted(false);
     resetProgress();
+    // The jobs keep going in the Download Queue
+    queueJobsRef.current = {};
+    setJobProgress({});
+    setWaitingJobs(0);
+    setFollowingQueue(false);
+    setQueuingDone(false);
     setButtonTexts({
       cancel: "Cancel",
       download: "Download",
@@ -503,18 +518,13 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         ...prev,
         download: "Add to Database",
       }));
-    } else if (addToQueueOnly) {
-      setButtonTexts((prev) => ({
-        ...prev,
-        download: "Add to Queue",
-      }));
     } else {
       setButtonTexts((prev) => ({
         ...prev,
         download: "Download",
       }));
     }
-  }, [addToQueueOnly, watchSelectedOptions]);
+  }, [watchSelectedOptions]);
 
   useEffect(() => {
     const dups = findDuplicateMediaItems(formItems);
@@ -756,7 +766,9 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
 
   const getAssetStatus = (itemKey: string, assetType: TYPE_DOWNLOAD_IMAGE_TYPE_OPTIONS): TaskStatus | undefined => {
     const tasks = progress.items[itemKey]?.tasks ?? [];
-    const relevant = tasks.filter((t) => t.payload.kind === "download" && t.payload.imageFile.type === assetType);
+    const relevant = tasks.filter(
+      (t) => t.payload.kind === "addToQueue" && t.payload.dbItem.poster_sets[0]?.selected_types?.[assetType]
+    );
     if (relevant.length === 0) return undefined;
 
     // Aggregate status so multi-file types don't "lose" completion due to a final skipped task.
@@ -770,30 +782,6 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   // Mark the item as saved on the page
   const markItemSaved = (latestMediaItem: MediaItem, item: FormItemDisplay, selectedTypes: SelectedTypes) => {
     onDownloadComplete?.(upsertSavedSets(latestMediaItem, item.Set.id, item.Set.user_created, selectedTypes));
-  };
-
-  const runDownloadTask = async (taskId: string, payload: DownloadTaskPayload): Promise<boolean> => {
-    updateTask(taskId, (t) => ({
-      ...t,
-      status: "in-progress",
-      attempts: (t.attempts ?? 0) + 1,
-      error: undefined,
-    }));
-
-    try {
-      const response = await downloadImageFileForMediaItem(payload.imageFile, payload.mediaItem, payload.fileName);
-
-      if (response.status === "error") {
-        throw new Error(response.error?.message || "Unknown error");
-      }
-
-      updateTask(taskId, (t) => ({ ...t, status: "completed" }));
-      return true;
-    } catch (error) {
-      const message = `"${payload.itemTitle}" - ${payload.fileName} - ${error instanceof Error ? error.message : "Unknown error"}`;
-      updateTask(taskId, (t) => ({ ...t, status: "failed", error: message }));
-      return false;
-    }
   };
 
   const runAddToDBTask = async (taskId: string, payload: AddToDBTaskPayload): Promise<boolean> => {
@@ -835,54 +823,24 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       attempts: (t.attempts ?? 0) + 1,
       error: undefined,
     }));
-    setCurrentText(`Adding "${payload.itemTitle}" to queue`, "Adding to queue");
+    setCurrentText(`Adding "${payload.itemTitle}" to the Download Queue`, "Adding to the queue");
 
     try {
       const resp = await AddItemToDownloadQueue(payload.dbItem);
-      if (resp.status === "error") {
+      if (resp.status === "error" || !resp.data?.job_id) {
         throw new Error(resp.error?.message || (typeof resp.error === "string" ? resp.error : "Unknown error"));
       }
-      updateTask(taskId, (t) => ({ ...t, status: "completed" }));
+      // It stays in progress until the job finishes in the Download Queue
+      const jobId = resp.data.job_id;
+      queueJobsRef.current[jobId] = { ...payload, jobId, taskId };
+      setWaitingJobs((n) => n + 1);
+      updateTask(taskId, (t) => ({ ...t, payload: { ...payload, jobId } }));
       return true;
     } catch (error) {
       updateTask(taskId, (t) => ({
         ...t,
         status: "failed",
         error: `"${payload.itemTitle}" - Add to queue failed - ${error instanceof Error ? error.message : "Unknown error"}`,
-      }));
-      return false;
-    }
-  };
-
-  const runCollectionImageTask = async (taskId: string, payload: CollectionImageTaskPayload): Promise<boolean> => {
-    updateTask(taskId, (t) => ({
-      ...t,
-      status: "in-progress",
-      attempts: (t.attempts ?? 0) + 1,
-      error: undefined,
-    }));
-    const label =
-      DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS.find((opt) => opt.value === payload.imageFile.type)?.label ??
-      payload.imageFile.type;
-    setCurrentText(`Applying ${label} to "${payload.itemTitle}"`, `Applying ${label}`);
-
-    try {
-      const resp = await DownloadImageFileForCollectionItem(
-        payload.imageFile.type,
-        payload.collectionItem,
-        payload.imageFile,
-        setSummary
-      );
-      if (resp.status === "error") {
-        throw new Error(resp.error?.message || "Unknown error");
-      }
-      updateTask(taskId, (t) => ({ ...t, status: "completed" }));
-      return true;
-    } catch (error) {
-      updateTask(taskId, (t) => ({
-        ...t,
-        status: "failed",
-        error: `"${payload.itemTitle}" - ${label} - ${error instanceof Error ? error.message : "Unknown error"}`,
       }));
       return false;
     }
@@ -895,39 +853,82 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     // NOTE: "note" tasks are not retryable
     if (t.payload.kind === "note") return;
 
-    if (t.payload.kind === "download") {
-      await runDownloadTask(taskId, t.payload);
-    } else if (t.payload.kind === "addToDB") {
+    if (t.payload.kind === "addToDB") {
       await runAddToDBTask(taskId, t.payload);
     } else if (t.payload.kind === "addToQueue") {
+      setFollowingQueue(true);
+      setQueuingDone(true);
       await runAddToQueueTask(taskId, t.payload);
-    } else if (t.payload.kind === "collectionImage") {
-      await runCollectionImageTask(taskId, t.payload);
     }
 
     setButtonTexts((prev) => ({ ...prev, download: "Download Again" }));
   };
 
-  const runInBatches = async <T,>(
-    jobs: T[],
-    batchSize: number,
-    worker: (job: T) => Promise<boolean>
-  ): Promise<boolean[]> => {
-    const results: boolean[] = [];
-
-    for (let i = 0; i < jobs.length; i += batchSize) {
-      if (cancelRef.current) break;
-
-      const batch = jobs.slice(i, i + batchSize);
-      const settled = await Promise.allSettled(batch.map((job) => worker(job)));
-
-      for (const entry of settled) {
-        results.push(entry.status === "fulfilled" ? entry.value : false);
-      }
+  // finishQueueJob records how the window's job ended in the Download Queue
+  const finishQueueJob = (jobId: number, status: "completed" | "failed", error?: string) => {
+    const job = queueJobsRef.current[jobId];
+    if (!job) return;
+    delete queueJobsRef.current[jobId];
+    updateTask(job.taskId, (t) => ({ ...t, status, error }));
+    // The set is saved when its job finishes, unless the job was stopped
+    if (job.formItem && error !== STOPPED_ERROR) {
+      markItemSaved(job.dbItem.media_item, job.formItem, job.dbItem.poster_sets[0].selected_types);
     }
-
-    return results;
+    setWaitingJobs((n) => Math.max(0, n - 1));
   };
+
+  // Follows the window's jobs in the Download Queue while it's open
+  useEffect(() => {
+    if (!followingQueue) return;
+    return subscribeToDownloadQueue({
+      onSnapshot: (jobs) => {
+        // A job that isn't in the queue anymore already finished
+        const inQueue = new Set((jobs ?? []).map((job) => job.id));
+        for (const jobId of Object.keys(queueJobsRef.current).map(Number)) {
+          if (!inQueue.has(jobId)) finishQueueJob(jobId, "completed");
+        }
+      },
+      onJobStarted: (job) => {
+        if (queueJobsRef.current[job.id]) setCurrentText(`Downloading ${job.media_item_title}`, "Downloading");
+      },
+      onJobProgress: (jobProgressUpdate) => {
+        if (!queueJobsRef.current[jobProgressUpdate.job_id]) return;
+        setJobProgress((prev) => ({ ...prev, [jobProgressUpdate.job_id]: jobProgressUpdate }));
+        const image = jobProgressUpdate.active[0];
+        if (image) {
+          setCurrentText(
+            formatDownloadProgressText(
+              image,
+              jobProgressUpdate.media_item_title,
+              Math.min(jobProgressUpdate.done + 1, jobProgressUpdate.total),
+              jobProgressUpdate.total
+            ),
+            formatDownloadProgressShortText(image)
+          );
+        }
+      },
+      onJobFinished: (job: DownloadQueueJob) => {
+        const errors = job.result_errors?.length ? job.result_errors.join("\n") : undefined;
+        finishQueueJob(job.id, job.status === "error" ? "failed" : "completed", errors);
+      },
+      onJobRemoved: (job) => finishQueueJob(job.id, "failed", STOPPED_ERROR),
+      onQueueCleared: () => {
+        for (const jobId of Object.keys(queueJobsRef.current).map(Number))
+          finishQueueJob(jobId, "failed", STOPPED_ERROR);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followingQueue]);
+
+  // Done once every job the window added has finished
+  useEffect(() => {
+    if (!queuingDone || waitingJobs > 0) return;
+    setQueuingDone(false);
+    setFollowingQueue(false);
+    setCurrentText("Completed!");
+    setButtonTexts({ cancel: "Close", download: "Download Again" });
+    setIsMounted(false);
+  }, [queuingDone, waitingJobs]);
 
   const renderFormItemAssetType = (
     field: ControllerRenderProps<
@@ -1059,7 +1060,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const renderCollectionImages = (collection: CollectionItem) => {
     const tasks = progress.items[COLLECTION_PROGRESS_KEY]?.tasks ?? [];
     const statusOf = (type: TYPE_DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS) =>
-      tasks.find((t) => t.payload.kind === "collectionImage" && t.payload.imageFile.type === type)?.status;
+      tasks.find(
+        (t) =>
+          t.payload.kind === "addToQueue" && t.payload.dbItem.collection_images?.images.some((img) => img.type === type)
+      )?.status;
 
     return (
       <FormField
@@ -1110,10 +1114,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               })}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {addToQueueOnly
-                ? "Applied to the collection on your media server when the Download Queue gets to them."
-                : "Applied to the collection on your media server."}{" "}
-              Collection images aren't saved, so Auto Download doesn't update them.
+              Applied to the collection on your media server when the Download Queue gets to them. Collection images
+              aren't saved, so Auto Download doesn't update them.
             </p>
           </div>
         )}
@@ -1425,43 +1427,13 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
         continue;
       }
 
-      // Add-to-queue-only => just one task (no downloads, no add-to-db)
-      if (addToQueueOnly) {
-        total += 1;
-        continue;
-      }
-
-      // Download tasks
-      for (const type of selected.types ?? []) {
-        switch (type) {
-          case "poster":
-            if (item.Set.images.some((img) => img.type === "poster")) total += 1;
-            break;
-          case "backdrop":
-            if (item.Set.images.some((img) => img.type === "backdrop")) total += 1;
-            break;
-          case "season_poster":
-            total += item.Set.images?.filter((sp) => sp.type === "season_poster" && sp.season_number !== 0).length ?? 0;
-            break;
-          case "special_season_poster":
-            total += item.Set.images?.filter((sp) => sp.type === "season_poster" && sp.season_number === 0).length ?? 0;
-            break;
-          case "titlecard":
-            total +=
-              item.Set.images?.filter(
-                (tc) => tc.type === "titlecard" && tc.season_number != null && tc.episode_number != null
-              ).length ?? 0;
-            break;
-        }
-      }
-
-      // After downloads, you *attempt* add-to-db (or mark it skipped) => count it as a planned task
-      if ((selected.types?.length ?? 0) > 0) total += 1;
+      // The images the item's job downloads
+      total += queuedImageCount(item.Set.images, selected.types ?? [], item.MediaItem);
     }
 
-    // One task for each collection image type, or one queue entry for them with Add to Queue
-    if (collectionImages && (data.collectionTypes?.length ?? 0) > 0) {
-      total += addToQueueOnly ? 1 : (data.collectionTypes?.length ?? 0);
+    // The collection's own images
+    if (collectionImages) {
+      total += data.collectionTypes?.length ?? 0;
     }
 
     return total;
@@ -1491,17 +1463,22 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       log("INFO", "Download Modal", "Debug Info", "Form submitted with data:", data);
       log("INFO", "Download Modal", "Debug Info", "Progress:", progress);
       log("INFO", "Download Modal", "Debug Info", "Selected Types:", { watchSelectedOptions });
-      log("INFO", "Download Modal", "Debug Info", "Add to Queue Only:", addToQueueOnly);
       log("INFO", "Download Modal", "Debug Info", "Auto Add New Collection Items:", autoAddNewCollectionItems);
 
-      // With Add to Queue, the collection images get their own queue entry
+      // Follow the jobs in the Download Queue from the start, so none of their updates are missed
+      queueJobsRef.current = {};
+      setJobProgress({});
+      setWaitingJobs(0);
+      setFollowingQueue(true);
+
+      // The collection images get their own job
       const selectedCollectionImages = collectionImages
         ? (data.collectionTypes ?? [])
             .map((type) => collectionImages.images.find((img) => img.type === type))
             .filter((img): img is CollectionItemImageFile => img !== undefined)
         : [];
       const queuedCollectionImages =
-        addToQueueOnly && collectionImages && selectedCollectionImages.length > 0
+        collectionImages && selectedCollectionImages.length > 0
           ? { collection: collectionImages.collection, images: selectedCollectionImages, set: setSummary }
           : undefined;
 
@@ -1626,366 +1603,34 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
 
         log("INFO", "Download Modal", "Debug Info", `Selected Types for ${item.MediaItem.title}:`, selectedTypes);
 
-        // Add to queue only (for items that actually have types selected)
-        if (addToQueueOnly) {
-          const taskId = newId();
-          const queueDBItem: DBSavedItem = createdSavedItem.dbItem;
-          addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-            id: taskId,
-            status: "pending",
-            label: `Add "${item.MediaItem.title}" to queue`,
-            attempts: 0,
-            payload: {
-              kind: "addToQueue",
-              itemKey: getItemFormKey(item.MediaItem),
-              itemTitle: item.MediaItem.title,
-              dbItem: queueDBItem,
-            },
-          });
-
-          const queued = await runAddToQueueTask(taskId, {
-            kind: "addToQueue",
-            itemKey: getItemFormKey(item.MediaItem),
-            itemTitle: item.MediaItem.title,
-            dbItem: queueDBItem,
-          });
-          if (queued) {
-            markItemSaved(latestMediaItem, item, {
-              poster: selectedTypes.includes("poster"),
-              backdrop: selectedTypes.includes("backdrop"),
-              season_poster: selectedTypes.includes("season_poster"),
-              special_season_poster: selectedTypes.includes("special_season_poster"),
-              titlecard: selectedTypes.includes("titlecard"),
-            });
-          }
-          continue;
-        }
-
-        type DownloadJob = {
-          taskId: string;
-          payload: DownloadTaskPayload;
-        };
-
-        const downloadJobs: DownloadJob[] = [];
-
-        for (const type of selectedTypes) {
-          if (cancelRef.current) return; // Exit if cancelled
-          switch (type) {
-            case "poster": {
-              const posterImg = item.Set.images.find((img) => img.type === "poster");
-              if (!posterImg) break;
-
-              const taskId = newId();
-              const payload: DownloadTaskPayload = {
-                kind: "download",
-                itemKey: getItemFormKey(item.MediaItem),
-                itemTitle: item.MediaItem.title,
-                imageFile: posterImg,
-                fileName: "Poster",
-                mediaItem: latestMediaItem,
-              };
-
-              addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-                id: taskId,
-                status: "pending",
-                label: payload.fileName,
-                attempts: 0,
-                payload,
-              });
-              downloadJobs.push({ taskId, payload });
-              break;
-            }
-
-            case "backdrop": {
-              const backdropImg = item.Set.images.find((img) => img.type === "backdrop");
-              if (!backdropImg) break;
-
-              const taskId = newId();
-              const payload: DownloadTaskPayload = {
-                kind: "download",
-                itemKey: getItemFormKey(item.MediaItem),
-                itemTitle: item.MediaItem.title,
-                imageFile: backdropImg,
-                fileName: "Backdrop",
-                mediaItem: latestMediaItem,
-              };
-
-              addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-                id: taskId,
-                status: "pending",
-                label: payload.fileName,
-                attempts: 0,
-                payload,
-              });
-              downloadJobs.push({ taskId, payload });
-              break;
-            }
-
-            case "season_poster": {
-              const seasonPosters = item.Set.images
-                .filter((sp) => sp.type === "season_poster" && sp.season_number !== 0)
-                .sort((a, b) => {
-                  if (a.season_number! < b.season_number!) return -1;
-                  if (a.season_number! > b.season_number!) return 1;
-                  return 0;
-                });
-
-              for (const sp of seasonPosters) {
-                const seasonNumber = sp.season_number!;
-                const exists = latestMediaItem.series?.seasons.some((season) => season.season_number === seasonNumber);
-                const taskId = newId();
-                const payload: DownloadTaskPayload = {
-                  kind: "download",
-                  itemKey: getItemFormKey(item.MediaItem),
-                  itemTitle: item.MediaItem.title,
-                  imageFile: sp,
-                  fileName: `Season ${seasonNumber} Poster`,
-                  mediaItem: latestMediaItem,
-                };
-
-                addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-                  id: taskId,
-                  status: "pending",
-                  label: payload.fileName,
-                  attempts: 0,
-                  payload,
-                });
-
-                if (!exists) {
-                  updateTask(taskId, (t) => ({ ...t, status: "skipped" }));
-                  continue;
-                }
-
-                downloadJobs.push({ taskId, payload });
-              }
-              break;
-            }
-
-            case "special_season_poster": {
-              const specialSeasonPosters = item.Set.images.filter(
-                (sp) => sp.type === "season_poster" && sp.season_number === 0
-              );
-
-              for (const sp of specialSeasonPosters) {
-                const taskId = newId();
-                const payload: DownloadTaskPayload = {
-                  kind: "download",
-                  itemKey: getItemFormKey(item.MediaItem),
-                  itemTitle: item.MediaItem.title,
-                  imageFile: sp,
-                  fileName: "Specials Season Poster",
-                  mediaItem: latestMediaItem,
-                };
-
-                addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-                  id: taskId,
-                  status: "pending",
-                  label: payload.fileName,
-                  attempts: 0,
-                  payload,
-                });
-                downloadJobs.push({ taskId, payload });
-              }
-              break;
-            }
-
-            case "titlecard": {
-              const titlecards = item.Set.images
-                .filter((tc) => tc.type === "titlecard" && tc.season_number != null && tc.episode_number != null)
-                .sort((a, b) => {
-                  if (a.season_number! < b.season_number!) return -1;
-                  if (a.season_number! > b.season_number!) return 1;
-                  if (a.episode_number! < b.episode_number!) return -1;
-                  if (a.episode_number! > b.episode_number!) return 1;
-                  return 0;
-                });
-
-              for (const tc of titlecards) {
-                const seasonNumber = tc.season_number!;
-                const episodeNumber = tc.episode_number!;
-                const exists = latestMediaItem.series?.seasons.some(
-                  (season) =>
-                    season.season_number === seasonNumber &&
-                    season.episodes.some((ep) => ep.episode_number === episodeNumber)
-                );
-                const taskId = newId();
-                const payload: DownloadTaskPayload = {
-                  kind: "download",
-                  itemKey: getItemFormKey(item.MediaItem),
-                  itemTitle: item.MediaItem.title,
-                  imageFile: tc,
-                  fileName: `S${seasonNumber}E${episodeNumber} Titlecard`,
-                  mediaItem: latestMediaItem,
-                };
-
-                addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-                  id: taskId,
-                  status: "pending",
-                  label: payload.fileName,
-                  attempts: 0,
-                  payload,
-                });
-
-                if (!exists) {
-                  updateTask(taskId, (t) => ({ ...t, status: "skipped" }));
-                  continue;
-                }
-
-                downloadJobs.push({ taskId, payload });
-              }
-              break;
-            }
-          }
-        }
-
-        const totalForItem = downloadJobs.length;
-
-        // No matching images in this set for selected types (e.g. future types).
-        // Still persist selected types to the DB so they can be auto-downloaded later.
-        if (totalForItem === 0) {
-          const addId = newId();
-          addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-            id: addId,
-            status: "pending",
-            label: `Add "${item.MediaItem.title}" to DB`,
-            attempts: 0,
-            payload: {
-              kind: "addToDB",
-              itemKey: getItemFormKey(item.MediaItem),
-              itemTitle: item.MediaItem.title,
-              mediaItem: createdSavedItem.dbItem.media_item,
-              posterSet: createdSavedItem.dbItem.poster_sets[0],
-              addToDBOnly: selectedOptions.addToDBOnly || false,
-            },
-          });
-
-          const ok = await runAddToDBTask(addId, {
-            kind: "addToDB",
-            itemKey: getItemFormKey(item.MediaItem),
-            itemTitle: item.MediaItem.title,
-            mediaItem: createdSavedItem.dbItem.media_item,
-            posterSet: createdSavedItem.dbItem.poster_sets[0],
-            addToDBOnly: selectedOptions.addToDBOnly || false,
-          });
-
-          if (ok) {
-            markItemSaved(latestMediaItem, item, {
-              poster: selectedOptions.types.includes("poster"),
-              backdrop: selectedOptions.types.includes("backdrop"),
-              season_poster: selectedOptions.types.includes("season_poster"),
-              special_season_poster: selectedOptions.types.includes("special_season_poster"),
-              titlecard: selectedOptions.types.includes("titlecard"),
-            });
-          }
-          continue;
-        }
-
-        // Posters, then backdrops, then each season's poster and its titlecards, like the Download Queue
-        const posterJobs = downloadJobs.filter((j) => j.payload.imageFile.type === "poster");
-        const backdropJobs = downloadJobs.filter((j) => j.payload.imageFile.type === "backdrop");
-        const otherJobs = downloadJobs
-          .filter((j) => j.payload.imageFile.type !== "poster" && j.payload.imageFile.type !== "backdrop")
-          .sort((a, b) => compareSeasonImages(a.payload.imageFile, b.payload.imageFile));
-
-        // One count for all the images of the item, the same text as the Download Queue
-        let started = 0;
-        const downloadJob = async (job: (typeof downloadJobs)[number]) => {
-          if (cancelRef.current) return false;
-          started += 1;
-          const image = job.payload.imageFile;
-          const imageLabel = {
-            image_type: image.type,
-            season_number: image.season_number,
-            episode_number: image.episode_number,
-          };
-          setCurrentText(
-            formatDownloadProgressText(imageLabel, item.MediaItem.title, started, totalForItem),
-            formatDownloadProgressShortText(imageLabel)
-          );
-          return runDownloadTask(job.taskId, job.payload);
-        };
-
-        let downloadResults: boolean[] = [];
-        for (const jobs of [posterJobs, backdropJobs, otherJobs]) {
-          if (jobs.length === 0) continue;
-          downloadResults = downloadResults.concat(await runInBatches(jobs, DOWNLOAD_BATCH_SIZE, downloadJob));
-        }
-
-        const downloadedAtLeastOneForItem = downloadResults.some(Boolean);
-        // The results are in the same order as the jobs
-        const orderedJobs = [...posterJobs, ...backdropJobs, ...otherJobs];
-        const downloadResult: DownloadResult = {
-          downloadedImageIds: orderedJobs
-            .filter((_, index) => downloadResults[index])
-            .map((job) => job.payload.imageFile.id),
-          failedImages: downloadResults.filter((ok) => !ok).length,
-        };
-
-        // Only add to DB if at least one download succeeded
-        if (!downloadedAtLeastOneForItem) {
-          const taskId = newId();
-          addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-            id: taskId,
-            status: "skipped",
-            label: `Add "${item.MediaItem.title}" to DB (skipped: no successful downloads)`,
-            attempts: 0,
-            payload: {
-              kind: "addToDB",
-              itemKey: getItemFormKey(item.MediaItem),
-              itemTitle: item.MediaItem.title,
-              mediaItem: createdSavedItem.dbItem.media_item,
-              posterSet: createdSavedItem.dbItem.poster_sets[0],
-              addToDBOnly: selectedOptions.addToDBOnly || false,
-            },
-          });
-          continue;
-        }
-
-        const addId = newId();
-        addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
-          id: addId,
-          status: "pending",
-          label: `Add "${item.MediaItem.title}" to DB`,
-          attempts: 0,
-          payload: {
-            kind: "addToDB",
-            itemKey: getItemFormKey(item.MediaItem),
-            itemTitle: item.MediaItem.title,
-            mediaItem: createdSavedItem.dbItem.media_item,
-            posterSet: createdSavedItem.dbItem.poster_sets[0],
-            addToDBOnly: selectedOptions.addToDBOnly || false,
-            downloadResult,
-          },
-        });
-
-        const ok = await runAddToDBTask(addId, {
-          kind: "addToDB",
+        // The Download Queue downloads the item's images, before the jobs that run in the background
+        const taskId = newId();
+        const queuePayload: AddToQueueTaskPayload = {
+          kind: "addToQueue",
           itemKey: getItemFormKey(item.MediaItem),
           itemTitle: item.MediaItem.title,
-          mediaItem: createdSavedItem.dbItem.media_item,
-          posterSet: createdSavedItem.dbItem.poster_sets[0],
-          addToDBOnly: selectedOptions.addToDBOnly || false,
-          downloadResult,
+          dbItem: { ...createdSavedItem.dbItem, source: "download_window" },
+          imageCount: queuedImageCount(item.Set.images, selectedTypes, latestMediaItem),
+          formItem: item,
+        };
+        addTask(getItemFormKey(item.MediaItem), item.MediaItem.title, {
+          id: taskId,
+          status: "pending",
+          label: `Download "${item.MediaItem.title}" in the Download Queue`,
+          attempts: 0,
+          payload: queuePayload,
         });
-
-        if (ok) {
-          markItemSaved(latestMediaItem, item, {
-            poster: selectedOptions.types.includes("poster"),
-            backdrop: selectedOptions.types.includes("backdrop"),
-            season_poster: selectedOptions.types.includes("season_poster"),
-            special_season_poster: selectedOptions.types.includes("special_season_poster"),
-            titlecard: selectedOptions.types.includes("titlecard"),
-          });
-        }
+        await runAddToQueueTask(taskId, queuePayload);
       }
 
-      // With Add to Queue, the collection images get their own queue entry, listed by the collection
+      // The collection images get their own job, listed by the collection
       if (queuedCollectionImages && formItems.length > 0 && !cancelRef.current) {
         const item = formItems[0];
         const dbItem: DBSavedItem = {
           media_item: item.MediaItem,
           poster_sets: [],
           collection_images: queuedCollectionImages,
+          source: "download_window",
         };
         const taskId = newId();
         const payload: AddToQueueTaskPayload = {
@@ -1993,50 +1638,26 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
           itemKey: COLLECTION_PROGRESS_KEY,
           itemTitle: queuedCollectionImages.collection.title,
           dbItem,
+          imageCount: queuedCollectionImages.images.length,
         };
         addTask(COLLECTION_PROGRESS_KEY, queuedCollectionImages.collection.title, {
           id: taskId,
           status: "pending",
-          label: `Add "${queuedCollectionImages.collection.title}" collection images to queue`,
+          label: `Download the "${queuedCollectionImages.collection.title}" collection images in the Download Queue`,
           attempts: 0,
           payload,
         });
         await runAddToQueueTask(taskId, payload);
       }
 
-      // The collection's own poster and backdrop, applied to the media server collection
-      if (collectionImages && !queuedCollectionImages && !cancelRef.current) {
-        for (const type of data.collectionTypes ?? []) {
-          const imageFile = collectionImages.images.find((img) => img.type === type);
-          if (!imageFile || cancelRef.current) continue;
-          const taskId = newId();
-          const payload: CollectionImageTaskPayload = {
-            kind: "collectionImage",
-            itemKey: COLLECTION_PROGRESS_KEY,
-            itemTitle: collectionImages.collection.title,
-            collectionItem: collectionImages.collection,
-            imageFile,
-          };
-          addTask(COLLECTION_PROGRESS_KEY, collectionImages.collection.title, {
-            id: taskId,
-            status: "pending",
-            label: DOWNLOAD_COLLECTION_IMAGE_TYPE_OPTIONS.find((opt) => opt.value === type)?.label ?? type,
-            attempts: 0,
-            payload,
-          });
-          await runCollectionImageTask(taskId, payload);
-        }
-      }
-
-      setCurrentText("Completed!");
-      setButtonTexts({
-        cancel: "Close",
-        download: "Download Again",
-      });
-      setIsMounted(false);
+      // The total is the queued images now, and the window is done when the queue finishes its jobs
+      setProgress((prev) => ({ ...prev, totalPlanned: 0 }));
+      setCurrentText("Waiting for the Download Queue", "Waiting for the queue");
+      setButtonTexts({ cancel: "Close", download: "Downloading..." });
+      setQueuingDone(true);
 
       const timeTaken = (Date.now() - startTime) / 1000;
-      log("INFO", "Download Modal", "Debug Info", `All tasks completed in ${timeTaken.toFixed(2)} seconds.`);
+      log("INFO", "Download Modal", "Debug Info", `Added to the Download Queue in ${timeTaken.toFixed(2)} seconds.`);
     } catch (error) {
       const taskId = newId();
       addTask("general", "General", {
@@ -2060,7 +1681,6 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     <Dialog
       onOpenChange={(open) => {
         if (open) {
-          setAddToQueueOnly(defaultAddToQueue);
           setAutoAddNewCollectionItems(defaultAutoAddNewCollectionItems);
         } else {
           handleClose();
@@ -2151,25 +1771,6 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                     </FormItem>
                   )}
 
-                {/* Add to Queue 
-									Only show this button if at least one item has types selected for download and not set to Add to DB Only
-								*/}
-                {formItems.some(
-                  (item) =>
-                    watchSelectedOptions?.[getItemFormKey(item.MediaItem)]?.types?.length > 0 &&
-                    !watchSelectedOptions?.[getItemFormKey(item.MediaItem)]?.addToDBOnly
-                ) && (
-                  <FormItem className="flex items-center space-x-2 mb-4">
-                    <FormControl>
-                      <Checkbox
-                        checked={addToQueueOnly}
-                        onCheckedChange={(checked) => setAddToQueueOnly(checked ? true : false)}
-                      />
-                    </FormControl>
-                    <FormLabel className="text-md font-normal cursor-pointer">Add to Queue</FormLabel>
-                    <DownloadModalPopover type="add-to-queue-only" />
-                  </FormItem>
-                )}
                 <div>
                   {/* Number of Images and Total Download Size (only if there are images to download) */}
                   {selectedSizes.fileCount > 0 &&
@@ -2235,7 +1836,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 {/* Progress Bar */}
                 {Object.values(progress.items).some((i) => i.tasks.length > 0) &&
                   (() => {
-                    const overall = getOverallProgress(progress);
+                    const overall = getOverallProgress(progress, jobProgress);
                     const errors = getErrorsByItem(progress);
                     const hasErrors = errors.length > 0;
 
@@ -2339,7 +1940,7 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                               buttonTexts.download.startsWith("Adding") ||
                               buttonTexts.download.startsWith("Downloading");
 
-                            const { done, total } = getOverallCounts(progress);
+                            const { done, total } = getOverallCounts(progress, jobProgress);
 
                             if (isBusy) {
                               return (
@@ -2360,8 +1961,6 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                                 buttonTexts.download === "Download Again" ||
                                 buttonTexts.download === "Retry Download" ? (
                                   <Download className="h-4 w-4" />
-                                ) : buttonTexts.download === "Add to Queue" ? (
-                                  <ListEnd className="h-4 w-4" />
                                 ) : buttonTexts.download === "Add to Database" ? (
                                   <DatabaseZap className="h-4 w-4" />
                                 ) : null}

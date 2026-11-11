@@ -204,7 +204,6 @@ export interface AppConfigUserPreferences {
   download_defaults: TYPE_DOWNLOAD_DEFAULT_TYPE_OPTIONS[]; // Image types selected by default in the Download Modal
   show_only_download_defaults: boolean; // Whether to only show the default image types in the Download Modal
   show_date_modified: boolean; // Whether to show the date modified on poster sets
-  default_add_to_queue: boolean; // Whether "Add to Queue" is checked by default in the Download Modal
   default_auto_add_new_collection_items?: boolean; // Whether "Auto Add New Collection Items" is checked by default in the Download Modal
   default_auto_upgrade?: boolean; // Whether "Auto Upgrade" is checked by default in the Download Modal
   default_add_to_db_only: boolean; // Whether "Add to Database Only" is checked by default in the Download Modal
