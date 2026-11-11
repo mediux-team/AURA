@@ -1,4 +1,4 @@
-import { ArrowUpFromDot, Plus, SparklesIcon, TriangleAlert, Wrench } from "lucide-react";
+import { ArrowUpFromDot, Minus, Plus, SparklesIcon, TriangleAlert, Wrench } from "lucide-react";
 
 import { FaGithub } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
@@ -95,6 +95,15 @@ export function ChangelogMarkdown({ currentVersion, children }: ChangelogMarkdow
               return (
                 <h3 className="text-lg font-semibold mb-1 text-blue-600 flex items-center gap-2">
                   <SparklesIcon className="w-5 h-5" />
+                  {props.children}
+                </h3>
+              );
+            }
+
+            if (/removed/i.test(text)) {
+              return (
+                <h3 className="text-lg font-semibold mb-1 text-orange-600 flex items-center gap-2">
+                  <Minus className="w-5 h-5" />
                   {props.children}
                 </h3>
               );

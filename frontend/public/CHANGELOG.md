@@ -21,6 +21,7 @@
 - Auto Download, the Sonarr webhook and Plex refreshes now download through the Download Queue, with only the images that changed, and one notification per set listing why each image was downloaded.
 - Retrying a failed download now gets the set's latest images from MediUX, and only downloads the images that failed.
 - Dates in Auto Download notifications are now shown in the server's timezone.
+- Added a new Remove icon for the Changelog
 - Updated frontend dependencies to latest versions for better security and performance.
 - Updated backend dependencies to latest versions for better security and performance.
 
