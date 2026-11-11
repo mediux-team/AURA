@@ -146,7 +146,7 @@ SELECT
     'title', mi.title,
     'year', mi.year,
 
-    'movie', CASE WHEN mi.type = 'movie' THEN
+    'movie', json(CASE WHEN mi.type = 'movie' THEN
       json_object(
         'file', json_object(
           'path', mi.movie_path,
@@ -154,20 +154,20 @@ SELECT
           'duration', mi.movie_duration
         )
       )
-    ELSE NULL END,
+    ELSE NULL END),
 
-    'series', CASE WHEN mi.type = 'show' THEN
+    'series', json(CASE WHEN mi.type = 'show' THEN
       json_object(
         'season_count', mi.season_count,
         'episode_count', mi.episode_count,
         'location', mi.location,
-        'seasons', (
+        'seasons', json((
           SELECT json_group_array(
             json_object(
 			  'rating_key', sn.rating_key,
               'season_number', sn.season_number,
               'episode_count', sn.episode_count,
-              'episodes', (
+              'episodes', json((
                 SELECT json_group_array(
                   json_object(
 				    'rating_key', ep.rating_key,
@@ -184,15 +184,15 @@ SELECT
                 FROM Episodes ep
                 WHERE ep.season_id = sn.id
                 ORDER BY ep.episode_number
-              )
+              ))
             )
           )
           FROM Seasons sn
           WHERE sn.series_id = mi.series_id
           ORDER BY sn.season_number
-        )
+        ))
       )
-    ELSE NULL END
+    ELSE NULL END)
   ) AS media_item,
 
   COALESCE(
@@ -211,18 +211,18 @@ SELECT
 
           -- IMPORTANT: emit JSON booleans, not 0/1 numbers
           'selected_types', json_object(
-            'poster', CASE WHEN si.poster_selected = 1 THEN json('true') ELSE json('false') END,
-            'backdrop', CASE WHEN si.backdrop_selected = 1 THEN json('true') ELSE json('false') END,
-            'season_poster', CASE WHEN si.season_poster_selected = 1 THEN json('true') ELSE json('false') END,
-            'special_season_poster', CASE WHEN si.special_season_poster_selected = 1 THEN json('true') ELSE json('false') END,
-            'titlecard', CASE WHEN si.titlecard_selected = 1 THEN json('true') ELSE json('false') END
+            'poster', json(CASE WHEN si.poster_selected = 1 THEN 'true' ELSE 'false' END),
+            'backdrop', json(CASE WHEN si.backdrop_selected = 1 THEN 'true' ELSE 'false' END),
+            'season_poster', json(CASE WHEN si.season_poster_selected = 1 THEN 'true' ELSE 'false' END),
+            'special_season_poster', json(CASE WHEN si.special_season_poster_selected = 1 THEN 'true' ELSE 'false' END),
+            'titlecard', json(CASE WHEN si.titlecard_selected = 1 THEN 'true' ELSE 'false' END)
           ),
 
-          'auto_download', CASE WHEN si.autodownload = 1 THEN json('true') ELSE json('false') END,
-		  'auto_add_new_collection_items', CASE WHEN si.auto_add_new_collection_items = 1 THEN json('true') ELSE json('false') END,
-		  'no_auto_upgrade', CASE WHEN si.no_auto_upgrade = 1 THEN json('true') ELSE json('false') END,
+          'auto_download', json(CASE WHEN si.autodownload = 1 THEN 'true' ELSE 'false' END),
+		  'auto_add_new_collection_items', json(CASE WHEN si.auto_add_new_collection_items = 1 THEN 'true' ELSE 'false' END),
+		  'no_auto_upgrade', json(CASE WHEN si.no_auto_upgrade = 1 THEN 'true' ELSE 'false' END),
 
-          'images', COALESCE(
+          'images', json(COALESCE(
             (
               SELECT json_group_array(
                 json_object(
@@ -237,8 +237,8 @@ SELECT
               WHERE im.poster_set_id = ps.id
                 AND im.item_tmdb_id = mi.tmdb_id
             ),
-            json('[]')
-          )
+            '[]'
+          ))
         )
       )
       FROM SavedItems si
