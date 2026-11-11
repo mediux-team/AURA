@@ -43,34 +43,58 @@ type jobProgress struct {
 	progress QueueProgress
 }
 
-func newJobProgress(jobID int64, title string, total int) *jobProgress {
-	return &jobProgress{progress: QueueProgress{JobID: jobID, MediaItemTitle: title, Active: []ProgressImage{}, Total: total}}
+func newJobProgress(jobID int64, title string, images []models.ImageFile) *jobProgress {
+	progress := QueueProgress{JobID: jobID, MediaItemTitle: title, Active: []ProgressImage{}, Images: []ProgressImage{}, Total: len(images)}
+	for _, image := range images {
+		progress.Images = append(progress.Images, progressImage(image, ImageWaiting))
+	}
+	return &jobProgress{progress: progress}
+}
+
+func progressImage(image models.ImageFile, status string) ProgressImage {
+	return ProgressImage{
+		ID:            image.ID,
+		ImageType:     image.Type,
+		SeasonNumber:  image.SeasonNumber,
+		EpisodeNumber: image.EpisodeNumber,
+		Status:        status,
+	}
 }
 
 // update adds an image that started, or counts one that finished
 func (p *jobProgress) update(update mediaserver.ImageUpdate) {
+	status := ImageDownloading
 	if !update.Finished {
-		p.progress.Active = append(p.progress.Active, ProgressImage{
-			ID:            update.Image.ID,
-			ImageType:     update.Image.Type,
-			SeasonNumber:  update.Image.SeasonNumber,
-			EpisodeNumber: update.Image.EpisodeNumber,
-		})
+		p.progress.Active = append(p.progress.Active, progressImage(update.Image, ""))
 	} else {
 		if i := slices.IndexFunc(p.progress.Active, func(image ProgressImage) bool { return image.ID == update.Image.ID }); i >= 0 {
 			p.progress.Active = slices.Delete(p.progress.Active, i, i+1)
 		}
 		p.progress.Done++
+		status = ImageDone
 		if update.Failed {
 			p.progress.Failed++
+			status = ImageFailed
 		}
 	}
-	p.publish()
+	changed := progressImage(update.Image, status)
+	if i := slices.IndexFunc(p.progress.Images, func(image ProgressImage) bool {
+		return image.ID == changed.ID && image.ImageType == changed.ImageType
+	}); i >= 0 {
+		p.progress.Images[i] = changed
+	}
+	p.publish(&changed)
 }
 
-func (p *jobProgress) publish() {
+// publish sends the progress, with every image when changed is nil, or only the image that changed
+func (p *jobProgress) publish(changed *ProgressImage) {
 	progress := p.progress
 	progress.Active = slices.Clone(p.progress.Active)
+	progress.Images = nil
+	progress.Changed = changed
+	if changed == nil {
+		progress.Images = slices.Clone(p.progress.Images)
+	}
 	QueueBroadcaster.Publish(QueueEvent{Type: "job_progress", Progress: &progress})
 }
 
@@ -126,7 +150,8 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 
 	// Only collection images, applied to their media server collection
 	if queueItem.IsCollectionOnly() {
-		progress := newJobProgress(job.ID, queueItem.CollectionImages.Collection.Title, len(queueItem.CollectionImages.Images))
+		progress := newJobProgress(job.ID, queueItem.CollectionImages.Collection.Title, queueItem.CollectionImages.Images)
+		progress.publish(nil)
 		errors, wasStopped := applyCollectionImages(ctx, stop, queueItem.CollectionImages, queueItem.Source, progress)
 		if wasStopped {
 			stopped()
@@ -182,8 +207,8 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 	}
 
 	// Images the job downloads, for the progress
-	progress := newJobProgress(job.ID, queueItem.MediaItem.Title, countJobImages(queueItem))
-	progress.publish()
+	progress := newJobProgress(job.ID, queueItem.MediaItem.Title, jobImages(queueItem))
+	progress.publish(nil)
 
 	for i, posterSet := range queueItem.PosterSets {
 		if stop.Err() != nil {
@@ -446,22 +471,28 @@ func recordDownloadHistoryFailure(ctx context.Context, mediaItem models.MediaIte
 	}, 0)
 }
 
-// countJobImages counts the images a job downloads, skipping the same sets and images as processQueueJob
-func countJobImages(queueItem models.DBSavedItem) (total int) {
+// jobImages is the images a job downloads, in the order they're downloaded, skipping the same sets and images as processQueueJob
+func jobImages(queueItem models.DBSavedItem) (images []models.ImageFile) {
+	images = []models.ImageFile{}
 	for _, posterSet := range queueItem.PosterSets {
 		if posterSet.ID == "" || posterSet.Type == "" || posterSet.Title == "" {
 			continue
 		}
-		for _, image := range posterSet.Images {
+		for _, image := range models.SortImagesForApply(posterSet.Images) {
 			if models.IsKnownImageType(image.Type) && models.ImageIsSelected(queueItem.MediaItem, posterSet.SelectedTypes, image) && posterSet.Downloads(image) {
-				total++
+				images = append(images, image)
 			}
 		}
 	}
 	if queueItem.HasCollectionImages() {
-		total += len(queueItem.CollectionImages.Images)
+		images = append(images, queueItem.CollectionImages.Images...)
 	}
-	return total
+	return images
+}
+
+// countJobImages counts the images a job downloads
+func countJobImages(queueItem models.DBSavedItem) int {
+	return len(jobImages(queueItem))
 }
 
 // downloadKind is what a job from the source counts as in the statistics

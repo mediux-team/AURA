@@ -22,6 +22,7 @@
 - Retrying a failed download now gets the set's latest images from MediUX, and only downloads the images that failed.
 - Dates in Auto Download notifications are now shown in the server's timezone.
 - Added a new Remove icon for the Changelog
+- The Download Queue shows how many images are left for each set, and you can open it to see each image’s progress. Sets downloading show side by side on desktop.
 - Updated frontend dependencies to latest versions for better security and performance.
 - Updated backend dependencies to latest versions for better security and performance.
 

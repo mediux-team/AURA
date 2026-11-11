@@ -74,6 +74,16 @@ const SourceSelect: React.FC<{ value: string; sources: string[]; onChange: (valu
   </div>
 );
 
+// withImageStatuses is the job's latest progress with every image, as an update only has the image that changed
+const withImageStatuses = (previous: DownloadQueueProgress | undefined, update: DownloadQueueProgress) => {
+  if (update.images) return update;
+  const changed = update.changed;
+  const images = (previous?.images ?? []).map((image) =>
+    changed && image.id === changed.id && image.image_type === changed.image_type ? changed : image
+  );
+  return { ...update, images };
+};
+
 // withoutJob is the progress without the job's
 const withoutJob = (progress: Record<number, DownloadQueueProgress>, jobId: number) => {
   if (!(jobId in progress)) return progress;
@@ -179,7 +189,10 @@ const DownloadQueuePage: React.FC = () => {
         );
       },
       onJobProgress: (jobProgress) => {
-        setProgress((prev) => ({ ...prev, [jobProgress.job_id]: jobProgress }));
+        setProgress((prev) => ({
+          ...prev,
+          [jobProgress.job_id]: withImageStatuses(prev[jobProgress.job_id], jobProgress),
+        }));
       },
       onJobFinished: (job) => {
         // Server always clears the job on finish, so drop it here too.
@@ -304,7 +317,7 @@ const DownloadQueuePage: React.FC = () => {
               </div>
 
               {processingJobs.length > 0 && (
-                <div className="w-full space-y-3 mb-4">
+                <div className="grid w-full gap-3 mb-4 lg:grid-cols-2">
                   {processingJobs.map((job, index) => (
                     <DownloadQueueProgressPanel
                       key={job.id}

@@ -29,12 +29,13 @@ export type DownloadQueueEventType =
   | "queue_cleared"
   | "queue_reordered";
 
-// An image being downloaded
+// An image of a job, and where it is
 export interface DownloadQueueProgressImage {
   id: string;
   image_type: string;
   season_number?: number;
   episode_number?: number;
+  status?: "waiting" | "downloading" | "done" | "failed";
 }
 
 export interface DownloadQueueProgress {
@@ -44,6 +45,8 @@ export interface DownloadQueueProgress {
   done: number; // Images of the job already downloaded
   failed: number; // Images of the job that couldn't be downloaded
   total: number; // Images the job downloads
+  images?: DownloadQueueProgressImage[]; // Every image of the job, sent when it starts
+  changed?: DownloadQueueProgressImage; // The image an update is for
 }
 
 export interface DownloadQueueEvent {

@@ -20,18 +20,29 @@ type QueueEvent struct {
 type QueueProgress struct {
 	JobID          int64           `json:"job_id"`
 	MediaItemTitle string          `json:"media_item_title"`
-	Active         []ProgressImage `json:"active"` // Images being downloaded
-	Done           int             `json:"done"`   // Images of the job already downloaded
-	Failed         int             `json:"failed"` // Images of the job that couldn't be downloaded
-	Total          int             `json:"total"`  // Images the job downloads
+	Active         []ProgressImage `json:"active"`            // Images being downloaded
+	Done           int             `json:"done"`              // Images of the job already downloaded
+	Failed         int             `json:"failed"`            // Images of the job that couldn't be downloaded
+	Total          int             `json:"total"`             // Images the job downloads
+	Images         []ProgressImage `json:"images,omitempty"`  // Every image of the job, sent when it starts and to new subscribers
+	Changed        *ProgressImage  `json:"changed,omitempty"` // The image this update is for
 }
 
-// ProgressImage is an image being downloaded
+// Where an image of a job is
+const (
+	ImageWaiting     = "waiting"
+	ImageDownloading = "downloading"
+	ImageDone        = "done"
+	ImageFailed      = "failed"
+)
+
+// ProgressImage is an image of a job
 type ProgressImage struct {
 	ID            string `json:"id"`
 	ImageType     string `json:"image_type"`
 	SeasonNumber  *int   `json:"season_number,omitempty"`
 	EpisodeNumber *int   `json:"episode_number,omitempty"`
+	Status        string `json:"status,omitempty"`
 }
 
 type broadcaster struct {
@@ -71,7 +82,20 @@ func (b *broadcaster) Publish(evt QueueEvent) {
 		if b.progress == nil {
 			b.progress = map[int64]QueueProgress{}
 		}
-		b.progress[evt.Progress.JobID] = *evt.Progress
+		latest := *evt.Progress
+		// An update has only the image that changed, so the rest of the list is kept for new subscribers
+		if latest.Images == nil {
+			latest.Images = slices.Clone(b.progress[latest.JobID].Images)
+			if changed := latest.Changed; changed != nil {
+				if i := slices.IndexFunc(latest.Images, func(image ProgressImage) bool {
+					return image.ID == changed.ID && image.ImageType == changed.ImageType
+				}); i >= 0 {
+					latest.Images[i] = *changed
+				}
+			}
+		}
+		latest.Changed = nil
+		b.progress[latest.JobID] = latest
 	case "job_started", "job_finished", "job_removed":
 		if evt.Job != nil {
 			delete(b.progress, evt.Job.ID)

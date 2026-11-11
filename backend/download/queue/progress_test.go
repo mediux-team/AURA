@@ -4,6 +4,7 @@ import (
 	"aura/database"
 	"aura/mediaserver"
 	"aura/models"
+	"slices"
 	"testing"
 )
 
@@ -74,9 +75,13 @@ func TestBroadcasterKeepsEachJobsProgress(t *testing.T) {
 
 func TestJobProgressCountsTheImagesDownloading(t *testing.T) {
 	season := func(n int) *int { return &n }
-	p := newJobProgress(1, "Severance", 3)
 	poster := models.ImageFile{ID: "a", Type: "poster"}
 	seasonPoster := models.ImageFile{ID: "b", Type: "season_poster", SeasonNumber: season(1)}
+	titlecard := models.ImageFile{ID: "c", Type: "titlecard", SeasonNumber: season(1), EpisodeNumber: season(1)}
+	p := newJobProgress(1, "Severance", []models.ImageFile{poster, seasonPoster, titlecard})
+	if p.progress.Total != 3 || len(p.progress.Images) != 3 || p.progress.Images[0].Status != ImageWaiting {
+		t.Fatalf("progress = %+v, want 3 images waiting", p.progress)
+	}
 
 	p.update(mediaserver.ImageUpdate{Image: poster})
 	p.update(mediaserver.ImageUpdate{Image: seasonPoster})
@@ -87,6 +92,34 @@ func TestJobProgressCountsTheImagesDownloading(t *testing.T) {
 	p.update(mediaserver.ImageUpdate{Image: poster, Finished: true, Failed: true})
 	if len(p.progress.Active) != 1 || p.progress.Active[0].ID != "b" || p.progress.Done != 1 || p.progress.Failed != 1 {
 		t.Errorf("progress = %+v, want the season poster downloading, 1 done and 1 failed", p.progress)
+	}
+	statuses := []string{}
+	for _, image := range p.progress.Images {
+		statuses = append(statuses, image.Status)
+	}
+	if want := []string{ImageFailed, ImageDownloading, ImageWaiting}; !slices.Equal(statuses, want) {
+		t.Errorf("statuses = %v, want %v", statuses, want)
+	}
+}
+
+func TestBroadcasterKeepsEveryImagesStatus(t *testing.T) {
+	b := &broadcaster{subs: map[chan QueueEvent]struct{}{}}
+	images := []ProgressImage{{ID: "a", ImageType: "poster", Status: ImageWaiting}, {ID: "b", ImageType: "backdrop", Status: ImageWaiting}}
+	b.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{JobID: 1, Total: 2, Images: images}})
+
+	// An update only has the image that changed
+	b.Publish(QueueEvent{Type: "job_progress", Progress: &QueueProgress{JobID: 1, Done: 1, Total: 2, Changed: &ProgressImage{ID: "b", ImageType: "backdrop", Status: ImageDone}}})
+
+	all := b.AllProgress()
+	if len(all) != 1 || all[0].Done != 1 || len(all[0].Images) != 2 || all[0].Images[0].Status != ImageWaiting || all[0].Images[1].Status != ImageDone {
+		t.Errorf("AllProgress = %+v, want every image with the backdrop done", all)
+	}
+	if all[0].Changed != nil {
+		t.Error("the stored progress shouldn't have a changed image")
+	}
+	// The list that was published isn't changed
+	if images[1].Status != ImageWaiting {
+		t.Error("the published images were changed")
 	}
 }
 
