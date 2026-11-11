@@ -67,8 +67,36 @@ type DBPosterSetDetail struct {
 	SelectedTypes             SelectedTypes `json:"selected_types"`
 	AutoDownload              bool          `json:"auto_download"`
 	AutoAddNewCollectionItems bool          `json:"auto_add_new_collection_items"`
-	NoAutoUpgrade             bool          `json:"no_auto_upgrade"` // Keep this set, Automatically Upgrade Sets doesn't replace it
-	ToDelete                  bool          `json:"to_delete"`       // Flag to indicate if the poster set should be deleted (Not used in DB)
+	NoAutoUpgrade             bool          `json:"no_auto_upgrade"`       // Keep this set, Automatically Upgrade Sets doesn't replace it
+	ToDelete                  bool          `json:"to_delete"`             // Flag to indicate if the poster set should be deleted (Not used in DB)
+	OnlyImages                []QueuedImage `json:"only_images,omitempty"` // The images a Download Queue job downloads, when it updates only some of the set (Not used in DB)
+}
+
+// QueuedImage is one of a set's images for a Download Queue job to download, and why
+type QueuedImage struct {
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	ReasonTitle string `json:"reason_title,omitempty"`
+	Reason      string `json:"reason,omitempty"`
+}
+
+// Downloads reports whether a Download Queue job downloads the image, which is every image unless OnlyImages lists some
+func (d DBPosterSetDetail) Downloads(image ImageFile) bool {
+	if len(d.OnlyImages) == 0 {
+		return true
+	}
+	_, ok := d.QueuedImage(image)
+	return ok
+}
+
+// QueuedImage is the image as OnlyImages lists it, with why it's downloaded
+func (d DBPosterSetDetail) QueuedImage(image ImageFile) (QueuedImage, bool) {
+	for _, queued := range d.OnlyImages {
+		if queued.ID == image.ID && queued.Type == image.Type {
+			return queued, true
+		}
+	}
+	return QueuedImage{}, false
 }
 
 type PosterSet struct {

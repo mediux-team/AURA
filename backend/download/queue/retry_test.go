@@ -122,3 +122,28 @@ func TestRetryDueDownloads(t *testing.T) {
 		t.Errorf("a queued item shouldn't be retried or stopped, retried %v, stopped %v", stubs.retried, stubs.stopped)
 	}
 }
+
+func TestFailedImages(t *testing.T) {
+	num := func(n int) *int { return &n }
+	images := []models.ImageFile{
+		{ID: "p", Type: "poster"},
+		{ID: "e1", Type: "titlecard", SeasonNumber: num(1), EpisodeNumber: num(1)},
+		{ID: "e2", Type: "titlecard", SeasonNumber: num(1), EpisodeNumber: num(2)},
+	}
+
+	queued := failedImages(images, []models.ImageDownloadResult{{ImageType: "titlecard", SeasonNumber: num(1), EpisodeNumber: num(2), FailureReason: "timed out"}})
+	if len(queued) != 1 || queued[0].ID != "e2" {
+		t.Errorf("queued = %+v, want only the failed title card", queued)
+	}
+
+	// A failure that isn't for one of the set's images downloads the whole set
+	for _, failed := range [][]models.ImageDownloadResult{
+		nil,
+		{{FailureReason: "Media Item missing required fields"}},
+		{{ImageType: "titlecard", SeasonNumber: num(2), EpisodeNumber: num(1)}},
+	} {
+		if queued := failedImages(images, failed); queued != nil {
+			t.Errorf("failedImages(%+v) = %+v, want the whole set", failed, queued)
+		}
+	}
+}

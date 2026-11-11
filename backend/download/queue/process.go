@@ -194,6 +194,7 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 				mediuxItemInfo.TMDB_PosterPath,
 				mediuxItemInfo.TMDB_BackdropPath,
 				queueItem.Source,
+				nil,
 			)
 			continue
 		}
@@ -213,6 +214,7 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 				mediuxItemInfo.TMDB_PosterPath,
 				mediuxItemInfo.TMDB_BackdropPath,
 				queueItem.Source,
+				nil,
 			)
 			continue
 		}
@@ -226,6 +228,10 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 			}
 			// Only the selected types, for seasons and episodes the item has
 			if !models.ImageIsSelected(queueItem.MediaItem, posterSet.SelectedTypes, image) {
+				continue
+			}
+			// Only the images the job updates, when it updates some of the set
+			if !posterSet.Downloads(image) {
 				continue
 			}
 			images = append(images, image)
@@ -245,6 +251,7 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 
 		event := models.NewDownloadEvent(queueItem.MediaItem, posterSet.PosterSet, queueItem.Source, models.DownloadKindDownload)
 		wasStopped := false
+		downloaded := []models.ImageFile{}
 		for _, r := range results {
 			if r.Stopped {
 				wasStopped = true
@@ -259,6 +266,8 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 			if r.Err.Message != "" {
 				setErrors = append(setErrors, fmt.Sprintf("%s: %s", utils.GetFileDownloadName(queueItem.MediaItem.Title, r.Image), r.Err.Message))
 				result.FailureReason = r.Err.Message
+			} else {
+				downloaded = append(downloaded, r.Image)
 			}
 			event.AddImage(r.Image, r.Err.Message == "")
 			imageResults = append(imageResults, result)
@@ -280,6 +289,7 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 			mediuxItemInfo.TMDB_PosterPath,
 			mediuxItemInfo.TMDB_BackdropPath,
 			queueItem.Source,
+			downloaded,
 		)
 
 		recordDownloadHistory(ctx, queueItem.MediaItem, posterSet, imageResults, len(setWarnings))
@@ -426,7 +436,7 @@ func countJobImages(queueItem models.DBSavedItem) (total int) {
 			continue
 		}
 		for _, image := range posterSet.Images {
-			if models.IsKnownImageType(image.Type) && models.ImageIsSelected(queueItem.MediaItem, posterSet.SelectedTypes, image) {
+			if models.IsKnownImageType(image.Type) && models.ImageIsSelected(queueItem.MediaItem, posterSet.SelectedTypes, image) && posterSet.Downloads(image) {
 				total++
 			}
 		}

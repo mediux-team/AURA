@@ -6,6 +6,7 @@ import (
 	"fmt"
 	maps0 "maps"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -87,6 +88,59 @@ func TemplateVars_Autodownload(mediaItem models.MediaItem, setItem models.DBPost
 			"Reason":                reason,
 		},
 	)
+}
+
+// TemplateVars_AutodownloadSet is TemplateVars_Autodownload for every image a Download Queue job downloaded from the set, with why each was downloaded
+func TemplateVars_AutodownloadSet(mediaItem models.MediaItem, setItem models.DBPosterSetDetail, downloaded []models.ImageFile, Errors []string, Warnings []string) map[string]string {
+	names, types, reasonTitles, reasons := []string{}, []string{}, []string{}, []string{}
+	for _, image := range downloaded {
+		name := GetFileDownloadName(mediaItem.Title, image)
+		names = append(names, name)
+		if !slices.Contains(types, image.Type) {
+			types = append(types, image.Type)
+		}
+		queued, _ := setItem.QueuedImage(image)
+		if queued.ReasonTitle != "" && !slices.Contains(reasonTitles, queued.ReasonTitle) {
+			reasonTitles = append(reasonTitles, queued.ReasonTitle)
+		}
+		reason := name
+		if queued.ReasonTitle != "" {
+			reason += ": " + queued.ReasonTitle
+		}
+		if queued.Reason != "" {
+			reason += "\n" + queued.Reason
+		}
+		reasons = append(reasons, reason)
+	}
+
+	reasonTitle := strings.Join(reasonTitles, ", ")
+	if len(Errors) > 0 {
+		reasons = append(reasons, "Failed:\n"+strings.Join(Errors, "\n"))
+		if len(downloaded) == 0 {
+			reasonTitle = "Error"
+		}
+	}
+	if len(Warnings) > 0 {
+		reasons = append(reasons, "Warnings:\n"+strings.Join(Warnings, "\n"))
+	}
+	if reasonTitle == "" {
+		reasonTitle = "Images Updated"
+	}
+
+	vars := TemplateVars_Autodownload(mediaItem, setItem, models.ImageFile{}, reasonTitle, strings.Join(reasons, "\n\n"))
+	vars["ImageName"] = strings.Join(names, ", ")
+	vars["ImageType"] = strings.Join(types, ", ")
+	return vars
+}
+
+// TemplateVars_SonarrSet is TemplateVars_AutodownloadSet for title cards applied again after Sonarr upgraded or renamed episodes
+func TemplateVars_SonarrSet(mediaItem models.MediaItem, setItem models.DBPosterSetDetail, downloaded []models.ImageFile, Errors []string, Warnings []string) map[string]string {
+	vars := TemplateVars_AutodownloadSet(mediaItem, setItem, downloaded, Errors, Warnings)
+	vars["Result"] = "Success"
+	if len(Errors) > 0 {
+		vars["Result"] = "Error: " + strings.Join(Errors, "\n")
+	}
+	return vars
 }
 
 func TemplateVars_DownloadQueue(mediaItem models.MediaItem, setItem models.DBPosterSetDetail, Errors []string, Warnings []string) map[string]string {

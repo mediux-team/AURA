@@ -7,6 +7,7 @@
 
 ### Updated
 
+- Retrying a failed download now gets the set's latest images from MediUX, and only downloads the images that failed.
 - Updated frontend dependencies to latest versions for better security and performance.
 - Updated backend dependencies to latest versions for better security and performance.
 

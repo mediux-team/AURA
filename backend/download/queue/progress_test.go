@@ -89,3 +89,23 @@ func TestJobProgressCountsTheImagesDownloading(t *testing.T) {
 		t.Errorf("progress = %+v, want the season poster downloading, 1 done and 1 failed", p.progress)
 	}
 }
+
+func TestCountJobImagesForAnUpdate(t *testing.T) {
+	season := func(n int) *int { return &n }
+	item := models.DBSavedItem{
+		MediaItem: models.MediaItem{Series: &models.MediaItemSeries{Seasons: []models.MediaItemSeason{{SeasonNumber: 1, Episodes: []models.MediaItemEpisode{{SeasonNumber: 1, EpisodeNumber: 1}, {SeasonNumber: 1, EpisodeNumber: 2}}}}}},
+		PosterSets: []models.DBPosterSetDetail{{
+			PosterSet: models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: "1", Type: "show", Title: "Set"}, Images: []models.ImageFile{
+				{ID: "p", Type: "poster"},
+				{ID: "e1", Type: "titlecard", SeasonNumber: season(1), EpisodeNumber: season(1)},
+				{ID: "e2", Type: "titlecard", SeasonNumber: season(1), EpisodeNumber: season(2)},
+			}},
+			SelectedTypes: models.SelectedTypes{Poster: true, Titlecard: true},
+			// The job updates only the second episode's title card
+			OnlyImages: []models.QueuedImage{{ID: "e2", Type: "titlecard", ReasonTitle: "Episode Changed"}},
+		}},
+	}
+	if got := countJobImages(item); got != 1 {
+		t.Errorf("countJobImages = %d, want 1", got)
+	}
+}

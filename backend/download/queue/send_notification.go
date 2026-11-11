@@ -11,7 +11,8 @@ import (
 	"fmt"
 )
 
-// SendNotification sends the result of a Download Queue set, favorite creator sets use their own notification
+// SendNotification sends the result of a Download Queue set, sets from other sources use their own notification.
+// downloaded is the set's images that downloaded.
 func SendNotification(
 	fileIssues FileIssues,
 	mediaItem models.MediaItem,
@@ -19,6 +20,7 @@ func SendNotification(
 	tmdbPoster string,
 	tmdbBackdrop string,
 	source string,
+	downloaded []models.ImageFile,
 ) {
 	// If notifications are disabled, skip
 	if !config.Current.Notifications.Enabled {
@@ -39,6 +41,13 @@ func SendNotification(
 		template = config.Current.Notifications.NotificationTemplate.NewItemAutoDownload
 	case source == models.SourceSiloPlugin:
 		template = config.Current.Notifications.NotificationTemplate.SiloPlugin
+	case source == models.SourceAutoDownload:
+		template = config.Current.Notifications.NotificationTemplate.Autodownload
+	case source == models.SourceSonarrWebhook:
+		template = config.Current.Notifications.NotificationTemplate.SonarrNotification
+	case source == models.SourcePlexRefresh:
+		// Images applied again after Plex refreshed an item don't send a notification
+		return
 	}
 
 	// If this notification is disabled, skip
@@ -72,12 +81,20 @@ func SendNotification(
 		vars = utils.TemplateVars_NewItemAutoDownload(mediaItem, posterSet, fileIssues.Errors, fileIssues.Warnings, source == models.SourceFavoriteCreatorsNewItem)
 	case source == models.SourceSiloPlugin:
 		vars = utils.TemplateVars_SiloPlugin(mediaItem, posterSet, fileIssues.Errors, fileIssues.Warnings)
+	case source == models.SourceAutoDownload:
+		vars = utils.TemplateVars_AutodownloadSet(mediaItem, posterSet, downloaded, fileIssues.Errors, fileIssues.Warnings)
+	case source == models.SourceSonarrWebhook:
+		vars = utils.TemplateVars_SonarrSet(mediaItem, posterSet, downloaded, fileIssues.Errors, fileIssues.Warnings)
 	}
 	title := utils.RenderTemplate(template.Title, vars)
 	message := utils.RenderTemplate(template.Message, vars)
 	imageURL := ""
 	if template.IncludeImage {
 		imageURL = getImageURLFromPosterSet(posterSet, tmdbPoster, tmdbBackdrop)
+		// An update shows the first image it downloaded
+		if (source == models.SourceAutoDownload || source == models.SourceSonarrWebhook) && len(downloaded) > 0 {
+			imageURL = fmt.Sprintf("%s/%s?v=%s&key=jpg", "https://images.mediux.io/assets", downloaded[0].ID, downloaded[0].Modified.Format("20060102150405"))
+		}
 	}
 
 	ctx, ld := logging.CreateLoggingContext(context.Background(), "Notification - Send Download Queue Update")

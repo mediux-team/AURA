@@ -7,6 +7,7 @@ import (
 	"aura/models"
 	"context"
 	"fmt"
+	"slices"
 )
 
 // Set in tests
@@ -116,6 +117,8 @@ func retryEntry(ctx context.Context, entry database.DownloadHistoryEntry) (alrea
 			// The set's latest images, as images that failed before weren't saved
 			if latest, latestErr := getLatestSet(ctx, set.ID, set.Type, item.MediaItem); latestErr.Message == "" && latest.ID == set.ID {
 				set.PosterSet = latest
+				// Only the images that failed, the others downloaded fine
+				set.OnlyImages = failedImages(latest.Images, entry.FailedImages)
 			} else {
 				logAction.AppendWarning("latest_set", "Couldn't get the set's latest images from MediUX, retrying with the saved images")
 			}
@@ -134,4 +137,34 @@ func retryEntry(ctx context.Context, entry database.DownloadHistoryEntry) (alrea
 
 	logAction.SetError(fmt.Sprintf("Set %s isn't saved for %s", entry.SetID, entry.MediaItemTitle), "Download the set again from the item's page", map[string]any{"id": entry.ID})
 	return false, *logAction.Error
+}
+
+// failedImages is the set's images that failed, or nil to download the whole set when a failure isn't for one of its images
+func failedImages(images []models.ImageFile, failed []models.ImageDownloadResult) []models.QueuedImage {
+	if len(failed) == 0 {
+		return nil
+	}
+	queued := []models.QueuedImage{}
+	for _, failure := range failed {
+		i := slices.IndexFunc(images, func(image models.ImageFile) bool {
+			return image.Type == failure.ImageType && sameNumber(image.SeasonNumber, failure.SeasonNumber) && sameNumber(image.EpisodeNumber, failure.EpisodeNumber)
+		})
+		if failure.ImageType == "" || i < 0 {
+			return nil
+		}
+		queued = append(queued, models.QueuedImage{
+			ID:          images[i].ID,
+			Type:        images[i].Type,
+			ReasonTitle: "Retry",
+			Reason:      "The image failed to download before",
+		})
+	}
+	return queued
+}
+
+func sameNumber(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
