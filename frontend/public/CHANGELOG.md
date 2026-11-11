@@ -10,6 +10,8 @@
 - Fixed issue where images that failed to download were saved as downloaded, so they were never tried again.
 - Fixed issue where Auto Download couldn't add new collection items for Emby, Jellyfin and Silo.
 - Fixed issue where a Plex refresh applied the saved sets of another edition of the movie.
+- Fixed issue where Auto Download would download season posters or the special season poster when only the other one was selected.
+- Fixed issue where Auto Download would download the same images twice for Silo items in more than one library.
 
 ### Updated
 
@@ -17,6 +19,7 @@
 - Redownload on the Saved Sets page now downloads the set's latest images from MediUX.
 - Auto Download, the Sonarr webhook and Plex refreshes now download through the Download Queue, with only the images that changed, and one notification per set listing why each image was downloaded.
 - Retrying a failed download now gets the set's latest images from MediUX, and only downloads the images that failed.
+- Dates in Auto Download notifications are now shown in the server's timezone.
 - Updated frontend dependencies to latest versions for better security and performance.
 - Updated backend dependencies to latest versions for better security and performance.
 

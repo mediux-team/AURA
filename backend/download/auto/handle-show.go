@@ -192,13 +192,6 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 		imagesToRedownload := []ImageFileWithReason{}
 
 		// Build fast lookup maps once (before looping images)
-		allSeasonsInMediaItem := make(map[int]struct{})
-		if mediaItem.Series != nil {
-			for _, s := range mediaItem.Series.Seasons {
-				allSeasonsInMediaItem[s.SeasonNumber] = struct{}{}
-			}
-		}
-
 		addedSeasonSet := make(map[int]struct{}, len(changes.AddedSeasons))
 		for _, s := range changes.AddedSeasons {
 			addedSeasonSet[s] = struct{}{}
@@ -206,15 +199,6 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 
 		episodeKey := func(season, episode int) string {
 			return fmt.Sprintf("%d:%d", season, episode)
-		}
-
-		allEpisodesInMediaItem := make(map[string]struct{})
-		if mediaItem.Series != nil {
-			for _, s := range mediaItem.Series.Seasons {
-				for _, e := range s.Episodes {
-					allEpisodesInMediaItem[episodeKey(s.SeasonNumber, e.EpisodeNumber)] = struct{}{}
-				}
-			}
 		}
 
 		addedEpisodeSet := make(map[string]struct{}, len(changes.AddedEpisodes))
@@ -247,20 +231,9 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 				Reason:  "",
 			}
 
-			if image.Type == "poster" && !dbSet.SelectedTypes.Poster {
-				check.Reason = "Poster not selected for this set"
-				actionImageChecks.AppendResult(imageName, check)
-				continue
-			} else if image.Type == "backdrop" && !dbSet.SelectedTypes.Backdrop {
-				check.Reason = "Backdrop not selected for this set"
-				actionImageChecks.AppendResult(imageName, check)
-				continue
-			} else if image.Type == "season_poster" && !dbSet.SelectedTypes.SeasonPoster && !dbSet.SelectedTypes.SpecialSeasonPoster {
-				check.Reason = "Season Poster not selected for this set"
-				actionImageChecks.AppendResult(imageName, check)
-				continue
-			} else if image.Type == "titlecard" && !dbSet.SelectedTypes.Titlecard {
-				check.Reason = "Titlecard not selected for this set"
+			// Only posters, backdrops, season posters and title cards are downloaded
+			if !models.IsKnownImageType(image.Type) {
+				check.Reason = "Unsupported image type"
 				actionImageChecks.AppendResult(imageName, check)
 				continue
 			}
@@ -272,30 +245,11 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 				continue
 			}
 
-			// Skip any season posters if the season they are for does not exist in the Media Item
-			if image.Type == "season_poster" {
-				if _, seasonExists := allSeasonsInMediaItem[*image.SeasonNumber]; !seasonExists {
-					check.Reason = fmt.Sprintf("Season %d does not exist in the Media Item, skipping", *image.SeasonNumber)
-					actionImageChecks.AppendResult(imageName, check)
-					continue
-
-				}
-			}
-
-			// Skip any titlecards if the season/episode they are for does not exist in the Media Item
-			if image.Type == "titlecard" {
-				sn := *image.SeasonNumber
-				en := *image.EpisodeNumber
-				if _, seasonExists := allSeasonsInMediaItem[sn]; !seasonExists {
-					check.Reason = fmt.Sprintf("Titlecard for Season %d Episode %d but Season %d does not exist in the Media Item, skipping", sn, en, sn)
-					actionImageChecks.AppendResult(imageName, check)
-					continue
-				}
-				if _, episodeExists := allEpisodesInMediaItem[episodeKey(sn, en)]; !episodeExists {
-					check.Reason = fmt.Sprintf("Titlecard for Season %d Episode %d but Episode %d does not exist in the Media Item, skipping", sn, en, en)
-					actionImageChecks.AppendResult(imageName, check)
-					continue
-				}
+			// Only the selected types, with season posters and the special season poster selected on their own, for seasons and episodes the item has
+			if !models.ImageIsSelected(mediaItem, dbSet.SelectedTypes, image) {
+				check.Reason = "Image type isn't selected for this set, or the Media Item doesn't have its season or episode"
+				actionImageChecks.AppendResult(imageName, check)
+				continue
 			}
 
 			// If we got here, it means the image type is selected for this set, so we check if the image needs to be re-downloaded based on the changes we detected earlier
@@ -376,8 +330,6 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 					check.Reason = reason
 					handled = true
 				}
-			default:
-				check.Reason = "Unsupported image type"
 			}
 
 			if !handled {

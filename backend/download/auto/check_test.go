@@ -6,6 +6,7 @@ import (
 	"aura/models"
 	"context"
 	"testing"
+	"time"
 )
 
 func TestQueuedUpdate(t *testing.T) {
@@ -54,5 +55,16 @@ func TestLatestSavedItem(t *testing.T) {
 
 	if _, found, _ := latestSavedItem(testContext(), models.MediaItem{TMDB_ID: "1", LibraryTitle: "Movies", Edition: "Extended"}); found {
 		t.Error("an edition without saved sets shouldn't be found")
+	}
+}
+
+func TestFormatReasonDate(t *testing.T) {
+	oldLocal := time.Local
+	t.Cleanup(func() { time.Local = oldLocal })
+	time.Local = time.FixedZone("EST", -5*60*60)
+
+	// A MediUX date in UTC is shown in the server's time zone
+	if got := formatReasonDate(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)); got != "2026-01-01 22:04:05 EST" {
+		t.Errorf("formatReasonDate = %q", got)
 	}
 }

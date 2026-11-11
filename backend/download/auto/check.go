@@ -2,6 +2,7 @@ package autodownload
 
 import (
 	"aura/cache"
+	"aura/config"
 	"aura/database"
 	"aura/logging"
 	"aura/mediaserver"
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sort"
+	"time"
 )
 
 type AutoDownloadResult struct {
@@ -49,7 +51,19 @@ func CheckAllItems(ctx context.Context) (Err logging.LogErrorInfo) {
 	warningCount := 0
 	successCount := 0
 	skippedCount := 0
+	// Silo has one item for every library it is in, and saving its sets saves them in the other libraries,
+	// so an item checked in one library isn't checked again in the others
+	checkedSiloItems := map[string]bool{}
 	for _, item := range out.Items {
+		if config.Current.MediaServer.Type == "Silo" && item.MediaItem.RatingKey != "" {
+			key := item.MediaItem.RatingKey + "|" + item.MediaItem.Edition
+			if checkedSiloItems[key] {
+				skippedCount++
+				continue
+			}
+			checkedSiloItems[key] = true
+		}
+
 		itemCtx, ld := logging.CreateLoggingContext(context.Background(), "AutoDownload - Check For Updates")
 		itemAction := ld.AddAction(fmt.Sprintf("Checking Item %s", utils.MediaItemInfo(item.MediaItem)), logging.LevelInfo)
 		itemCtx = logging.WithCurrentAction(itemCtx, itemAction)
@@ -335,6 +349,11 @@ func getOverallResults(result *AutoDownloadResult) {
 	}
 }
 
+// formatReasonDate is a date for a reason, in the server's time zone with the zone, as MediUX dates are in UTC
+func formatReasonDate(t time.Time) string {
+	return t.Local().Format("2006-01-02 15:04:05 MST")
+}
+
 func checkImageDates(
 	image models.ImageFile,
 	dbSet *models.DBPosterSetDetail,
@@ -349,12 +368,12 @@ func checkImageDates(
 		check.Outcome = "redownload"
 		check.Reason = fmt.Sprintf(
 			"New image added to set since last download\nImage Updated New: %s\nLast Downloaded: %s",
-			image.Modified.Format("2006-01-02 15:04:05"),
-			dbSet.LastDownloaded.Format("2006-01-02 15:04:05"),
+			formatReasonDate(image.Modified),
+			formatReasonDate(dbSet.LastDownloaded),
 		)
 		check.Details = map[string]any{
-			"image_modified_new": image.Modified.Format("2006-01-02 15:04:05"),
-			"last_downloaded":    dbSet.LastDownloaded.Format("2006-01-02 15:04:05"),
+			"image_modified_new": formatReasonDate(image.Modified),
+			"last_downloaded":    formatReasonDate(dbSet.LastDownloaded),
 		}
 		*imagesToRedownload = append(*imagesToRedownload, ImageFileWithReason{
 			ImageFile:   image,
@@ -365,17 +384,17 @@ func checkImageDates(
 	}
 
 	check.Details = map[string]any{
-		"image_modified_new": image.Modified.Format("2006-01-02 15:04:05"),
-		"image_modified_old": matchingOldImage.Modified.Format("2006-01-02 15:04:05"),
-		"last_downloaded":    dbSet.LastDownloaded.Format("2006-01-02 15:04:05"),
+		"image_modified_new": formatReasonDate(image.Modified),
+		"image_modified_old": formatReasonDate(matchingOldImage.Modified),
+		"last_downloaded":    formatReasonDate(dbSet.LastDownloaded),
 	}
 
 	if !image.Modified.Equal(matchingOldImage.Modified) && image.Modified.After(matchingOldImage.Modified) {
 		check.Outcome = "redownload"
 		check.Reason = fmt.Sprintf(
 			"Image modified date is newer than previous image\nImage Updated New: %s\nImage Updated Old: %s",
-			image.Modified.Format("2006-01-02 15:04:05"),
-			matchingOldImage.Modified.Format("2006-01-02 15:04:05"),
+			formatReasonDate(image.Modified),
+			formatReasonDate(matchingOldImage.Modified),
 		)
 		*imagesToRedownload = append(*imagesToRedownload, ImageFileWithReason{
 			ImageFile:   image,
@@ -387,8 +406,8 @@ func checkImageDates(
 		check.Outcome = "redownload"
 		check.Reason = fmt.Sprintf(
 			"Image modified date is newer than last downloaded date\nImage Updated New: %s\nLast Downloaded: %s",
-			image.Modified.Format("2006-01-02 15:04:05"),
-			dbSet.LastDownloaded.Format("2006-01-02 15:04:05"),
+			formatReasonDate(image.Modified),
+			formatReasonDate(dbSet.LastDownloaded),
 		)
 
 		*imagesToRedownload = append(*imagesToRedownload, ImageFileWithReason{
