@@ -328,82 +328,44 @@ func reApplySavedImages(item PlexRefreshedItem) {
 		return
 	}
 
-	applied := 0
-	matchedImages := make([]models.ImageFile, 0)
-
+	updates := []models.DBPosterSetDetail{}
 	for _, savedItem := range savedItems.Items {
+		// Only the refreshed edition's saved sets
+		if savedItem.MediaItem.Edition != item.MediaItem.Edition {
+			continue
+		}
 		for _, posterSet := range savedItem.PosterSets {
 			if !posterSet.AutoDownload {
 				continue
 			}
-			event := models.NewDownloadEvent(item.MediaItem, posterSet.PosterSet, models.SourcePlexRefresh, models.DownloadKindReapply)
+			update := posterSet
+			update.OnlyImages = nil
 			for _, image := range posterSet.Images {
-				switch image.Type {
-				case "poster":
-					if !posterSet.SelectedTypes.Poster {
-						continue
-					}
-				case "backdrop":
-					if !posterSet.SelectedTypes.Backdrop {
-						continue
-					}
-				case "season_poster":
-					if !posterSet.SelectedTypes.SeasonPoster && !posterSet.SelectedTypes.SpecialSeasonPoster {
-						continue
-					}
-					// If the season number is 0, and we dont have special season poster selected, then skip
-					if image.SeasonNumber != nil && *image.SeasonNumber == 0 && !posterSet.SelectedTypes.SpecialSeasonPoster {
-						continue
-					}
-					// If the season number is greater than 0, and we dont have regular season poster selected, then skip
-					if image.SeasonNumber != nil && *image.SeasonNumber > 0 && !posterSet.SelectedTypes.SeasonPoster {
-						continue
-					}
-				case "titlecard":
-					if !posterSet.SelectedTypes.Titlecard {
-						continue
-					}
-				default:
+				if !models.IsKnownImageType(image.Type) || !models.ImageIsSelected(item.MediaItem, posterSet.SelectedTypes, image) || !shouldReApplyImage(item, image) {
 					continue
 				}
-
-				if !shouldReApplyImage(item, image) {
-					continue
-				}
-
-				matchedImages = append(matchedImages, image)
-				applyErr := mediaserver.DownloadApplyImageToMainMediaServer(logCtx, &item.MediaItem, image)
-				event.AddImage(image, applyErr.Message == "")
-				if applyErr.Message != "" {
-					logging.LOGGER.Error().Timestamp().
-						Str("error", applyErr.Message).
-						Str("image_id", image.ID).
-						Str("image_type", image.Type).
-						Str("item_title", item.MediaItem.Title).
-						Str("item_rating_key", item.MediaItem.RatingKey).
-						Msg("Plex Event Listener: Failed to re-apply saved image to refreshed item")
-				} else {
-					applied++
-					logging.LOGGER.Info().Timestamp().
-						Str("image_type", image.Type).
-						Str("item_title", item.MediaItem.Title).
-						Str("item_rating_key", item.MediaItem.RatingKey).
-						Msg("Plex Event Listener: Successfully re-applied saved image to refreshed item")
-				}
+				update.OnlyImages = append(update.OnlyImages, models.QueuedImage{
+					ID:          image.ID,
+					Type:        image.Type,
+					ReasonTitle: "Plex Refresh",
+					Reason:      "Plex refreshed the item's metadata, so the saved image is applied again",
+				})
 			}
-			database.RecordDownloadEvent(logCtx, event)
+			if len(update.OnlyImages) > 0 {
+				updates = append(updates, update)
+			}
 		}
 	}
 
-	if applied == 0 {
-		logging.DevMsgf("Identified %d saved %s images for refreshed item %s, but none matched the criteria for re-application", len(matchedImages), item.ItemType, utils.MediaItemInfo(item.MediaItem))
+	if len(updates) == 0 {
 		logAction.AppendResult("result", "no matching images found for refreshed item")
 		logAction.Complete()
 		return
 	}
-
-	logAction.AppendResult("matched_images", matchedImages)
-	logAction.AppendResult("images_reapplied", applied)
+	if Err := addToQueue(logCtx, models.DBSavedItem{MediaItem: item.MediaItem, PosterSets: updates, Source: models.SourcePlexRefresh}); Err.Message != "" {
+		logAction.SetError("Failed to add the saved images to the Download Queue", Err.Message, nil)
+	}
+	logAction.AppendResult("sets_queued", len(updates))
 	logAction.Complete()
 }
 

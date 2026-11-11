@@ -4,9 +4,12 @@
 
 - Fixed issue where Auto Download would fail with "Media Item not found in cache" for Plex items that list more than one TMDB ID. #155
 - Fixed issue where images that failed to download were saved as downloaded, so they were never tried again.
+- Fixed issue where Auto Download couldn't add new collection items for Emby, Jellyfin and Silo.
+- Fixed issue where a Plex refresh applied the saved sets of another edition of the movie.
 
 ### Updated
 
+- Auto Download, the Sonarr webhook and Plex refreshes now download through the Download Queue, with only the images that changed, and one notification per set listing why each image was downloaded.
 - Retrying a failed download now gets the set's latest images from MediUX, and only downloads the images that failed.
 - Updated frontend dependencies to latest versions for better security and performance.
 - Updated backend dependencies to latest versions for better security and performance.

@@ -9,7 +9,15 @@ import { Aside } from "@astrojs/starlight/components";
 
 ![The Download Queue](../../../assets/screenshots/download_queue_page.png)
 
-The Download Queue runs downloads in the background, starting as soon as a set is added. Several sets download at once, and each of them downloads several images at once, both set by [Simultaneous Downloads](/AURA/settings/mediux/#simultaneous-downloads). Sets end up here when you use **Add to Queue** in the [download window](/AURA/how-to-use/downloading-sets/), and when aura downloads sets by itself, from your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) or the Silo plugin.
+The Download Queue runs downloads in the background, starting as soon as a set is added. Several sets download at once, and each of them downloads several images at once, both set by [Simultaneous Downloads](/AURA/settings/mediux/#simultaneous-downloads).
+
+Sets end up here from:
+
+- **Add to Queue** in the [download window](/AURA/how-to-use/downloading-sets/).
+- **Auto Download**, with only the images that are new or changed.
+- The [Sonarr webhook](/AURA/sonarr-webhook-integration/) and the Plex listener, with only the images to apply again.
+- Upgrades, your [favorite creators](/AURA/settings/user-preferences/#favorite-creators--automatic-downloads) and the Silo plugin.
+- Retries of failed downloads.
 
 ## Queue
 

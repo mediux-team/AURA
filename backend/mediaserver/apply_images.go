@@ -33,6 +33,11 @@ func ApplyImages(ctx, stop context.Context, item models.MediaItem, images []mode
 	return applyImages(ctx, stop, item, images, downloadApplyImageToMediaItem, onUpdate)
 }
 
+// ApplyImagesToMainMediaServer is ApplyImages on the main media server only
+func ApplyImagesToMainMediaServer(ctx, stop context.Context, item models.MediaItem, images []models.ImageFile, onUpdate func(ImageUpdate)) (results []ImageResult, updated models.MediaItem) {
+	return applyImages(ctx, stop, item, images, DownloadApplyImageToMainMediaServer, onUpdate)
+}
+
 // ApplyCollectionImages applies a collection's images one after another, and returns a result for each
 func ApplyCollectionImages(ctx, stop context.Context, collection models.CollectionItem, images []models.ImageFile, onUpdate func(ImageUpdate)) (results []ImageResult) {
 	for _, image := range images {

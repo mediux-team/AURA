@@ -8,31 +8,23 @@ import (
 	"testing"
 )
 
-func TestInsertRedownloadedSetSavesOnlyThatSet(t *testing.T) {
-	oldUpsert := upsertSavedItem
-	t.Cleanup(func() { upsertSavedItem = oldUpsert })
-	var saved models.DBSavedItem
-	upsertSavedItem = func(_ context.Context, item models.DBSavedItem) logging.LogErrorInfo {
-		saved = item
-		return logging.LogErrorInfo{}
+func TestQueuedUpdate(t *testing.T) {
+	saved := models.DBPosterSetDetail{
+		PosterSet:     models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: "b", Title: "B"}, Images: []models.ImageFile{{ID: "e1", Type: "titlecard"}}},
+		SelectedTypes: models.SelectedTypes{Titlecard: true},
+		AutoDownload:  true,
 	}
+	latest := models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: "b", Title: "B updated"}, Images: []models.ImageFile{{ID: "e1", Type: "titlecard"}, {ID: "e2", Type: "titlecard"}}}
+	changed := []ImageFileWithReason{{ImageFile: models.ImageFile{ID: "e2", Type: "titlecard"}, ReasonTitle: "Episode Added", Reason: "Season 01 Episode 02 added"}}
 
-	item := models.MediaItem{TMDB_ID: "1", LibraryTitle: "Series", Type: "show", Title: "Show"}
-	setA := models.DBPosterSetDetail{PosterSet: models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: "a"}}, SelectedTypes: models.SelectedTypes{Poster: true}, AutoDownload: true}
-	setB := models.DBPosterSetDetail{PosterSet: models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: "b"}}, SelectedTypes: models.SelectedTypes{Titlecard: true}, AutoDownload: true}
-	dbItem := models.DBSavedItem{MediaItem: item, PosterSets: []models.DBPosterSetDetail{setA, setB}}
-
-	latestB := models.PosterSet{BaseSetInfo: models.BaseSetInfo{ID: "b", Title: "B updated"}, Images: []models.ImageFile{{ID: "e1", Type: "titlecard"}}}
-	if Err := insertRedownloadedSetIntoDB(testContext(), item, latestB, dbItem, setB); Err.Message != "" {
-		t.Fatal(Err.Message)
+	update := queuedUpdate(saved, latest, changed)
+	// The set is saved with its latest images, and keeps its options
+	if update.Title != "B updated" || len(update.Images) != 2 || !update.SelectedTypes.Titlecard || !update.AutoDownload {
+		t.Errorf("update = %+v, want the latest set with the saved options", update)
 	}
-
-	// Set A isn't saved again, so an update it got earlier in the check stays
-	if len(saved.PosterSets) != 1 || saved.PosterSets[0].ID != "b" || saved.PosterSets[0].Title != "B updated" {
-		t.Fatalf("saved sets = %+v, want only the updated set b", saved.PosterSets)
-	}
-	if !saved.PosterSets[0].SelectedTypes.Titlecard || !saved.PosterSets[0].AutoDownload {
-		t.Errorf("set b = %+v, want its selected types and Auto Download kept", saved.PosterSets[0])
+	// Only the changed image is downloaded, with why
+	if len(update.OnlyImages) != 1 || update.OnlyImages[0].ID != "e2" || update.OnlyImages[0].ReasonTitle != "Episode Added" {
+		t.Errorf("OnlyImages = %+v, want only the added episode", update.OnlyImages)
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sort"
-	"time"
 )
 
 type AutoDownloadResult struct {
@@ -29,24 +28,10 @@ type AutoDownloadSetResult struct {
 	Reason      string `json:"reason"`
 }
 
-// Set in tests
-var upsertSavedItem = database.UpsertSavedItem
-
 type ImageFileWithReason struct {
 	models.ImageFile
 	ReasonTitle string
 	Reason      string
-}
-
-// applyRedownloads downloads the images in parallel, and returns a result for each in the same order
-func applyRedownloads(ctx context.Context, mediaItem *models.MediaItem, images []ImageFileWithReason) []mediaserver.ImageResult {
-	files := make([]models.ImageFile, len(images))
-	for i, image := range images {
-		files[i] = image.ImageFile
-	}
-	results, updated := mediaserver.ApplyImages(ctx, ctx, *mediaItem, files, nil)
-	*mediaItem = updated
-	return results
 }
 
 func CheckAllItems(ctx context.Context) (Err logging.LogErrorInfo) {
@@ -125,6 +110,13 @@ func CheckItem(ctx context.Context, dbItem models.DBSavedItem) (result AutoDownl
 	}
 	dbItem = latest
 
+	// A job already waiting or running for the item downloads what it needs, so it's checked again next time
+	if queuedItems(ctx)[dbItem.MediaItem.TMDB_ID+"|"+dbItem.MediaItem.LibraryTitle+"|"+dbItem.MediaItem.Edition] {
+		result.OverallResult = "skipped"
+		result.OverallMessage = "The item is in the Download Queue, it's checked again next time"
+		return result
+	}
+
 	// If there are no Poster Sets in the database for this item, we will skip the check process as there is no existing data to compare against, and just return the result
 	if len(dbItem.PosterSets) == 0 {
 		result.OverallResult = "skipped"
@@ -170,16 +162,41 @@ func CheckItem(ctx context.Context, dbItem models.DBSavedItem) (result AutoDownl
 		return result
 	}
 
+	var updates []models.DBPosterSetDetail
 	switch dbItem.MediaItem.Type {
 	case "movie":
-		result = handleMovie(ctx, *mediaItem, dbItem)
+		result, updates = handleMovie(ctx, *mediaItem, dbItem)
 	case "show":
-		result = handleShow(ctx, *mediaItem, dbItem)
+		result, updates = handleShow(ctx, *mediaItem, dbItem)
 	default:
 		result.OverallResult = "error"
 		result.OverallMessage = "Unknown media type"
 	}
+
+	// One job downloads the changed images of every set
+	if len(updates) > 0 {
+		if Err := addToQueue(ctx, models.DBSavedItem{MediaItem: *mediaItem, PosterSets: updates, Source: models.SourceAutoDownload}); Err.Message != "" {
+			result.OverallResult = "error"
+			result.OverallMessage = fmt.Sprintf("Failed to add the changed images to the Download Queue: %s", Err.Message)
+		}
+	}
 	return result
+}
+
+// queuedUpdate is the set as a Download Queue job saves it, downloading only the images that changed, with why
+func queuedUpdate(dbSet models.DBPosterSetDetail, latest models.PosterSet, images []ImageFileWithReason) models.DBPosterSetDetail {
+	update := dbSet
+	update.PosterSet = latest
+	update.OnlyImages = make([]models.QueuedImage, 0, len(images))
+	for _, image := range images {
+		update.OnlyImages = append(update.OnlyImages, models.QueuedImage{
+			ID:          image.ID,
+			Type:        image.Type,
+			ReasonTitle: image.ReasonTitle,
+			Reason:      image.Reason,
+		})
+	}
+	return update
 }
 
 // latestSavedItem is the item's saved sets as they are in the database now
@@ -278,40 +295,6 @@ func sortImagesSliceByType(images []models.ImageFile) {
 		// Stable fallback
 		return a.ID < b.ID
 	})
-}
-
-func insertRedownloadedSetIntoDB(ctx context.Context, newMediaItem models.MediaItem, newMediuxSet models.PosterSet, dbItem models.DBSavedItem, dbSet models.DBPosterSetDetail) (Err logging.LogErrorInfo) {
-	_, insertRedownloadAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Inserting redownloaded set %s into database for item %s", newMediuxSet.Title, utils.MediaItemInfo(newMediaItem)), logging.LevelInfo)
-	defer insertRedownloadAction.Complete()
-
-	dbItem.MediaItem = newMediaItem
-	newSetInfo := models.DBPosterSetDetail{
-		PosterSet: models.PosterSet{
-			BaseSetInfo: models.BaseSetInfo{
-				ID:          newMediuxSet.ID,
-				Type:        newMediuxSet.Type,
-				Title:       newMediuxSet.Title,
-				UserCreated: newMediuxSet.UserCreated,
-				DateCreated: newMediuxSet.DateCreated,
-				DateUpdated: newMediuxSet.DateUpdated,
-			},
-			Images: newMediuxSet.Images,
-		},
-		LastDownloaded:            time.Now(),
-		SelectedTypes:             dbSet.SelectedTypes,
-		AutoDownload:              dbSet.AutoDownload,
-		AutoAddNewCollectionItems: dbSet.AutoAddNewCollectionItems,
-		NoAutoUpgrade:             dbSet.NoAutoUpgrade,
-		ToDelete:                  false,
-	}
-	// Only this set is saved, so the item's other sets keep what is in the database
-	dbItem.PosterSets = []models.DBPosterSetDetail{newSetInfo}
-	Err = upsertSavedItem(ctx, dbItem)
-	if Err.Message != "" {
-		logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(newMediaItem)).Str("set_id", dbSet.ID).Str("error", Err.Message).Msg("Failed to update DB item after redownloading images for AutoDownload Check")
-		return Err
-	}
-	return logging.LogErrorInfo{}
 }
 
 func getOverallResults(result *AutoDownloadResult) {

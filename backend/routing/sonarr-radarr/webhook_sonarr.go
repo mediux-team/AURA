@@ -3,6 +3,7 @@ package routes_sonarr_radarr
 import (
 	"aura/cache"
 	"aura/database"
+	downloadqueue "aura/download/queue"
 	"aura/logging"
 	"aura/mediaserver"
 	"aura/mediux"
@@ -284,6 +285,14 @@ func processSonarrDownloadEvent(ctx context.Context, payload SonarrWebHookOnUpgr
 		retrySleepAction.Complete()
 	}
 
+	reasonTitle := "New Download"
+	reason := "A new episode was downloaded via Sonarr for this media item."
+	if payload.IsUpgrade {
+		reasonTitle = "Upgrade"
+		reason = "An existing episode was upgraded via Sonarr for this media item."
+	}
+
+	updates := []models.DBPosterSetDetail{}
 	for _, dbSet := range dbItem.PosterSets {
 		if !dbSet.SelectedTypes.SeasonPoster && !dbSet.SelectedTypes.SpecialSeasonPoster && !dbSet.SelectedTypes.Titlecard {
 			continue
@@ -379,63 +388,23 @@ func processSonarrDownloadEvent(ctx context.Context, payload SonarrWebHookOnUpgr
 		actionCheck.AppendResult(fmt.Sprintf("images_to_download_for_set_%s", dbSet.ID), len(imagesToDownload))
 		actionCheck.Complete()
 
-		dbUpdateRequired := false
-		event := models.NewDownloadEvent(*mediaItem, dbSet.PosterSet, models.SourceSonarrWebhook, models.DownloadKindReapply)
-		results, updatedItem := mediaserver.ApplyImages(ctx, ctx, *mediaItem, imagesToDownload, nil)
-		*mediaItem = updatedItem
-		for i, image := range imagesToDownload {
-			result := ""
-			Err := results[i].Err
-			event.AddImage(image, Err.Message == "")
-			if Err.Message != "" {
-				logging.LOGGER.Error().Timestamp().Msgf("Error downloading/applying image from set ID %s to media item %s: %s", dbSet.ID, utils.MediaItemInfo(*mediaItem), Err.Message)
-				result = "Error: " + Err.Message
-			} else {
-				dbUpdateRequired = true
-				result = "Success"
+		// Only the images for the episodes, the set is saved with its latest images
+		update := dbSet
+		update.PosterSet = mediuxSet.PosterSet
+		update.OnlyImages = nil
+		for _, image := range imagesToDownload {
+			if _, queued := update.QueuedImage(image); queued {
+				continue
 			}
-
-			go func(image models.ImageFile, result string) {
-				defer logging.RecoverPanic("Sonarr Webhook Notification")
-				sendFileDownloadNotification(*mediaItem, dbSet, image, payload.IsUpgrade, result)
-			}(image, result)
+			update.OnlyImages = append(update.OnlyImages, models.QueuedImage{ID: image.ID, Type: image.Type, ReasonTitle: reasonTitle, Reason: reason})
 		}
-		database.RecordDownloadEvent(ctx, event)
+		updates = append(updates, update)
+	}
 
-		if dbUpdateRequired {
-			dbItem.MediaItem = *mediaItem
-			newSetInfo := models.DBPosterSetDetail{
-				PosterSet: models.PosterSet{
-					BaseSetInfo: models.BaseSetInfo{
-						ID:               dbSet.ID,
-						Type:             dbSet.Type,
-						Title:            dbSet.Title,
-						UserCreated:      dbSet.UserCreated,
-						DateCreated:      dbSet.DateCreated,
-						DateUpdated:      dbSet.DateUpdated,
-						Popularity:       dbSet.Popularity,
-						PopularityGlobal: dbSet.PopularityGlobal,
-					},
-					Images: mediuxSet.Images,
-				},
-				LastDownloaded:            time.Now(),
-				SelectedTypes:             dbSet.SelectedTypes,
-				AutoDownload:              dbSet.AutoDownload,
-				AutoAddNewCollectionItems: dbSet.AutoAddNewCollectionItems,
-				NoAutoUpgrade:             dbSet.NoAutoUpgrade,
-				ToDelete:                  false,
-			}
-			found, dbItem.PosterSets = utils.UpdatePosterSetInDBItem(dbItem.PosterSets, newSetInfo)
-			if !found {
-				logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(*mediaItem)).Str("set_id", dbSet.ID).Msg("Failed to update set info in DB item after redownloading images for Sonarr Webhook Check, set not found in DB item")
-			} else {
-				// Update the set info in the database for this item
-				Err = database.UpsertSavedItem(ctx, dbItem)
-				if Err.Message != "" {
-					logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(*mediaItem)).Str("set_id", dbSet.ID).Str("error", Err.Message).Msg("Failed to update DB item after redownloading images for Sonarr Webhook Check")
-					continue
-				}
-			}
-		}
+	if len(updates) == 0 {
+		return
+	}
+	if Err := downloadqueue.AddToQueue(ctx, models.DBSavedItem{MediaItem: *mediaItem, PosterSets: updates, Source: models.SourceSonarrWebhook}); Err.Message != "" {
+		logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(*mediaItem)).Str("error", Err.Message).Msg("Failed to add the Sonarr images to the Download Queue")
 	}
 }

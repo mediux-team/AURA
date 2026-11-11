@@ -246,10 +246,15 @@ func processQueueJob(ctx, stop context.Context, job database.DownloadQueueJob) {
 				}
 			}
 		}
-		results, updatedItem := mediaserver.ApplyImages(ctx, stop, queueItem.MediaItem, images, onUpdate)
+		applyImages := mediaserver.ApplyImages
+		if queueItem.Source == models.SourcePlexRefresh {
+			// Plex refreshed the item on the main media server, the other media servers still have the images
+			applyImages = mediaserver.ApplyImagesToMainMediaServer
+		}
+		results, updatedItem := applyImages(ctx, stop, queueItem.MediaItem, images, onUpdate)
 		queueItem.MediaItem = updatedItem
 
-		event := models.NewDownloadEvent(queueItem.MediaItem, posterSet.PosterSet, queueItem.Source, models.DownloadKindDownload)
+		event := models.NewDownloadEvent(queueItem.MediaItem, posterSet.PosterSet, queueItem.Source, downloadKind(queueItem.Source))
 		wasStopped := false
 		downloaded := []models.ImageFile{}
 		for _, r := range results {
@@ -445,6 +450,17 @@ func countJobImages(queueItem models.DBSavedItem) (total int) {
 		total += len(queueItem.CollectionImages.Images)
 	}
 	return total
+}
+
+// downloadKind is what a job from the source counts as in the statistics
+func downloadKind(source string) string {
+	switch source {
+	case models.SourceAutoDownload:
+		return models.DownloadKindUpdate
+	case models.SourceSonarrWebhook, models.SourcePlexRefresh:
+		return models.DownloadKindReapply
+	}
+	return models.DownloadKindDownload
 }
 
 // savedImagesBySet is the images saved for the item now, by set ID and image

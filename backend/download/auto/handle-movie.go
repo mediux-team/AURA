@@ -3,7 +3,6 @@ package autodownload
 import (
 	"aura/database"
 	"aura/logging"
-	"aura/mediaserver"
 	"aura/mediux"
 	"aura/models"
 	"aura/utils"
@@ -11,10 +10,10 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
-	"time"
 )
 
-func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.DBSavedItem) (result AutoDownloadResult) {
+// handleMovie checks the movie's sets for changes, and returns each set with the images to download again
+func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.DBSavedItem) (result AutoDownloadResult, updates []models.DBPosterSetDetail) {
 	result = AutoDownloadResult{}
 	result.Item = utils.MediaItemInfo(dbItem.MediaItem)
 
@@ -225,52 +224,17 @@ func handleMovie(ctx context.Context, mediaItem models.MediaItem, dbItem models.
 			Int("images_to_redownload", len(imagesToRedownload)).
 			Msgf("Image check results for set %s", dbSet.ID)
 
-		_, imageRedownloadsAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Downloading %d updated images for set %s (ID: %s)", len(imagesToRedownload), dbSet.Title, dbSet.ID), logging.LevelInfo)
-		event := models.NewDownloadEvent(mediaItem, dbSet.PosterSet, models.SourceAutoDownload, models.DownloadKindUpdate)
-		results := applyRedownloads(ctx, &mediaItem, imagesToRedownload)
-		for idx, image := range imagesToRedownload {
-			// The redownloaded image
-			imageRedownloadResult := make(map[string]any)
-			imageRedownloadResult["image"] = utils.GetFileDownloadName(mediaItem.Title, image.ImageFile)
-			imageRedownloadResult["image_type"] = image.Type
-			imageRedownloadResult["redownload_reason"] = image.Reason
-
-			Err := results[idx].Err
-			event.AddImage(image.ImageFile, Err.Message == "")
-			if Err.Message != "" {
-				imageRedownloadResult["redownload_result"] = "error"
-				imageRedownloadResult["redownload_error"] = Err.Message
-				imageRedownloadsAction.AppendResult(fmt.Sprintf("image_redownload_%d", idx+1), imageRedownloadResult)
-				setResult.Result = "error"
-				setResult.Reason = fmt.Sprintf("Failed to redownload image %s: %s", utils.GetFileDownloadName(mediaItem.Title, image.ImageFile), Err.Message)
-				result.Sets = append(result.Sets, setResult)
-				logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(mediaItem)).Str("set_id", dbSet.ID).Str("image", utils.GetFileDownloadName(mediaItem.Title, image.ImageFile)).Str("error", Err.Message).Msg("Failed to redownload image for AutoDownload Check")
-				continue
-			} else {
-				// Send a notification to all configured notification services
-				// We do this asynchronously and don't wait for the result
-				go func(image ImageFileWithReason) {
-					defer logging.RecoverPanic("Auto Download Notification")
-					sendFileDownloadNotification(mediaItem, dbSet, image)
-				}(image)
-			}
-		}
-		imageRedownloadsAction.Complete()
-		database.RecordDownloadEvent(ctx, event)
-
-		// We remove the images that are for other items in the set and then update the set in the database with the new image info and download date so that it is up to date for the next check
+		// Only the images that changed are downloaded, the set is saved with the images for this item
 		mediuxSet.PosterSet.Images = possibleImages
-
-		// Reinsert the set into the DB item with the updated image info and download date so that it is up to date for the next check
-		Err = insertRedownloadedSetIntoDB(ctx, mediaItem, mediuxSet.PosterSet, dbItem, dbSet)
+		updates = append(updates, queuedUpdate(dbSet, mediuxSet.PosterSet, imagesToRedownload))
 
 		setResult.Result = "success"
-		setResult.Reason = fmt.Sprintf("%d images need to be redownloaded", len(imagesToRedownload))
+		setResult.Reason = fmt.Sprintf("%d images queued to download", len(imagesToRedownload))
 		result.Sets = append(result.Sets, setResult)
 	}
 
 	getOverallResults(&result)
-	return result
+	return result, updates
 }
 
 func getMovieInfoReasons(changes MovieChangeDetails) string {
@@ -321,6 +285,7 @@ func handleCollectionAutoAddNewItems(ctx context.Context, dbSet models.DBPosterS
 	}
 	logging.DevMsgf("Found %d existing items in the database for collection set %s (ID: %s)", len(dbOut.Items), dbSet.Title, dbSet.ID)
 
+	queued := queuedItems(ctx)
 	existing := map[string]struct{}{}
 	for _, existingItem := range dbOut.Items {
 		key := existingItem.MediaItem.TMDB_ID + "|" + existingItem.MediaItem.LibraryTitle
@@ -367,71 +332,33 @@ func handleCollectionAutoAddNewItems(ctx context.Context, dbSet models.DBPosterS
 			continue
 		}
 
-		event := models.NewDownloadEvent(item, mediuxSet.PosterSet, models.SourceAutoDownload, models.DownloadKindDownload)
-		results, updatedItem := mediaserver.ApplyImages(ctx, ctx, item, itemImages, nil)
-		item = updatedItem
-		for i, image := range itemImages {
-			downloadErr := results[i].Err
-			event.AddImage(image, downloadErr.Message == "")
-			if downloadErr.Message != "" {
-				action.AppendWarning("collection_auto_add_download_failed", map[string]any{
-					"tmdb_id":       item.TMDB_ID,
-					"library_title": item.LibraryTitle,
-					"image_type":    image.Type,
-					"image_id":      image.ID,
-					"error":         downloadErr.Message,
-				})
-				continue
-			}
-
-			go func(mediaItem models.MediaItem, imageFile models.ImageFile) {
-				defer logging.RecoverPanic("Auto Download Notification")
-				sendFileDownloadNotification(mediaItem, dbSet, ImageFileWithReason{
-					ImageFile:   imageFile,
-					ReasonTitle: "New Collection Item",
-					Reason:      "Item was added to a collection set with auto-add enabled",
-				})
-			}(item, image)
+		// The queue gets the item's details, with its file, before downloading
+		if queued[item.TMDB_ID+"|"+item.LibraryTitle+"|"+item.Edition] {
+			continue
 		}
-		database.RecordDownloadEvent(ctx, event)
-
-		newSavedItem := models.DBSavedItem{
-			MediaItem: item,
-			PosterSets: []models.DBPosterSetDetail{
-				{
-					PosterSet: models.PosterSet{
-						BaseSetInfo: models.BaseSetInfo{
-							ID:          mediuxSet.ID,
-							Type:        mediuxSet.Type,
-							Title:       mediuxSet.Title,
-							UserCreated: mediuxSet.UserCreated,
-							DateCreated: mediuxSet.DateCreated,
-							DateUpdated: mediuxSet.DateUpdated,
-						},
-						Images: itemImages,
-					},
-					LastDownloaded:            time.Now(),
-					SelectedTypes:             dbSet.SelectedTypes,
-					AutoDownload:              dbSet.AutoDownload,
-					AutoAddNewCollectionItems: dbSet.AutoAddNewCollectionItems,
-					NoAutoUpgrade:             dbSet.NoAutoUpgrade,
-					ToDelete:                  false,
-				},
-			},
+		newSet := dbSet
+		newSet.PosterSet = models.PosterSet{BaseSetInfo: mediuxSet.BaseSetInfo, Images: itemImages}
+		newSet.OnlyImages = nil
+		for _, image := range itemImages {
+			newSet.OnlyImages = append(newSet.OnlyImages, models.QueuedImage{
+				ID:          image.ID,
+				Type:        image.Type,
+				ReasonTitle: "New Collection Item",
+				Reason:      "Item was added to a collection set with auto-add enabled",
+			})
 		}
-
-		upsertErr := database.UpsertSavedItem(ctx, newSavedItem)
-		if upsertErr.Message != "" {
-			action.AppendWarning("collection_auto_add_db_upsert_failed", map[string]any{
+		queueErr := addToQueue(ctx, models.DBSavedItem{MediaItem: item, PosterSets: []models.DBPosterSetDetail{newSet}, Source: models.SourceAutoDownload})
+		if queueErr.Message != "" {
+			action.AppendWarning("collection_auto_add_queue_failed", map[string]any{
 				"tmdb_id":       item.TMDB_ID,
 				"library_title": item.LibraryTitle,
-				"error":         upsertErr.Message,
+				"error":         queueErr.Message,
 			})
 			continue
 		}
 
 		existing[itemKey] = struct{}{}
-		action.AppendResult("collection_auto_add_added_item", map[string]any{
+		action.AppendResult("collection_auto_add_queued_item", map[string]any{
 			"tmdb_id":       item.TMDB_ID,
 			"library_title": item.LibraryTitle,
 			"set_id":        dbSet.ID,

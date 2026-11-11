@@ -1,7 +1,6 @@
 package autodownload
 
 import (
-	"aura/database"
 	"aura/logging"
 	"aura/mediux"
 	"aura/models"
@@ -12,7 +11,8 @@ import (
 	"strings"
 )
 
-func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.DBSavedItem) (result AutoDownloadResult) {
+// handleShow checks the show's sets for changes, and returns each set with the images to download again
+func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.DBSavedItem) (result AutoDownloadResult, updates []models.DBPosterSetDetail) {
 	result = AutoDownloadResult{}
 	result.Item = utils.MediaItemInfo(dbItem.MediaItem)
 
@@ -399,48 +399,16 @@ func handleShow(ctx context.Context, mediaItem models.MediaItem, dbItem models.D
 			Int("images_to_redownload", len(imagesToRedownload)).
 			Msgf("Image check results for set %s", dbSet.ID)
 
-		_, imageRedownloadsAction := logging.AddSubActionToContext(ctx, fmt.Sprintf("Downloading %d updated images for set %s (ID: %s)", len(imagesToRedownload), dbSet.Title, dbSet.ID), logging.LevelInfo)
-		event := models.NewDownloadEvent(mediaItem, dbSet.PosterSet, models.SourceAutoDownload, models.DownloadKindUpdate)
-		results := applyRedownloads(ctx, &mediaItem, imagesToRedownload)
-		for idx, image := range imagesToRedownload {
-			// The redownloaded image
-			imageRedownloadResult := make(map[string]any)
-			imageRedownloadResult["image"] = utils.GetFileDownloadName(mediaItem.Title, image.ImageFile)
-			imageRedownloadResult["image_type"] = image.Type
-			imageRedownloadResult["redownload_reason"] = image.Reason
-			Err := results[idx].Err
-			event.AddImage(image.ImageFile, Err.Message == "")
-			if Err.Message != "" {
-				imageRedownloadResult["redownload_result"] = "error"
-				imageRedownloadResult["redownload_error"] = Err.Message
-				imageRedownloadsAction.AppendResult(fmt.Sprintf("image_redownload_%d", idx+1), imageRedownloadResult)
-				setResult.Result = "error"
-				setResult.Reason = fmt.Sprintf("Failed to redownload image %s: %s", utils.GetFileDownloadName(mediaItem.Title, image.ImageFile), Err.Message)
-				result.Sets = append(result.Sets, setResult)
-				logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(mediaItem)).Str("set_id", dbSet.ID).Str("image", utils.GetFileDownloadName(mediaItem.Title, image.ImageFile)).Str("error", Err.Message).Msg("Failed to redownload image for AutoDownload Check")
-				continue
-			} else {
-				// Send a notification to all configured notification services
-				// We do this asynchronously and don't wait for the result
-				go func(image ImageFileWithReason) {
-					defer logging.RecoverPanic("Auto Download Notification")
-					sendFileDownloadNotification(mediaItem, dbSet, image)
-				}(image)
-			}
-		}
-		imageRedownloadsAction.Complete()
-		database.RecordDownloadEvent(ctx, event)
-
-		// Reinsert the set into the DB item with the updated image info and download date so that it is up to date for the next check
-		Err = insertRedownloadedSetIntoDB(ctx, mediaItem, mediuxSet.PosterSet, dbItem, dbSet)
+		// Only the images that changed are downloaded
+		updates = append(updates, queuedUpdate(dbSet, mediuxSet.PosterSet, imagesToRedownload))
 
 		setResult.Result = "success"
-		setResult.Reason = fmt.Sprintf("%d images need to be redownloaded", len(imagesToRedownload))
+		setResult.Reason = fmt.Sprintf("%d images queued to download", len(imagesToRedownload))
 		result.Sets = append(result.Sets, setResult)
 	}
 
 	getOverallResults(&result)
-	return result
+	return result, updates
 }
 
 func getShowInfoChangeReason(changes ShowChangeDetails) string {
