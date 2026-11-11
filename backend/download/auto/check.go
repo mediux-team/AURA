@@ -29,6 +29,9 @@ type AutoDownloadSetResult struct {
 	Reason      string `json:"reason"`
 }
 
+// Set in tests
+var upsertSavedItem = database.UpsertSavedItem
+
 type ImageFileWithReason struct {
 	models.ImageFile
 	ReasonTitle string
@@ -108,6 +111,20 @@ func CheckItem(ctx context.Context, dbItem models.DBSavedItem) (result AutoDownl
 		}
 	}()
 
+	// The saved sets may have changed since the check started, so use them as they are now
+	latest, found, Err := latestSavedItem(ctx, dbItem.MediaItem)
+	if Err.Message != "" {
+		result.OverallResult = "error"
+		result.OverallMessage = "Failed to get the item's saved sets"
+		return result
+	}
+	if !found {
+		result.OverallResult = "skipped"
+		result.OverallMessage = "The item has no saved sets anymore"
+		return result
+	}
+	dbItem = latest
+
 	// If there are no Poster Sets in the database for this item, we will skip the check process as there is no existing data to compare against, and just return the result
 	if len(dbItem.PosterSets) == 0 {
 		result.OverallResult = "skipped"
@@ -141,7 +158,7 @@ func CheckItem(ctx context.Context, dbItem models.DBSavedItem) (result AutoDownl
 	actionGetFromCache.Complete()
 
 	// Get the latest Show Media Item from the media server
-	found, Err := mediaserver.GetMediaItemDetails(ctx, mediaItem)
+	found, Err = mediaserver.GetMediaItemDetails(ctx, mediaItem)
 	if Err.Message != "" {
 		result.OverallResult = "error"
 		result.OverallMessage = "Failed to get latest Media Item details from media server"
@@ -163,6 +180,20 @@ func CheckItem(ctx context.Context, dbItem models.DBSavedItem) (result AutoDownl
 		result.OverallMessage = "Unknown media type"
 	}
 	return result
+}
+
+// latestSavedItem is the item's saved sets as they are in the database now
+func latestSavedItem(ctx context.Context, item models.MediaItem) (saved models.DBSavedItem, found bool, Err logging.LogErrorInfo) {
+	out, Err := getSavedSets(ctx, models.DBFilter{ItemTMDB_ID: item.TMDB_ID, ItemLibraryTitle: item.LibraryTitle, ItemsPerPage: -1})
+	if Err.Message != "" {
+		return saved, false, Err
+	}
+	for _, savedItem := range out.Items {
+		if savedItem.MediaItem.Edition == item.Edition {
+			return savedItem, true, logging.LogErrorInfo{}
+		}
+	}
+	return saved, false, logging.LogErrorInfo{}
 }
 
 // Only mark size as changed if the size differs by at least 256KB to avoid minor Media Server metadata/container drift.
@@ -273,17 +304,12 @@ func insertRedownloadedSetIntoDB(ctx context.Context, newMediaItem models.MediaI
 		NoAutoUpgrade:             dbSet.NoAutoUpgrade,
 		ToDelete:                  false,
 	}
-	var found bool
-	found, dbItem.PosterSets = utils.UpdatePosterSetInDBItem(dbItem.PosterSets, newSetInfo)
-	if !found {
-		logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(newMediaItem)).Str("set_id", dbSet.ID).Msg("Failed to update set info in DB item after redownloading images for AutoDownload Check, set not found in DB item")
-	} else {
-		// Update the set info in the database for this item
-		Err = database.UpsertSavedItem(ctx, dbItem)
-		if Err.Message != "" {
-			logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(newMediaItem)).Str("set_id", dbSet.ID).Str("error", Err.Message).Msg("Failed to update DB item after redownloading images for AutoDownload Check")
-			return Err
-		}
+	// Only this set is saved, so the item's other sets keep what is in the database
+	dbItem.PosterSets = []models.DBPosterSetDetail{newSetInfo}
+	Err = upsertSavedItem(ctx, dbItem)
+	if Err.Message != "" {
+		logging.LOGGER.Error().Timestamp().Str("item", utils.MediaItemInfo(newMediaItem)).Str("set_id", dbSet.ID).Str("error", Err.Message).Msg("Failed to update DB item after redownloading images for AutoDownload Check")
+		return Err
 	}
 	return logging.LogErrorInfo{}
 }
